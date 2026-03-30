@@ -125,9 +125,9 @@ app.whenReady().then(async () => {
     // 创建主窗口
     createWindow();
 
-    // 设置 IPC 处理器
-    setupTaskHandlers();
-    setupProjectHandlers();
+    // 设置 IPC 处理器（支持异步初始化）
+    await setupTaskHandlers();
+    await setupProjectHandlers();
     setupWindowHandlers();
     setupNotificationHandlers();
 
