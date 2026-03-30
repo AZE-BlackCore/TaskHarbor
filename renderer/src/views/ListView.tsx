@@ -4,9 +4,10 @@ import { useProjectStore } from '../stores/projectStore';
 import { Task, TaskStatus } from '../types';
 import { Plus, Search, Filter, MoreVertical, Edit2, Trash2 } from 'lucide-react';
 import { TaskEditDialog } from '../components/task/TaskEditDialog';
+import { TableSkeleton } from '../components/ui/Skeleton';
 
 export function ListView() {
-  const { tasks, fetchTasks, createTask, updateTaskStatus, deleteTask, updateTask } = useTaskStore();
+  const { tasks, fetchTasks, createTask, updateTaskStatus, deleteTask, updateTask, loading } = useTaskStore();
   const { projects, currentProjectId, setCurrentProject } = useProjectStore();
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -182,69 +183,98 @@ export function ListView() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-            {filteredTasks.map((task) => (
-              <tr key={task.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                <td className="px-4 py-3">
-                  <div className="text-sm text-gray-900 dark:text-white">{task.description}</div>
-                </td>
-                <td className="px-4 py-3">
-                  <div className="text-sm text-gray-500 dark:text-gray-400">
-                    {task.module || '-'}
-                  </div>
-                </td>
-                <td className="px-4 py-3">
-                  <select
-                    value={task.status}
-                    onChange={(e) => updateTaskStatus(task.id, e.target.value as TaskStatus)}
-                    className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(task.status)}`}
-                  >
-                    <option value="todo">待办</option>
-                    <option value="in-progress">进行中</option>
-                    <option value="review">审查中</option>
-                    <option value="done">已完成</option>
-                    <option value="blocked">已阻塞</option>
-                  </select>
-                </td>
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-primary rounded-full transition-all"
-                        style={{ width: `${task.progress}%` }}
-                      />
-                    </div>
-                    <span className="text-xs text-gray-500 dark:text-gray-400 w-10">
-                      {task.progress}%
-                    </span>
-                  </div>
-                </td>
-                <td className="px-4 py-3">
-                  <div className="text-sm text-gray-500 dark:text-gray-400">
-                    {task.assignee || '-'}
-                  </div>
-                </td>
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <button 
-                      onClick={() => handleEdit(task)}
-                      className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
-                    >
-                      <Edit2 className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-                    </button>
-                    <button 
-                      onClick={() => deleteTask(task.id)}
-                      className="p-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded"
-                    >
-                      <Trash2 className="w-4 h-4 text-red-500" />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+            {loading ? (
+              <>
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <tr key={i} className="animate-pulse">
+                    <td className="px-4 py-3">
+                      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded-full w-20"></div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded w-32"></div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24"></div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-16"></div>
+                    </td>
+                  </tr>
+                ))}
+              </>
+            ) : (
+              <>
+                {filteredTasks.map((task) => (
+                  <tr key={task.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                    <td className="px-4 py-3">
+                      <div className="text-sm text-gray-900 dark:text-white">{task.description}</div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="text-sm text-gray-500 dark:text-gray-400">
+                        {task.module || '-'}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <select
+                        value={task.status}
+                        onChange={(e) => updateTaskStatus(task.id, e.target.value as TaskStatus)}
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(task.status)}`}
+                      >
+                        <option value="todo">待办</option>
+                        <option value="in-progress">进行中</option>
+                        <option value="review">审查中</option>
+                        <option value="done">已完成</option>
+                        <option value="blocked">已阻塞</option>
+                      </select>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-primary rounded-full transition-all"
+                            style={{ width: `${task.progress}%` }}
+                          />
+                        </div>
+                        <span className="text-xs text-gray-500 dark:text-gray-400 w-10">
+                          {task.progress}%
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="text-sm text-gray-500 dark:text-gray-400">
+                        {task.assignee || '-'}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <button 
+                          onClick={() => handleEdit(task)}
+                          className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
+                        >
+                          <Edit2 className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                        </button>
+                        <button 
+                          onClick={() => deleteTask(task.id)}
+                          className="p-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded"
+                        >
+                          <Trash2 className="w-4 h-4 text-red-500" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </>
+            )}
           </tbody>
         </table>
 
-        {filteredTasks.length === 0 && (
+        {!loading && filteredTasks.length === 0 && (
           <div className="flex items-center justify-center h-64">
             <div className="text-center text-gray-500 dark:text-gray-400">
               <p>暂无任务</p>

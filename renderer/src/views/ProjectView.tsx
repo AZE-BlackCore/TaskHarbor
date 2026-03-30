@@ -1,13 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useProjectStore } from '../stores/projectStore';
 import { useTaskStore } from '../stores/taskStore';
 import { ProjectCard } from '../components/project/ProjectCard';
 import { ProjectEditDialog } from '../components/project/ProjectEditDialog';
+import { ProjectSkeleton } from '../components/ui/Skeleton';
+import { cacheService, getProjectStatsCacheKey } from '../utils/cache';
 import { Plus, Grid, List, PieChart } from 'lucide-react';
 import { Project } from '../types';
 
 export function ProjectView() {
-  const { projects, fetchProjects, createProject, updateProject, deleteProject } = useProjectStore();
+  const { projects, fetchProjects, createProject, updateProject, deleteProject, loading } = useProjectStore();
   const { tasks } = useTaskStore();
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showEditDialog, setShowEditDialog] = useState(false);
@@ -44,20 +46,34 @@ export function ProjectView() {
     console.log('点击项目:', project);
   };
 
-  // 计算项目统计
-  const getProjectStats = (projectId: string) => {
-    const projectTasks = tasks.filter(t => t.projectId === projectId);
-    const completed = projectTasks.filter(t => t.status === 'done').length;
-    const avgProgress = projectTasks.length > 0
-      ? Math.round(projectTasks.reduce((sum, t) => sum + t.progress, 0) / projectTasks.length)
-      : 0;
-    
-    return {
-      taskCount: projectTasks.length,
-      completedCount: completed,
-      averageProgress: avgProgress,
+  // 计算项目统计（使用缓存优化）
+  const getProjectStats = useMemo(() => {
+    return (projectId: string) => {
+      // 尝试从缓存获取
+      const cacheKey = getProjectStatsCacheKey(projectId);
+      const cached = cacheService.get(cacheKey);
+      if (cached) {
+        return cached;
+      }
+
+      // 计算统计
+      const projectTasks = tasks.filter(t => t.projectId === projectId);
+      const completed = projectTasks.filter(t => t.status === 'done').length;
+      const avgProgress = projectTasks.length > 0
+        ? Math.round(projectTasks.reduce((sum, t) => sum + t.progress, 0) / projectTasks.length)
+        : 0;
+      
+      const stats = {
+        taskCount: projectTasks.length,
+        completedCount: completed,
+        averageProgress: avgProgress,
+      };
+
+      // 缓存 5 秒
+      cacheService.set(cacheKey, stats, 5000);
+      return stats;
     };
-  };
+  }, [tasks]);
 
   // 过滤项目
   const filteredProjects = projects.filter(project => {
@@ -148,7 +164,9 @@ export function ProjectView() {
 
       {/* 项目列表 */}
       <div className="flex-1 overflow-auto p-6">
-        {filteredProjects.length === 0 ? (
+        {loading ? (
+          <ProjectSkeleton />
+        ) : filteredProjects.length === 0 ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-center text-gray-500 dark:text-gray-400">
               <PieChart className="w-16 h-16 mx-auto mb-4 opacity-50" />

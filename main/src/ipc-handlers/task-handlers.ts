@@ -1,41 +1,15 @@
 import { ipcMain } from 'electron';
-import { getDatabase, saveDatabase, runTransaction } from '../services/database';
-import { generateId } from '../utils/idGenerator';
-import { getUTCNow } from '../utils/timestamp';
+import { taskService } from '../services/taskService';
+import { saveDatabase } from '../services/database';
 
-export function setupTaskHandlers() {
+export async function setupTaskHandlers() {
+  // 初始化 TaskService
+  await taskService.init();
+
   // 获取所有任务
   ipcMain.handle('tasks:getAll', async (_, filters) => {
     try {
-      const db = await getDatabase();
-      let query = 'SELECT * FROM tasks WHERE 1=1';
-      const params: any[] = [];
-
-      if (filters?.projectId) {
-        query += ' AND projectId = ?';
-        params.push(filters.projectId);
-      }
-
-      if (filters?.status) {
-        query += ' AND status = ?';
-        params.push(filters.status);
-      }
-
-      if (filters?.assignee) {
-        query += ' AND assignee = ?';
-        params.push(filters.assignee);
-      }
-
-      query += ' ORDER BY createdAt DESC';
-
-      const stmt = db.prepare(query);
-      stmt.bind(params);
-      
-      const tasks: any[] = [];
-      while (stmt.step()) {
-        tasks.push(stmt.getAsObject());
-      }
-      
+      const tasks = await taskService.findAll(filters);
       return { success: true, data: tasks };
     } catch (error: any) {
       console.error('Error getting tasks:', error);
@@ -46,19 +20,10 @@ export function setupTaskHandlers() {
   // 获取单个任务
   ipcMain.handle('tasks:getById', async (_, id) => {
     try {
-      const db = await getDatabase();
-      const stmt = db.prepare('SELECT * FROM tasks WHERE id = ?');
-      stmt.bind([id]);
-      
-      let task = null;
-      if (stmt.step()) {
-        task = stmt.getAsObject();
-      }
-      
+      const task = await taskService.findById(id);
       if (!task) {
         return { success: false, error: 'Task not found' };
       }
-      
       return { success: true, data: task };
     } catch (error: any) {
       console.error('Error getting task:', error);
@@ -69,40 +34,9 @@ export function setupTaskHandlers() {
   // 创建任务
   ipcMain.handle('tasks:create', async (_, taskData) => {
     try {
-      const db = await getDatabase();
-      const id = generateId('task');
-      const now = getUTCNow();
-      
-      const stmt = db.prepare(`
-        INSERT INTO tasks (
-          id, projectId, moduleId, module, functionModule,
-          description, progress, status, assignee,
-          startDate, estimatedEndDate, issues, notes,
-          createdAt, updatedAt
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `);
-      
-      stmt.run([
-        id,
-        taskData.projectId,
-        taskData.moduleId || null,
-        taskData.module || null,
-        taskData.functionModule || null,
-        taskData.description,
-        taskData.progress || 0,
-        taskData.status || 'todo',
-        taskData.assignee || null,
-        taskData.startDate || null,
-        taskData.estimatedEndDate || null,
-        taskData.issues || null,
-        taskData.notes || null,
-        now,
-        now,
-      ]);
-      
+      const task = await taskService.createTask(taskData);
       saveDatabase();
-      
-      return { success: true, data: { id, ...taskData, createdAt: now, updatedAt: now } };
+      return { success: true, data: task };
     } catch (error: any) {
       console.error('Error creating task:', error);
       return { success: false, error: error.message };
@@ -112,38 +46,11 @@ export function setupTaskHandlers() {
   // 更新任务
   ipcMain.handle('tasks:update', async (_, id, updates) => {
     try {
-      const db = await getDatabase();
-      
-      const allowedFields = [
-        'moduleId', 'module', 'functionModule', 'description',
-        'progress', 'status', 'assignee', 'startDate',
-        'estimatedEndDate', 'actualEndDate', 'issues', 'notes'
-      ];
-      
-      const setClauses: string[] = [];
-      const values: any[] = [];
-      
-      for (const field of allowedFields) {
-        if (field in updates) {
-          setClauses.push(`${field} = ?`);
-          values.push(updates[field]);
-        }
+      const success = await taskService.updateTask(id, updates);
+      if (!success) {
+        return { success: false, error: 'Task not found or no changes made' };
       }
-      
-      if (setClauses.length === 0) {
-        return { success: false, error: 'No valid fields to update' };
-      }
-      
-      setClauses.push("updatedAt = datetime('now')");
-      values.push(id);
-      
-      const stmt = db.prepare(`
-        UPDATE tasks SET ${setClauses.join(', ')} WHERE id = ?
-      `);
-      
-      stmt.run(values);
       saveDatabase();
-      
       return { success: true, message: 'Task updated successfully' };
     } catch (error: any) {
       console.error('Error updating task:', error);
@@ -154,11 +61,11 @@ export function setupTaskHandlers() {
   // 删除任务
   ipcMain.handle('tasks:delete', async (_, id) => {
     try {
-      const db = await getDatabase();
-      const stmt = db.prepare('DELETE FROM tasks WHERE id = ?');
-      stmt.run([id]);
+      const success = await taskService.deleteTask(id);
+      if (!success) {
+        return { success: false, error: 'Task not found' };
+      }
       saveDatabase();
-      
       return { success: true, message: 'Task deleted successfully' };
     } catch (error: any) {
       console.error('Error deleting task:', error);
@@ -169,13 +76,9 @@ export function setupTaskHandlers() {
   // 批量删除任务
   ipcMain.handle('tasks:deleteBatch', async (_, ids) => {
     try {
-      const db = await getDatabase();
-      const placeholders = ids.map(() => '?').join(',');
-      const stmt = db.prepare(`DELETE FROM tasks WHERE id IN (${placeholders})`);
-      stmt.run(ids);
+      const count = await taskService.deleteTasks(ids);
       saveDatabase();
-      
-      return { success: true, message: `${ids.length} tasks deleted` };
+      return { success: true, message: `${count} tasks deleted` };
     } catch (error: any) {
       console.error('Error deleting tasks:', error);
       return { success: false, error: error.message };
