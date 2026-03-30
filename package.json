@@ -1,0 +1,58 @@
+{
+  "name": "todolist-desktop",
+  "version": "1.0.0",
+  "description": "桌面端 Todo List 任务管理软件 - 支持悬浮窗口、项目化任务管理、多视图展示",
+  "main": "main/dist/index.js",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:vite\" \"npm run dev:electron\"",
+    "dev:vite": "cd renderer && npm run dev",
+    "dev:electron": "wait-on http://localhost:5173 && cross-env NODE_ENV=development electron .",
+    "build:main": "tsc -p main/tsconfig.json",
+    "build:preload": "tsc -p preload/tsconfig.json",
+    "build:renderer": "cd renderer && npm run build",
+    "preview": "vite preview",
+    "electron:build": "npm run build:renderer && npm run build:main && npm run build:preload && electron-builder",
+    "electron:pack": "electron-builder --dir"
+  },
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^25.5.0",
+    "@types/sql.js": "^1.4.11",
+    "concurrently": "^8.2.2",
+    "cross-env": "^7.0.3",
+    "electron": "^28.1.0",
+    "electron-builder": "^24.9.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3",
+    "vite": "^5.0.11",
+    "wait-on": "^7.2.0"
+  },
+  "dependencies": {
+    "electron-store": "^8.1.0",
+    "electron-window-state": "^5.0.3",
+    "exceljs": "^4.4.0",
+    "marked": "^11.1.1",
+    "pdfkit": "^0.14.0",
+    "sql.js": "^1.10.3"
+  },
+  "build": {
+    "appId": "com.todolist.desktop",
+    "productName": "TodoList Desktop",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "main/dist/**/*",
+      "preload/dist/**/*",
+      "renderer/dist/**/*"
+    ],
+    "win": {
+      "target": "portable"
+    },
+    "portable": {
+      "artifactName": "TodoListDesktop-${version}.exe"
+    }
+  }
+}
