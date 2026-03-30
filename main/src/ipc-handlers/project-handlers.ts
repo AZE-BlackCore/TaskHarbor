@@ -1,5 +1,7 @@
 import { ipcMain } from 'electron';
-import { getDatabase, saveDatabase } from '../services/database';
+import { getDatabase, saveDatabase, runTransaction } from '../services/database';
+import { generateId } from '../utils/idGenerator';
+import { getUTCNow } from '../utils/timestamp';
 
 export function setupProjectHandlers() {
   // 获取所有项目
@@ -47,11 +49,12 @@ export function setupProjectHandlers() {
   ipcMain.handle('projects:create', async (_, projectData) => {
     try {
       const db = await getDatabase();
-      const id = `project_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const id = generateId('project');
+      const now = getUTCNow();
       
       const stmt = db.prepare(`
-        INSERT INTO projects (id, name, type, description, color)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO projects (id, name, type, description, color, createdAt, updatedAt)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
       `);
       
       stmt.run([
@@ -60,11 +63,13 @@ export function setupProjectHandlers() {
         projectData.type,
         projectData.description || null,
         projectData.color || '#3B82F6',
+        now,
+        now,
       ]);
       
       saveDatabase();
       
-      return { success: true, data: { id, ...projectData } };
+      return { success: true, data: { id, ...projectData, createdAt: now, updatedAt: now } };
     } catch (error: any) {
       console.error('Error creating project:', error);
       return { success: false, error: error.message };

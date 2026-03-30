@@ -24,6 +24,7 @@ import {
   Settings
 } from 'lucide-react';
 import { SettingsPanel } from './settings/SettingsPanel';
+import { ToastContainer } from './ui/Toast';
 import { useViewStore } from '../stores/viewStore';
 import { useProjectStore } from '../stores/projectStore';
 import { useTaskStore } from '../stores/taskStore';
@@ -289,6 +290,9 @@ export function Layout({ darkMode, toggleDarkMode }: LayoutProps) {
         darkMode={darkMode}
         toggleDarkMode={toggleDarkMode}
       />
+
+      {/* Toast 通知容器 */}
+      <ToastContainer />
     </div>
   );
 }

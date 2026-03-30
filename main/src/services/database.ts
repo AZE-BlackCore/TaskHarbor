@@ -3,11 +3,83 @@ import type { Database } from 'sql.js';
 import * as path from 'path';
 import { app } from 'electron';
 import * as fs from 'fs';
+import { getUTCNow } from '../utils/timestamp';
 
 let db: Database | null = null;
 let DB_PATH = '';
+let saveTimeout: NodeJS.Timeout | null = null;
+const SAVE_DELAY = 1000; // 1 秒防抖延迟
+
+/**
+ * 数据库管理器 - 单例模式
+ */
+class DatabaseManager {
+  private static instance: DatabaseManager | null = null;
+  private db: Database | null = null;
+  private dbPath: string = '';
+  private saveTimeout: NodeJS.Timeout | null = null;
+  private readonly SAVE_DELAY = 1000;
+
+  private constructor() {}
+
+  static getInstance(): DatabaseManager {
+    if (!DatabaseManager.instance) {
+      DatabaseManager.instance = new DatabaseManager();
+    }
+    return DatabaseManager.instance;
+  }
+
+  getDatabase(): Database | null {
+    return this.db;
+  }
+
+  getDbPath(): string {
+    return this.dbPath;
+  }
+
+  /**
+   * 延迟保存数据库，避免频繁 I/O 操作
+   */
+  async saveDatabase() {
+    if (this.saveTimeout) {
+      clearTimeout(this.saveTimeout);
+    }
+
+    this.saveTimeout = setTimeout(() => {
+      if (this.db) {
+        try {
+          const data = this.db!.export();
+          const buffer = Buffer.from(data);
+          fs.writeFileSync(this.dbPath, buffer);
+          console.log('[Database] Saved at', getUTCNow());
+        } catch (error) {
+          console.error('[Database] Save error:', error);
+        }
+      }
+    }, this.SAVE_DELAY);
+  }
+
+  /**
+   * 强制立即保存（应用退出时使用）
+   */
+  async forceSave() {
+    if (this.saveTimeout) {
+      clearTimeout(this.saveTimeout);
+      this.saveTimeout = null;
+    }
+    if (this.db) {
+      const data = this.db.export();
+      const buffer = Buffer.from(data);
+      fs.writeFileSync(this.dbPath, buffer);
+      console.log('[Database] Force saved at', getUTCNow());
+    }
+  }
+}
+
+const dbManager = DatabaseManager.getInstance();
 
 export async function getDatabase(): Promise<Database> {
+  const db = dbManager.getDatabase();
   if (!db) {
     throw new Error('Database not initialized');
   }
@@ -36,6 +108,13 @@ export async function setupDatabase() {
       db = new SQL.Database();
       console.log('Creating new database at:', DB_PATH);
     }
+
+    // 更新 dbManager 状态
+    const manager = DatabaseManager.getInstance();
+    // @ts-ignore - 访问私有属性进行初始化
+    manager.db = db;
+    // @ts-ignore
+    manager.dbPath = DB_PATH;
 
     // 创建项目表
     db!.run(`
@@ -135,8 +214,51 @@ export async function setupDatabase() {
     db!.run(`CREATE INDEX IF NOT EXISTS idx_dependencies_task ON task_dependencies(taskId)`);
     db!.run(`CREATE INDEX IF NOT EXISTS idx_tags_task ON task_tags(taskId)`);
 
+    // 创建数据验证触发器
+    db!.run(`
+      CREATE TRIGGER IF NOT EXISTS validate_task_project
+      BEFORE INSERT ON tasks
+      FOR EACH ROW
+      BEGIN
+        SELECT CASE
+          WHEN (SELECT COUNT(*) FROM projects WHERE id = NEW.projectId) = 0
+          THEN RAISE(ABORT, 'Project not found')
+        END;
+      END;
+    `);
+
+    db!.run(`
+      CREATE TRIGGER IF NOT EXISTS validate_task_progress
+      BEFORE INSERT OR UPDATE ON tasks
+      FOR EACH ROW
+      BEGIN
+        SELECT CASE
+          WHEN NEW.progress < 0 OR NEW.progress > 100
+          THEN RAISE(ABORT, 'Progress must be between 0 and 100')
+        END;
+      END;
+    `);
+
+    db!.run(`
+      CREATE TRIGGER IF NOT EXISTS update_task_timestamp
+      AFTER UPDATE ON tasks
+      FOR EACH ROW
+      BEGIN
+        UPDATE tasks SET updatedAt = datetime('now') WHERE id = NEW.id;
+      END;
+    `);
+
+    db!.run(`
+      CREATE TRIGGER IF NOT EXISTS update_project_timestamp
+      AFTER UPDATE ON projects
+      FOR EACH ROW
+      BEGIN
+        UPDATE projects SET updatedAt = datetime('now') WHERE id = NEW.id;
+      END;
+    `);
+
     // 保存数据库
-    saveDatabase();
+    dbManager.saveDatabase();
 
     console.log('Database initialized successfully');
   } catch (error) {
@@ -145,18 +267,93 @@ export async function setupDatabase() {
   }
 }
 
+/**
+ * 延迟保存数据库（防抖）
+ */
 export function saveDatabase() {
-  if (db) {
-    const data = db.export();
-    const buffer = Buffer.from(data);
-    fs.writeFileSync(DB_PATH, buffer);
-  }
+  dbManager.saveDatabase();
 }
 
+/**
+ * 强制立即保存数据库
+ */
+export function forceSaveDatabase() {
+  dbManager.forceSave();
+}
+
+/**
+ * 关闭数据库连接
+ */
 export function closeDatabase() {
+  forceSaveDatabase();
   if (db) {
-    saveDatabase();
     db.close();
     db = null;
   }
+}
+
+/**
+ * 运行数据库事务
+ * @param operation 事务操作函数
+ * @returns 操作结果
+ */
+export async function runTransaction<T>(
+  operation: (db: Database) => Promise<T>
+): Promise<T> {
+  const database = await getDatabase();
+  
+  try {
+    database.run('BEGIN TRANSACTION');
+    const result = await operation(database);
+    database.run('COMMIT');
+    saveDatabase();
+    return result;
+  } catch (error) {
+    database.run('ROLLBACK');
+    console.error('[Database] Transaction failed:', error);
+    throw error;
+  }
+}
+
+/**
+ * 软删除辅助函数
+ * @param table 表名
+ * @param id 记录 ID
+ */
+export function softDelete(table: string, id: string) {
+  const database = dbManager.getDatabase();
+  if (!database) {
+    throw new Error('Database not initialized');
+  }
+  
+  const stmt = database.prepare(`
+    UPDATE ${table} SET deletedAt = ? WHERE id = ?
+  `);
+  stmt.run([getUTCNow(), id]);
+  saveDatabase();
+}
+
+/**
+ * 检查记录是否已被软删除
+ * @param table 表名
+ * @param id 记录 ID
+ * @returns 是否已删除
+ */
+export function isDeleted(table: string, id: string): boolean {
+  const database = dbManager.getDatabase();
+  if (!database) {
+    throw new Error('Database not initialized');
+  }
+  
+  const stmt = database.prepare(`
+    SELECT deletedAt FROM ${table} WHERE id = ?
+  `);
+  stmt.bind([id]);
+  
+  if (stmt.step()) {
+    const row = stmt.getAsObject() as any;
+    return row.deletedAt !== null && row.deletedAt !== undefined;
+  }
+  
+  return false;
 }

@@ -1,5 +1,7 @@
 import { ipcMain } from 'electron';
-import { getDatabase, saveDatabase } from '../services/database';
+import { getDatabase, saveDatabase, runTransaction } from '../services/database';
+import { generateId } from '../utils/idGenerator';
+import { getUTCNow } from '../utils/timestamp';
 
 export function setupTaskHandlers() {
   // 获取所有任务
@@ -68,14 +70,16 @@ export function setupTaskHandlers() {
   ipcMain.handle('tasks:create', async (_, taskData) => {
     try {
       const db = await getDatabase();
-      const id = `task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const id = generateId('task');
+      const now = getUTCNow();
       
       const stmt = db.prepare(`
         INSERT INTO tasks (
           id, projectId, moduleId, module, functionModule,
           description, progress, status, assignee,
-          startDate, estimatedEndDate, issues, notes
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          startDate, estimatedEndDate, issues, notes,
+          createdAt, updatedAt
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
       
       stmt.run([
@@ -92,11 +96,13 @@ export function setupTaskHandlers() {
         taskData.estimatedEndDate || null,
         taskData.issues || null,
         taskData.notes || null,
+        now,
+        now,
       ]);
       
       saveDatabase();
       
-      return { success: true, data: { id, ...taskData } };
+      return { success: true, data: { id, ...taskData, createdAt: now, updatedAt: now } };
     } catch (error: any) {
       console.error('Error creating task:', error);
       return { success: false, error: error.message };
@@ -201,11 +207,12 @@ export function setupTaskHandlers() {
   ipcMain.handle('subtasks:create', async (_, subtaskData) => {
     try {
       const db = await getDatabase();
-      const id = `subtask_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const id = generateId('subtask');
+      const now = getUTCNow();
       
       const stmt = db.prepare(`
-        INSERT INTO subtasks (id, taskId, description, completed, orderIndex)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO subtasks (id, taskId, description, completed, orderIndex, createdAt)
+        VALUES (?, ?, ?, ?, ?, ?)
       `);
       
       stmt.run([
@@ -214,11 +221,12 @@ export function setupTaskHandlers() {
         subtaskData.description,
         subtaskData.completed ? 1 : 0,
         subtaskData.orderIndex || 0,
+        now,
       ]);
       
       saveDatabase();
       
-      return { success: true, data: { id, ...subtaskData } };
+      return { success: true, data: { id, ...subtaskData, createdAt: now } };
     } catch (error: any) {
       console.error('Error creating subtask:', error);
       return { success: false, error: error.message };
@@ -290,15 +298,15 @@ export function setupTaskHandlers() {
   ipcMain.handle('timelogs:start', async (_, taskId, description) => {
     try {
       const db = await getDatabase();
-      const id = `timelog_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      const startTime = new Date().toISOString();
+      const id = generateId('timelog');
+      const startTime = getUTCNow();
       
       const stmt = db.prepare(`
-        INSERT INTO timelogs (id, taskId, startTime, description)
-        VALUES (?, ?, ?, ?)
+        INSERT INTO timelogs (id, taskId, startTime, description, createdAt)
+        VALUES (?, ?, ?, ?, ?)
       `);
       
-      stmt.run([id, taskId, startTime, description || null]);
+      stmt.run([id, taskId, startTime, description || null, startTime]);
       saveDatabase();
       
       return { success: true, data: { id, taskId, startTime } };
@@ -374,14 +382,15 @@ export function setupTaskHandlers() {
   ipcMain.handle('dependencies:create', async (_, taskId, dependencyTaskId, type) => {
     try {
       const db = await getDatabase();
-      const id = `dep_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const id = generateId('dep');
+      const now = getUTCNow();
       
       const stmt = db.prepare(`
-        INSERT INTO task_dependencies (id, taskId, dependencyTaskId, type)
-        VALUES (?, ?, ?, ?)
+        INSERT INTO task_dependencies (id, taskId, dependencyTaskId, type, createdAt)
+        VALUES (?, ?, ?, ?, ?)
       `);
       
-      stmt.run([id, taskId, dependencyTaskId, type || 'finish-to-start']);
+      stmt.run([id, taskId, dependencyTaskId, type || 'finish-to-start', now]);
       saveDatabase();
       
       return { success: true, message: 'Dependency created' };
@@ -431,14 +440,15 @@ export function setupTaskHandlers() {
   ipcMain.handle('tags:add', async (_, taskId, tagName, tagColor) => {
     try {
       const db = await getDatabase();
-      const id = `tag_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const id = generateId('tag');
+      const now = getUTCNow();
       
       const stmt = db.prepare(`
-        INSERT INTO task_tags (id, taskId, tagName, tagColor)
-        VALUES (?, ?, ?, ?)
+        INSERT INTO task_tags (id, taskId, tagName, tagColor, createdAt)
+        VALUES (?, ?, ?, ?, ?)
       `);
       
-      stmt.run([id, taskId, tagName, tagColor || '#3B82F6']);
+      stmt.run([id, taskId, tagName, tagColor || '#3B82F6', now]);
       saveDatabase();
       
       return { success: true, message: 'Tag added' };
