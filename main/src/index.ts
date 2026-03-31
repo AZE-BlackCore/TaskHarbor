@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, session } from 'electron';
+import { app, BrowserWindow, ipcMain, session, globalShortcut } from 'electron';
 import * as path from 'path';
 import { setupDatabase } from './services/database';
 import { setupTaskHandlers } from './ipc-handlers/task-handlers';
@@ -13,20 +13,35 @@ console.log('Chrome version:', process.versions.chrome);
 
 let mainWindow: BrowserWindow | null = null;
 
-// 设置 Content Security Policy
+// 设置 Content Security Policy（根据环境动态生成）
 function setupCSP() {
+  const isDev = !app.isPackaged;
+
+  // 开发环境：允许 Vite 开发服务器 (localhost:5173) 和 HMR websocket
+  // 生产环境：只允许本地资源 (file://), 移除所有 localhost 引用
+  const csp = isDev
+    ? [
+        "default-src 'self'; ",
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:5173; ",
+        "style-src 'self' 'unsafe-inline' http://localhost:5173; ",
+        "font-src 'self' data:; ",
+        "img-src 'self' data: blob: http://localhost:5173; ",
+        "connect-src 'self' http://localhost:5173 ws://localhost:5173;",
+      ].join('')
+    : [
+        "default-src 'self'; ",
+        "script-src 'self' 'unsafe-inline'; ",
+        "style-src 'self' 'unsafe-inline'; ",
+        "font-src 'self' data:; ",
+        "img-src 'self' data: blob:; ",
+        "connect-src 'self';",
+      ].join('');
+
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
     callback({
       responseHeaders: {
         ...details.responseHeaders,
-        'Content-Security-Policy': [
-          "default-src 'self'; " +
-          "script-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:5173; " +
-          "style-src 'self' 'unsafe-inline' http://localhost:5173; " +
-          "font-src 'self' data:; " +
-          "img-src 'self' data: blob: http://localhost:5173; " +
-          "connect-src 'self' http://localhost:5173 ws://localhost:5173;"
-        ],
+        'Content-Security-Policy': [csp],
       },
     });
   });
@@ -78,6 +93,28 @@ function createWindow() {
     mainWindow.loadFile(getResourcePath('renderer/dist/index.html'));
   }
 
+  // 打包后也可通过 Ctrl+Shift+I 打开 DevTools（方便排查生产问题）
+  mainWindow.webContents.on('before-input-event', (_event, input) => {
+    if (input.control && input.shift && input.key.toLowerCase() === 'i') {
+      if (mainWindow) {
+        if (mainWindow.webContents.isDevToolsOpened()) {
+          mainWindow.webContents.closeDevTools();
+        } else {
+          mainWindow.webContents.openDevTools({ mode: 'detach' });
+        }
+      }
+    }
+  });
+
+  // 监听渲染进程崩溃，打印日志方便排查
+  mainWindow.webContents.on('render-process-gone', (_event, details) => {
+    console.error('[Main] Render process gone:', details.reason, details.exitCode);
+  });
+
+  mainWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {
+    console.error('[Main] Failed to load:', errorCode, errorDescription, validatedURL);
+  });
+
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
@@ -128,12 +165,8 @@ export function createFloatingWindow(options?: {
 
 app.whenReady().then(async () => {
   try {
-    // 设置 Content Security Policy
-    // 注意：开发环境需要 'unsafe-eval' 支持 Vite HMR，会显示安全警告
-    // 生产环境打包后会使用更严格的 CSP，不会显示警告
-    if (app.isPackaged) {
-      setupCSP();
-    }
+    // 设置 Content Security Policy（函数内部根据环境自动选择合适的策略）
+    setupCSP();
 
     // 初始化数据库
     await setupDatabase();
