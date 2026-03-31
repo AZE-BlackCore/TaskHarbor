@@ -180,8 +180,7 @@ export function DashboardView() {
                   ))}
                 </Pie>
                 <Tooltip 
-                  formatter={(value: number) => [`${value} 个任务`, '数量']}
-                  nameKey="name"
+                  formatter={(value) => [`${value ?? 0} 个任务`, '数量']}
                 />
               </PieChart>
             </ResponsiveContainer>

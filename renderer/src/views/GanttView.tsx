@@ -159,13 +159,13 @@ export function GanttView() {
             </div>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div>
             {/* 时间轴头部 */}
-            <div className="flex border-b border-gray-200 dark:border-gray-700 pb-2">
+            <div className="flex border-b border-gray-200 dark:border-gray-700 pb-2 sticky top-0 bg-white dark:bg-dark-card z-10">
               <div className="w-64 flex-shrink-0 text-sm font-medium text-gray-700 dark:text-gray-300">
                 任务
               </div>
-              <div className="flex-1 flex">
+              <div className="flex-1 flex relative">
                 {timeline.map((date, index) => (
                   <div
                     key={index}
@@ -181,34 +181,54 @@ export function GanttView() {
               </div>
             </div>
 
-            {/* 任务条 */}
-            {tasks.filter(t => t.startDate || t.estimatedEndDate).map((task) => {
-              const position = getTaskPosition(task);
-              const project = projects.find(p => p.id === task.projectId);
-              
-              return (
-                <div key={task.id} className="flex items-center">
-                  <div className="w-64 flex-shrink-0 text-sm text-gray-900 dark:text-white truncate pr-4">
-                    {task.description}
-                  </div>
-                  <div className="flex-1 relative h-8">
-                    {position && (
-                      <div
-                        className="absolute h-6 top-1 rounded text-xs text-white flex items-center px-2 truncate"
-                        style={{
-                          left: position.left,
-                          width: position.width,
-                          backgroundColor: getProjectColor(task.projectId),
-                        }}
-                        title={`${task.description} - ${task.progress}%`}
-                      >
-                        {task.progress}%
-                      </div>
-                    )}
-                  </div>
+            {/* 甘特图网格区域 */}
+            <div className="relative mt-2">
+              {/* 垂直经线（时间网格线） */}
+              <div className="absolute inset-0 flex pointer-events-none z-0">
+                <div className="w-64 flex-shrink-0" />
+                <div className="flex-1 flex">
+                  {timeline.map((date, index) => (
+                    <div
+                      key={index}
+                      className={`flex-1 border-l ${
+                        date.day() === 0 || date.date() === 1 
+                          ? 'border-gray-300 dark:border-gray-600' 
+                          : 'border-gray-100 dark:border-gray-800'
+                      }`}
+                    />
+                  ))}
                 </div>
-              );
-            })}
+              </div>
+
+              {/* 任务条 */}
+              <div className="relative space-y-1">
+                {tasks.filter(t => t.startDate || t.estimatedEndDate).map((task) => {
+                  const position = getTaskPosition(task);
+                  return (
+                    <div key={task.id} className="flex items-center">
+                      <div className="w-64 flex-shrink-0 text-sm text-gray-900 dark:text-white truncate pr-4">
+                        {task.description}
+                      </div>
+                      <div className="flex-1 relative h-8">
+                        {position && (
+                          <div
+                            className="absolute h-6 top-1 rounded text-xs text-white flex items-center px-2 truncate z-10"
+                            style={{
+                              left: position.left,
+                              width: position.width,
+                              backgroundColor: getProjectColor(task.projectId),
+                            }}
+                            title={`${task.description} - ${task.progress}%`}
+                          >
+                            {task.progress}%
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         )}
       </div>
