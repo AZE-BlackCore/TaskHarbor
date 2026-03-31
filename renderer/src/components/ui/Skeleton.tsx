@@ -1,5 +1,3 @@
-import { Card } from './Card';
-
 /**
  * 任务列表骨架屏 - 显示 3 行加载状态
  */
@@ -33,7 +31,7 @@ export function ProjectSkeleton() {
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {[1, 2, 3].map((i) => (
         <div key={i} className="animate-pulse">
-          <Card className="p-6">
+          <div className="bg-white dark:bg-dark-card rounded-lg p-6 shadow-lg">
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
@@ -52,7 +50,7 @@ export function ProjectSkeleton() {
               <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-16"></div>
               <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-16"></div>
             </div>
-          </Card>
+          </div>
         </div>
       ))}
     </div>

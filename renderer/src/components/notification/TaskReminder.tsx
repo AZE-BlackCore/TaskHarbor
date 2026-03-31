@@ -21,7 +21,7 @@ export function TaskReminder() {
         const daysUntilDue = dueDate.diff(now, 'day');
 
         // 逾期任务
-        if (daysUntilDue < 0 && task.status !== 'done') {
+        if (daysUntilDue < 0 && (task.status as string) !== 'done') {
           newReminders.push({
             id: task.id,
             taskName: task.description,
@@ -63,12 +63,14 @@ export function TaskReminder() {
       // 发送通知（如果未静音）
       if (!muted && newReminders.length > 0) {
         newReminders.forEach(reminder => {
-          if (reminder.type === 'overdue') {
-            window.electronAPI.sendNotification('任务逾期', `任务 "${reminder.taskName}" 已逾期！`);
-          } else if (reminder.dueDate === '今天') {
-            window.electronAPI.sendNotification('任务提醒', `任务 "${reminder.taskName}" 今天到期！`);
-          } else if (reminder.dueDate === '明天') {
-            window.electronAPI.sendNotification('任务提醒', `任务 "${reminder.taskName}" 明天到期！`);
+          if ((window as any).electronAPI?.sendNotification) {
+            if (reminder.type === 'overdue') {
+              (window as any).electronAPI.sendNotification('任务逾期', `任务 "${reminder.taskName}" 已逾期！`);
+            } else if (reminder.dueDate === '今天') {
+              (window as any).electronAPI.sendNotification('任务提醒', `任务 "${reminder.taskName}" 今天到期！`);
+            } else if (reminder.dueDate === '明天') {
+              (window as any).electronAPI.sendNotification('任务提醒', `任务 "${reminder.taskName}" 明天到期！`);
+            }
           }
         });
       }

@@ -1,6 +1,8 @@
 import { ipcMain } from 'electron';
 import { taskService } from '../services/taskService';
-import { saveDatabase } from '../services/database';
+import { saveDatabase, getDatabase } from '../services/database';
+import { generateId } from '../utils/idGenerator';
+import { getUTCNow } from '../utils/timestamp';
 
 export async function setupTaskHandlers() {
   // 初始化 TaskService

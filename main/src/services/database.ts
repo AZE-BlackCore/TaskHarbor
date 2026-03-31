@@ -116,6 +116,10 @@ export async function setupDatabase() {
     // @ts-ignore
     manager.dbPath = DB_PATH;
 
+    // 启用外键约束（SQLite 默认关闭，必须每次连接后手动启用）
+    db!.run('PRAGMA foreign_keys = ON');
+    console.log('[Database] Foreign keys enabled');
+
     // 创建项目表
     db!.run(`
       CREATE TABLE IF NOT EXISTS projects (
@@ -215,47 +219,64 @@ export async function setupDatabase() {
     db!.run(`CREATE INDEX IF NOT EXISTS idx_tags_task ON task_tags(taskId)`);
 
     // 创建数据验证触发器
-    db!.run(`
-      CREATE TRIGGER IF NOT EXISTS validate_task_project
-      BEFORE INSERT ON tasks
-      FOR EACH ROW
-      BEGIN
-        SELECT CASE
-          WHEN (SELECT COUNT(*) FROM projects WHERE id = NEW.projectId) = 0
-          THEN RAISE(ABORT, 'Project not found')
+    // 注意：sql.js 不支持 IF EXISTS 语法，直接创建，如果已存在会报错忽略
+    try {
+      db!.run(`
+        CREATE TRIGGER validate_task_project
+        BEFORE INSERT ON tasks
+        FOR EACH ROW
+        BEGIN
+          SELECT CASE
+            WHEN (SELECT COUNT(*) FROM projects WHERE id = NEW.projectId) = 0
+            THEN RAISE(ABORT, 'Project not found')
+          END;
         END;
-      END;
-    `);
+      `);
+    } catch (e) {
+      console.log('Trigger validate_task_project already exists');
+    }
 
-    db!.run(`
-      CREATE TRIGGER IF NOT EXISTS validate_task_progress
-      BEFORE INSERT OR UPDATE ON tasks
-      FOR EACH ROW
-      BEGIN
-        SELECT CASE
-          WHEN NEW.progress < 0 OR NEW.progress > 100
-          THEN RAISE(ABORT, 'Progress must be between 0 and 100')
+    try {
+      db!.run(`
+        CREATE TRIGGER validate_task_progress
+        BEFORE INSERT OR UPDATE ON tasks
+        FOR EACH ROW
+        BEGIN
+          SELECT CASE
+            WHEN NEW.progress < 0 OR NEW.progress > 100
+            THEN RAISE(ABORT, 'Progress must be between 0 and 100')
+          END;
         END;
-      END;
-    `);
+      `);
+    } catch (e) {
+      console.log('Trigger validate_task_progress already exists');
+    }
 
-    db!.run(`
-      CREATE TRIGGER IF NOT EXISTS update_task_timestamp
-      AFTER UPDATE ON tasks
-      FOR EACH ROW
-      BEGIN
-        UPDATE tasks SET updatedAt = datetime('now') WHERE id = NEW.id;
-      END;
-    `);
+    try {
+      db!.run(`
+        CREATE TRIGGER update_task_timestamp
+        AFTER UPDATE ON tasks
+        FOR EACH ROW
+        BEGIN
+          UPDATE tasks SET updatedAt = datetime('now') WHERE id = NEW.id;
+        END;
+      `);
+    } catch (e) {
+      console.log('Trigger update_task_timestamp already exists');
+    }
 
-    db!.run(`
-      CREATE TRIGGER IF NOT EXISTS update_project_timestamp
-      AFTER UPDATE ON projects
-      FOR EACH ROW
-      BEGIN
-        UPDATE projects SET updatedAt = datetime('now') WHERE id = NEW.id;
-      END;
-    `);
+    try {
+      db!.run(`
+        CREATE TRIGGER update_project_timestamp
+        AFTER UPDATE ON projects
+        FOR EACH ROW
+        BEGIN
+          UPDATE projects SET updatedAt = datetime('now') WHERE id = NEW.id;
+        END;
+      `);
+    } catch (e) {
+      console.log('Trigger update_project_timestamp already exists');
+    }
 
     // 保存数据库
     dbManager.saveDatabase();

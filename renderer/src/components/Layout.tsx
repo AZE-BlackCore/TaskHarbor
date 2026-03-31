@@ -26,9 +26,19 @@ import {
 import { SettingsPanel } from './settings/SettingsPanel';
 import { ToastContainer } from './ui/Toast';
 import { useViewStore } from '../stores/viewStore';
+import { useViewConfigStore, ViewItem } from '../stores/viewConfigStore';
 import { useProjectStore } from '../stores/projectStore';
 import { useTaskStore } from '../stores/taskStore';
 import { Project } from '../types';
+
+const ICON_MAP: Record<string, any> = {
+  List,
+  Grid3X3,
+  Network,
+  Columns,
+  Calendar: CalendarIcon,
+  BarChart3,
+};
 
 interface LayoutProps {
   darkMode: boolean;
@@ -39,6 +49,7 @@ export function Layout({ darkMode, toggleDarkMode }: LayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { setView } = useViewStore();
+  const { views, loadViews } = useViewConfigStore();
   const { projects, fetchProjects, createProject } = useProjectStore();
   const { fetchTasks } = useTaskStore();
   const [showNewProjectDialog, setShowNewProjectDialog] = useState(false);
@@ -47,6 +58,7 @@ export function Layout({ darkMode, toggleDarkMode }: LayoutProps) {
   const [newProjectType, setNewProjectType] = useState<'personal' | 'company'>('personal');
 
   useEffect(() => {
+    loadViews();
     fetchProjects();
     fetchTasks();
   }, []);
@@ -85,66 +97,26 @@ export function Layout({ darkMode, toggleDarkMode }: LayoutProps) {
         </SidebarHeader>
 
         <SidebarContent className="flex-1 overflow-y-auto p-4">
-          {/* 视图切换 */}
+          {/* 视图切换 - 动态渲染 */}
           <div className="mb-6">
             <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">
               视图
             </h3>
             <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  onClick={() => handleViewChange('list', '/list')}
-                  active={location.pathname === '/list' || location.pathname === '/'}
-                  icon={<List className="w-4 h-4" />}
-                >
-                  任务列表
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  onClick={() => navigate('/projects')}
-                  active={location.pathname === '/projects'}
-                  icon={<Grid3X3 className="w-4 h-4" />}
-                >
-                  项目管理
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  onClick={() => handleViewChange('gantt', '/gantt')}
-                  active={location.pathname === '/gantt'}
-                  icon={<Network className="w-4 h-4" />}
-                >
-                  甘特图
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  onClick={() => handleViewChange('kanban', '/kanban')}
-                  active={location.pathname === '/kanban'}
-                  icon={<Columns className="w-4 h-4" />}
-                >
-                  看板
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  onClick={() => handleViewChange('calendar', '/calendar')}
-                  active={location.pathname === '/calendar'}
-                  icon={<CalendarIcon className="w-4 h-4" />}
-                >
-                  日历
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  onClick={() => handleViewChange('dashboard', '/dashboard')}
-                  active={location.pathname === '/dashboard'}
-                  icon={<BarChart3 className="w-4 h-4" />}
-                >
-                  统计报表
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+              {views.filter(v => v.enabled).map((view) => {
+                const IconComponent = ICON_MAP[view.icon] || List;
+                return (
+                  <SidebarMenuItem key={view.id}>
+                    <SidebarMenuButton
+                      onClick={() => handleViewChange(view.id, view.path)}
+                      active={location.pathname === view.path || (view.id === 'list' && location.pathname === '/')}
+                      icon={<IconComponent className="w-4 h-4" />}
+                    >
+                      {view.name}
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
           </div>
 

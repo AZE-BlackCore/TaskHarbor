@@ -6,6 +6,11 @@ import { setupProjectHandlers } from './ipc-handlers/project-handlers';
 import { setupWindowHandlers } from './ipc-handlers/window-handlers';
 import { setupNotificationHandlers } from './ipc-handlers/notification-handlers';
 
+console.log('=== Main Process Started ===');
+console.log('Electron version:', process.versions.electron);
+console.log('Node version:', process.versions.node);
+console.log('Chrome version:', process.versions.chrome);
+
 let mainWindow: BrowserWindow | null = null;
 
 // 设置 Content Security Policy
@@ -29,15 +34,27 @@ function setupCSP() {
 
 // 获取资源路径（兼容开发环境和打包后）
 function getResourcePath(relativePath: string): string {
-  // 打包后资源在 app.asar 中
   if (app.isPackaged) {
-    return path.join(process.resourcesPath, 'app.asar', relativePath);
+    // 打包后：__dirname = {resourcesPath}/app.asar/main/dist
+    // 通过 __dirname 回溯到 asar 根目录，loadFile 可正确解析 asar 虚拟路径
+    return path.join(__dirname, '../../', relativePath);
   }
   // 开发环境
   return path.join(__dirname, '..', '..', relativePath);
 }
 
+// 获取 preload 脚本路径（preload 不能在 asar 内，需从 extraResources 读取）
+function getPreloadPath(): string {
+  if (app.isPackaged) {
+    return path.join(process.resourcesPath, 'preload', 'dist', 'index.js');
+  }
+  return path.join(__dirname, '../../preload/dist/index.js');
+}
+
 function createWindow() {
+  const preloadPath = getPreloadPath();
+  console.log('Preload path:', preloadPath);
+  
   // 创建主窗口
   mainWindow = new BrowserWindow({
     width: 1400,
@@ -49,7 +66,7 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: getResourcePath('preload/dist/index.js'),
+      preload: preloadPath,
     },
   });
 
@@ -89,7 +106,7 @@ export function createFloatingWindow(options?: {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: path.join(__dirname, '../../preload/dist/index.js'),
+      preload: getPreloadPath(),
     },
   });
 
@@ -122,14 +139,16 @@ app.whenReady().then(async () => {
     await setupDatabase();
     console.log('Database setup complete');
 
-    // 创建主窗口
-    createWindow();
-
-    // 设置 IPC 处理器（支持异步初始化）
+    // 设置 IPC 处理器（支持异步初始化）- 在创建窗口之前设置
     await setupTaskHandlers();
     await setupProjectHandlers();
     setupWindowHandlers();
     setupNotificationHandlers();
+    
+    console.log('IPC handlers setup complete');
+
+    // 创建主窗口
+    createWindow();
 
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) {

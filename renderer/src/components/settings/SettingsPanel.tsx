@@ -11,11 +11,13 @@ import {
   Download, 
   Trash2,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  LayoutGrid
 } from 'lucide-react';
 import { useTaskStore } from '../../stores/taskStore';
 import { useProjectStore } from '../../stores/projectStore';
 import { exportToExcel, exportToCSV, exportToMarkdown } from '../../utils/export';
+import { ViewOrderSettings } from './ViewOrderSettings';
 
 interface SettingsPanelProps {
   open: boolean;
@@ -79,6 +81,15 @@ export function SettingsPanel({ open, onClose, darkMode, toggleDarkMode }: Setti
   return (
     <Dialog open={open} onClose={onClose} title="设置" className="max-w-2xl">
       <div className="space-y-6">
+        {/* 视图设置 */}
+        <section>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+            <LayoutGrid className="w-5 h-5" />
+            视图设置
+          </h3>
+          <ViewOrderSettings />
+        </section>
+
         {/* 外观设置 */}
         <section>
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">

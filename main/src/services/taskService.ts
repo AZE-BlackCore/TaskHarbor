@@ -25,7 +25,10 @@ export interface CreateTaskInput {
 /**
  * 任务更新参数
  */
-export interface UpdateTaskInput extends Partial<CreateTaskInput> {}
+export interface UpdateTaskInput extends Partial<CreateTaskInput> {
+  [key: string]: any;
+  actualEndDate?: string;
+}
 
 /**
  * 任务查询过滤器
@@ -136,15 +139,13 @@ export class TaskService {
       UPDATE tasks SET ${setClauses.join(', ')} WHERE id = ?
     `);
 
-    const result = stmt.run(values);
+    stmt.run(values);
     
     // 清除相关缓存
-    if (result.changes > 0) {
-      cacheService.invalidateByPrefix('tasks:');
-      cacheService.invalidateByPrefix('query:tasks:');
-    }
+    cacheService.invalidateByPrefix('tasks:');
+    cacheService.invalidateByPrefix('query:tasks:');
     
-    return result.changes > 0;
+    return true;
   }
 
   /**
@@ -153,16 +154,20 @@ export class TaskService {
    * @returns 是否删除成功
    */
   async deleteTask(id: string) {
-    const stmt = this.db.prepare('DELETE FROM tasks WHERE id = ?');
-    const result = stmt.run([id]);
-    
-    // 清除相关缓存
-    if (result.changes > 0) {
-      cacheService.invalidateByPrefix('tasks:');
-      cacheService.invalidateByPrefix('query:tasks:');
+    // 先检查任务是否存在
+    const task = await this.findById(id);
+    if (!task) {
+      return false;
     }
     
-    return result.changes > 0;
+    const stmt = this.db.prepare('DELETE FROM tasks WHERE id = ?');
+    stmt.run([id]);
+    
+    // 清除相关缓存
+    cacheService.invalidateByPrefix('tasks:');
+    cacheService.invalidateByPrefix('query:tasks:');
+    
+    return true;
   }
 
   /**
@@ -173,17 +178,24 @@ export class TaskService {
   async deleteTasks(ids: string[]) {
     if (ids.length === 0) return 0;
 
+    let deletedCount = 0;
     const placeholders = ids.map(() => '?').join(',');
     const stmt = this.db.prepare(`DELETE FROM tasks WHERE id IN (${placeholders})`);
-    const result = stmt.run(ids);
+    stmt.run(ids);
     
-    // 清除相关缓存
-    if (result.changes > 0) {
-      cacheService.invalidateByPrefix('tasks:');
-      cacheService.invalidateByPrefix('query:tasks:');
+    // 统计实际删除的数量（通过检查哪些 ID 不再存在）
+    for (const id of ids) {
+      const task = await this.findById(id);
+      if (!task) {
+        deletedCount++;
+      }
     }
     
-    return result.changes;
+    // 清除相关缓存
+    cacheService.invalidateByPrefix('tasks:');
+    cacheService.invalidateByPrefix('query:tasks:');
+    
+    return deletedCount;
   }
 
   /**

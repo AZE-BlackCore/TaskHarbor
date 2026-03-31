@@ -3,6 +3,10 @@ import { useTaskStore } from '../stores/taskStore';
 import { useProjectStore } from '../stores/projectStore';
 import { ZoomIn, ZoomOut, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import dayjs from 'dayjs';
+import weekOfYear from 'dayjs/plugin/weekOfYear';
+
+// 启用 weekOfYear 插件
+dayjs.extend(weekOfYear);
 
 export function GanttView() {
   const { tasks, fetchTasks } = useTaskStore();
@@ -13,7 +17,7 @@ export function GanttView() {
   useEffect(() => {
     fetchTasks();
     fetchProjects();
-  }, []);
+  }, [fetchTasks, fetchProjects]);
 
   const getProjectColor = (projectId: string) => {
     const project = projects.find(p => p.id === projectId);
@@ -53,7 +57,7 @@ export function GanttView() {
   // 生成时间轴
   const generateTimeline = () => {
     const days = [];
-    const startDate = currentDate.startOf(zoomLevel === 'day' ? 'week' : zoomLevel === 'week' ? 'month' : 'quarter');
+    const startDate = currentDate.startOf(zoomLevel === 'day' ? 'week' : zoomLevel === 'week' ? 'month' : 'year' as any);
     const endDate = startDate.add(zoomLevel === 'day' ? 14 : zoomLevel === 'week' ? 6 : 12, zoomLevel === 'day' ? 'day' : zoomLevel === 'week' ? 'week' : 'month');
     
     let current = startDate;

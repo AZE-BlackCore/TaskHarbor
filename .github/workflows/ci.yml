@@ -1,0 +1,181 @@
+name: CI
+
+# 触发条件：push 到 main/develop 分支，或任意 PR
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - 'feature/**'
+      - 'fix/**'
+  pull_request:
+    branches:
+      - main
+      - develop
+
+# 并发控制：同一分支同时只运行一个 CI，新的会取消旧的
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ─────────────────────────────────────────────
+  # Job 1: 代码质量检查（Lint + TypeScript 类型检查）
+  # ─────────────────────────────────────────────
+  lint-and-typecheck:
+    name: 🔍 Lint & TypeScript
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: 📥 Checkout 代码
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 📦 安装根依赖
+        run: npm ci
+
+      - name: 📦 安装 Renderer 依赖
+        run: npm ci
+        working-directory: renderer
+
+      # TypeScript 类型检查 - 主进程
+      - name: 🔎 TypeScript 检查（主进程）
+        run: npx tsc --noEmit --project main/tsconfig.json
+
+      # TypeScript 类型检查 - preload
+      - name: 🔎 TypeScript 检查（Preload）
+        run: npx tsc --noEmit --project preload/tsconfig.json
+
+      # TypeScript 类型检查 - 渲染进程
+      - name: 🔎 TypeScript 检查（渲染进程）
+        run: npx tsc -b --noEmit
+        working-directory: renderer
+
+      # ESLint 代码质量检查
+      - name: 🧹 ESLint 检查
+        run: npm run lint --if-present
+        working-directory: renderer
+
+  # ─────────────────────────────────────────────
+  # Job 2: 编译构建验证（确保三端均可成功编译）
+  # ─────────────────────────────────────────────
+  build:
+    name: 🔨 Build Verification
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: lint-and-typecheck
+
+    steps:
+      - name: 📥 Checkout 代码
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 📦 安装根依赖
+        run: npm ci
+
+      - name: 📦 安装 Renderer 依赖
+        run: npm ci
+        working-directory: renderer
+
+      # 并行编译三端
+      - name: 🏗️ 编译主进程
+        run: npm run build:main
+
+      - name: 🏗️ 编译 Preload
+        run: npm run build:preload
+
+      - name: 🏗️ 编译渲染进程
+        run: npm run build:renderer
+
+      # 上传编译产物供后续 Job 使用（可选，加速后续 release 流程）
+      - name: 📤 上传编译产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output-${{ github.sha }}
+          path: |
+            main/dist/
+            preload/dist/
+            renderer/dist/
+          retention-days: 7
+
+  # ─────────────────────────────────────────────
+  # Job 3: 功能测试（运行 tests/run-tests.js）
+  # ─────────────────────────────────────────────
+  test:
+    name: 🧪 Functional Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: build
+
+    steps:
+      - name: 📥 Checkout 代码
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 📦 安装根依赖
+        run: npm ci
+
+      - name: 📦 安装 Renderer 依赖
+        run: npm ci
+        working-directory: renderer
+
+      - name: 🧪 运行核心功能测试
+        run: node tests/run-tests.js
+
+      # 如果有 vitest/jest，在此运行单元测试
+      - name: 🧪 单元测试（如已配置）
+        run: npm test --if-present
+        working-directory: renderer
+        continue-on-error: true  # 尚未有 vitest 时不阻断流程
+
+  # ─────────────────────────────────────────────
+  # Job 4: 安全扫描（依赖漏洞检查）
+  # ─────────────────────────────────────────────
+  security-audit:
+    name: 🔒 Security Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # 安全扫描独立于其他 Job，尽早运行
+    needs: []
+
+    steps:
+      - name: 📥 Checkout 代码
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 📦 安装根依赖
+        run: npm ci
+
+      - name: 📦 安装 Renderer 依赖
+        run: npm ci
+        working-directory: renderer
+
+      - name: 🔐 根依赖安全审计
+        run: npm audit --audit-level=high
+        continue-on-error: true  # 审计问题告警但不阻断 CI
+
+      - name: 🔐 Renderer 依赖安全审计
+        run: npm audit --audit-level=high
+        working-directory: renderer
+        continue-on-error: true

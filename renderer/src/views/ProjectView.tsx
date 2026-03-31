@@ -48,10 +48,10 @@ export function ProjectView() {
 
   // 计算项目统计（使用缓存优化）
   const getProjectStats = useMemo(() => {
-    return (projectId: string) => {
+    return (projectId: string): { taskCount: number; completedCount: number; averageProgress: number } => {
       // 尝试从缓存获取
       const cacheKey = getProjectStatsCacheKey(projectId);
-      const cached = cacheService.get(cacheKey);
+      const cached = cacheService.get<{ taskCount: number; completedCount: number; averageProgress: number }>(cacheKey);
       if (cached) {
         return cached;
       }
