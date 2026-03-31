@@ -15,7 +15,7 @@ export function CalendarView() {
 
   useEffect(() => {
     fetchTasks();
-  }, []);
+  }, [fetchTasks]);
 
   const getDaysInMonth = () => {
     const startOfMonth = currentMonth.startOf('month');

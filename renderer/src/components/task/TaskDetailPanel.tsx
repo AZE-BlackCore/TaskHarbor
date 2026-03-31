@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { Task, Subtask, TimeLog, TaskTag } from '../../types';
 import { SubtaskList } from './SubtaskList';

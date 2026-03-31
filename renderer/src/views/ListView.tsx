@@ -2,13 +2,12 @@ import { useEffect, useState } from 'react';
 import { useTaskStore } from '../stores/taskStore';
 import { useProjectStore } from '../stores/projectStore';
 import { Task, TaskStatus } from '../types';
-import { Plus, Search, Filter, MoreVertical, Edit2, Trash2 } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2 } from 'lucide-react';
 import { TaskEditDialog } from '../components/task/TaskEditDialog';
-import { TableSkeleton } from '../components/ui/Skeleton';
 
 export function ListView() {
   const { tasks, fetchTasks, createTask, updateTaskStatus, deleteTask, updateTask, loading } = useTaskStore();
-  const { projects, currentProjectId, setCurrentProject } = useProjectStore();
+  const { currentProjectId } = useProjectStore();
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -17,7 +16,7 @@ export function ListView() {
 
   useEffect(() => {
     fetchTasks(currentProjectId ? { projectId: currentProjectId } : undefined);
-  }, [currentProjectId]);
+  }, [currentProjectId, fetchTasks]);
 
   const handleEdit = (task: Task) => {
     setEditingTask(task);
@@ -50,15 +49,6 @@ export function ListView() {
     }
   };
 
-  const getStatusLabel = (status: TaskStatus) => {
-    switch (status) {
-      case 'todo': return '待办';
-      case 'in-progress': return '进行中';
-      case 'review': return '审查中';
-      case 'done': return '已完成';
-      case 'blocked': return '已阻塞';
-    }
-  };
 
   const filteredTasks = tasks.filter(task => {
     // 搜索过滤

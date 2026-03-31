@@ -14,7 +14,8 @@ interface TimeTrackerProps {
   onDelete: (id: string) => void;
 }
 
-export function TimeTracker({ taskId, timeLogs, onStart, onStop, onDelete }: TimeTrackerProps) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function TimeTracker({ taskId: _taskId, timeLogs, onStart, onStop, onDelete }: TimeTrackerProps) {
   const [isTracking, setIsTracking] = useState(false);
   const [currentLogId, setCurrentLogId] = useState<string | null>(null);
   const [elapsed, setElapsed] = useState(0);

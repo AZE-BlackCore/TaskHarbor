@@ -58,10 +58,10 @@ export const useTaskStore = create<TaskState>()(
           await get().fetchTasks();
           useErrorStore.getState().addError(result.error || '更新失败', 'error');
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         // 失败则重新加载数据
         await get().fetchTasks();
-        useErrorStore.getState().addError(error.message, 'error');
+        useErrorStore.getState().addError(error instanceof Error ? error.message : '未知错误', 'error');
       }
     },
 
@@ -97,8 +97,8 @@ export const useTaskStore = create<TaskState>()(
         } else {
           useErrorStore.getState().addError(result.error || '删除失败', 'error');
         }
-      } catch (error: any) {
-        useErrorStore.getState().addError(error.message, 'error');
+      } catch (error: unknown) {
+        useErrorStore.getState().addError(error instanceof Error ? error.message : '未知错误', 'error');
       }
     },
 
@@ -120,9 +120,10 @@ export const useTaskStore = create<TaskState>()(
           set({ error: result.error ?? null, loading: false });
           useErrorStore.getState().addError(result.error ?? '未知错误', 'error');
         }
-      } catch (error: any) {
-        set({ error: error.message, loading: false });
-        useErrorStore.getState().addError(error.message, 'error');
+      } catch (error: unknown) {
+        const msg = error instanceof Error ? error.message : '未知错误';
+        set({ error: msg, loading: false });
+        useErrorStore.getState().addError(msg, 'error');
       }
     },
 
@@ -177,10 +178,10 @@ export const useTaskStore = create<TaskState>()(
           useErrorStore.getState().addError(result.error || '创建失败', 'error');
           return null;
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         // 异常回滚
         rollback();
-        useErrorStore.getState().addError(error.message, 'error');
+        useErrorStore.getState().addError(error instanceof Error ? error.message : '未知错误', 'error');
         return null;
       }
     },
@@ -196,9 +197,9 @@ export const useTaskStore = create<TaskState>()(
           // 失败回滚
           useErrorStore.getState().addError(result.error || '更新失败', 'error');
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('Error updating task status:', error);
-        useErrorStore.getState().addError(error.message, 'error');
+        useErrorStore.getState().addError(error instanceof Error ? error.message : '未知错误', 'error');
       }
     },
 
@@ -212,9 +213,9 @@ export const useTaskStore = create<TaskState>()(
         if (!result.success) {
           useErrorStore.getState().addError(result.error || '更新进度失败', 'error');
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('Error updating task progress:', error);
-        useErrorStore.getState().addError(error.message, 'error');
+        useErrorStore.getState().addError(error instanceof Error ? error.message : '未知错误', 'error');
       }
     },
   }))

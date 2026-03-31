@@ -10,41 +10,44 @@ interface ElectronAPI {
   toggleAlwaysOnTop: () => Promise<{ success: boolean }>;
   
   // 任务 CRUD
-  getTasks: (filters?: any) => Promise<{ success: boolean; data: any[]; error?: string }>;
-  getTaskById: (id: string) => Promise<{ success: boolean; data: any; error?: string }>;
-  createTask: (taskData: any) => Promise<{ success: boolean; data: any; error?: string }>;
-  updateTask: (id: string, updates: any) => Promise<{ success: boolean; error?: string }>;
+  getTasks: (filters?: Record<string, unknown>) => Promise<{ success: boolean; data: Record<string, unknown>[]; error?: string }>;
+  getTaskById: (id: string) => Promise<{ success: boolean; data: Record<string, unknown>; error?: string }>;
+  createTask: (taskData: Record<string, unknown>) => Promise<{ success: boolean; data: Record<string, unknown>; error?: string }>;
+  updateTask: (id: string, updates: Record<string, unknown>) => Promise<{ success: boolean; error?: string }>;
   deleteTask: (id: string) => Promise<{ success: boolean; error?: string }>;
   deleteTasksBatch: (ids: string[]) => Promise<{ success: boolean; error?: string }>;
   
   // 子任务
-  getSubtasks: (taskId: string) => Promise<{ success: boolean; data: any[]; error?: string }>;
-  createSubtask: (subtaskData: any) => Promise<{ success: boolean; data: any; error?: string }>;
-  updateSubtask: (id: string, updates: any) => Promise<{ success: boolean; error?: string }>;
+  getSubtasks: (taskId: string) => Promise<{ success: boolean; data: Record<string, unknown>[]; error?: string }>;
+  createSubtask: (subtaskData: Record<string, unknown>) => Promise<{ success: boolean; data: Record<string, unknown>; error?: string }>;
+  updateSubtask: (id: string, updates: Record<string, unknown>) => Promise<{ success: boolean; error?: string }>;
   deleteSubtask: (id: string) => Promise<{ success: boolean; error?: string }>;
   
   // 时间追踪
-  getTimelogs: (taskId: string) => Promise<{ success: boolean; data: any[]; error?: string }>;
-  startTimelog: (taskId: string, description?: string) => Promise<{ success: boolean; data: any; error?: string }>;
-  stopTimelog: (id: string) => Promise<{ success: boolean; data: any; error?: string }>;
+  getTimelogs: (taskId: string) => Promise<{ success: boolean; data: Record<string, unknown>[]; error?: string }>;
+  startTimelog: (taskId: string, description?: string) => Promise<{ success: boolean; data: Record<string, unknown>; error?: string }>;
+  stopTimelog: (id: string) => Promise<{ success: boolean; data: Record<string, unknown>; error?: string }>;
   
   // 依赖关系
-  getDependencies: (taskId: string) => Promise<{ success: boolean; data: any[]; error?: string }>;
+  getDependencies: (taskId: string) => Promise<{ success: boolean; data: Record<string, unknown>[]; error?: string }>;
   createDependency: (taskId: string, dependencyTaskId: string, type?: string) => Promise<{ success: boolean; error?: string }>;
   deleteDependency: (id: string) => Promise<{ success: boolean; error?: string }>;
   
   // 标签
-  getTags: (taskId: string) => Promise<{ success: boolean; data: any[]; error?: string }>;
+  getTags: (taskId: string) => Promise<{ success: boolean; data: Record<string, unknown>[]; error?: string }>;
   addTag: (taskId: string, tagName: string, tagColor?: string) => Promise<{ success: boolean; error?: string }>;
   deleteTag: (id: string) => Promise<{ success: boolean; error?: string }>;
   
   // 项目
-  getProjects: () => Promise<{ success: boolean; data: any[]; error?: string }>;
-  getProjectById: (id: string) => Promise<{ success: boolean; data: any; error?: string }>;
-  createProject: (projectData: any) => Promise<{ success: boolean; data: any; error?: string }>;
-  updateProject: (id: string, updates: any) => Promise<{ success: boolean; error?: string }>;
+  getProjects: () => Promise<{ success: boolean; data: Record<string, unknown>[]; error?: string }>;
+  getProjectById: (id: string) => Promise<{ success: boolean; data: Record<string, unknown>; error?: string }>;
+  createProject: (projectData: Record<string, unknown>) => Promise<{ success: boolean; data: Record<string, unknown>; error?: string }>;
+  updateProject: (id: string, updates: Record<string, unknown>) => Promise<{ success: boolean; error?: string }>;
   deleteProject: (id: string) => Promise<{ success: boolean; error?: string }>;
-  getProjectStats: (projectId: string) => Promise<{ success: boolean; data: any; error?: string }>;
+  getProjectStats: (projectId: string) => Promise<{ success: boolean; data: Record<string, unknown>; error?: string }>;
+
+  // 通知
+  sendNotification?: (title: string, body: string) => void;
 }
 
 interface Window {

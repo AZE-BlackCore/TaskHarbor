@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTaskStore } from '../stores/taskStore';
 import { useProjectStore } from '../stores/projectStore';
+import type { Task } from '../types';
 import { ZoomIn, ZoomOut, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import dayjs from 'dayjs';
 import weekOfYear from 'dayjs/plugin/weekOfYear';
@@ -57,7 +58,7 @@ export function GanttView() {
   // 生成时间轴
   const generateTimeline = () => {
     const days = [];
-    const startDate = currentDate.startOf(zoomLevel === 'day' ? 'week' : zoomLevel === 'week' ? 'month' : 'year' as any);
+    const startDate = currentDate.startOf(zoomLevel === 'day' ? 'week' : zoomLevel === 'week' ? 'month' : 'year');
     const endDate = startDate.add(zoomLevel === 'day' ? 14 : zoomLevel === 'week' ? 6 : 12, zoomLevel === 'day' ? 'day' : zoomLevel === 'week' ? 'week' : 'month');
     
     let current = startDate;
@@ -72,7 +73,7 @@ export function GanttView() {
   const timeline = generateTimeline();
 
   // 计算任务在甘特图中的位置
-  const getTaskPosition = (task: any) => {
+  const getTaskPosition = (task: Task) => {
     const start = task.startDate ? dayjs(task.startDate) : dayjs();
     const end = task.estimatedEndDate ? dayjs(task.estimatedEndDate) : start.add(7, 'day');
     const timelineStart = timeline[0];

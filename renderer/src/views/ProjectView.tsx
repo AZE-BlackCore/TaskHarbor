@@ -18,7 +18,7 @@ export function ProjectView() {
 
   useEffect(() => {
     fetchProjects();
-  }, []);
+  }, [fetchProjects]);
 
   const handleEdit = (project: Project) => {
     setEditingProject(project);
@@ -35,7 +35,7 @@ export function ProjectView() {
     if (editingProject) {
       await updateProject(editingProject.id, projectData);
     } else {
-      await createProject(projectData as any);
+      await createProject(projectData as { name: string; type: 'personal' | 'company'; description?: string; color?: string });
     }
     setShowEditDialog(false);
     setEditingProject(null);

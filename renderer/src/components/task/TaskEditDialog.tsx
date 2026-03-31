@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, FieldErrors } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Dialog, DialogFooter } from '../ui/dialog';
@@ -58,7 +58,6 @@ export function TaskEditDialog({ open, task, onClose, onSave }: TaskEditDialogPr
   const { addError } = useErrorStore();
 
   const {
-    register,
     handleSubmit,
     formState: { errors },
     setValue,
@@ -122,10 +121,10 @@ export function TaskEditDialog({ open, task, onClose, onSave }: TaskEditDialogPr
     onClose();
   };
 
-  const onError = (errors: any) => {
-    const firstError = Object.values(errors)[0] as any;
-    if (firstError) {
-      addError(firstError.message, 'error');
+  const onError = (errs: FieldErrors<TaskFormData>) => {
+    const firstError = Object.values(errs)[0];
+    if (firstError && 'message' in firstError) {
+      addError(firstError.message as string, 'error');
     }
   };
 

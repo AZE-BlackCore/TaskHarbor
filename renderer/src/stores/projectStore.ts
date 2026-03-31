@@ -79,8 +79,8 @@ export const useProjectStore = create<ProjectState>()(
         } else {
           useErrorStore.getState().addError(result.error || '删除失败', 'error');
         }
-      } catch (error: any) {
-        useErrorStore.getState().addError(error.message, 'error');
+      } catch (error: unknown) {
+        useErrorStore.getState().addError(error instanceof Error ? error.message : '未知错误', 'error');
       }
     },
 
@@ -100,9 +100,10 @@ export const useProjectStore = create<ProjectState>()(
         set({ error: result.error ?? null, loading: false });
         useErrorStore.getState().addError(result.error ?? '未知错误', 'error');
       }
-    } catch (error: any) {
-      set({ error: error.message, loading: false });
-      useErrorStore.getState().addError(error.message, 'error');
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : '未知错误';
+      set({ error: msg, loading: false });
+      useErrorStore.getState().addError(msg, 'error');
     }
   },
 
@@ -156,9 +157,9 @@ export const useProjectStore = create<ProjectState>()(
         useErrorStore.getState().addError(result.error || '创建失败', 'error');
         return null;
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       rollback();
-      useErrorStore.getState().addError(error.message, 'error');
+      useErrorStore.getState().addError(error instanceof Error ? error.message : '未知错误', 'error');
       return null;
     }
   },
@@ -172,7 +173,7 @@ export const useProjectStore = create<ProjectState>()(
         } else {
           return null;
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('Error getting project stats:', error);
         return null;
       }

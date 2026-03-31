@@ -20,7 +20,8 @@ export function VirtualTaskList({
   onDelete,
   onStatusChange,
   getStatusColor,
-  getStatusLabel,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  getStatusLabel: _getStatusLabel,
 }: VirtualTaskListProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [scrollTop, setScrollTop] = useState(0);
@@ -59,7 +60,7 @@ export function VirtualTaskList({
       <div style={{ height: totalHeight, position: 'relative' }}>
         {/* 可见行 */}
         <div style={{ position: 'absolute', top: offsetY, left: 0, right: 0 }}>
-          {tasks.slice(startIndex, endIndex + 1).map((task, i) => (
+          {tasks.slice(startIndex, endIndex + 1).map((task) => (
             <div
               key={task.id}
               style={{ height: ROW_HEIGHT }}

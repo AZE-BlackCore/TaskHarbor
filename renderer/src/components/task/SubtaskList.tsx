@@ -10,7 +10,8 @@ interface SubtaskListProps {
   onDelete: (id: string) => void;
 }
 
-export function SubtaskList({ taskId, subtasks, onAdd, onToggle, onDelete }: SubtaskListProps) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function SubtaskList({ taskId: _taskId, subtasks, onAdd, onToggle, onDelete }: SubtaskListProps) {
   const [newSubtask, setNewSubtask] = useState('');
   const [showAdd, setShowAdd] = useState(false);
 

@@ -4,7 +4,7 @@ import App from './App.tsx'
 
 // 检查 Electron API 是否可用
 console.log('=== Electron API Check ===')
-console.log('window.electronAPI:', (window as any).electronAPI)
+console.log('window.electronAPI:', window.electronAPI)
 console.log('Has electronAPI:', 'electronAPI' in window)
 console.log('========================')
 

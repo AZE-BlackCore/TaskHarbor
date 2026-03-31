@@ -28,7 +28,7 @@ const DEFAULT_VIEWS: ViewItem[] = [
 ];
 
 export const useViewConfigStore = create<ViewState>()(
-  immer((set, get) => ({
+  immer((set) => ({
     views: [],
 
     loadViews: () => {

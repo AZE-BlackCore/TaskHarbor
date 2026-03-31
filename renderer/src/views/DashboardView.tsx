@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTaskStore } from '../stores/taskStore';
 import { useProjectStore } from '../stores/projectStore';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
@@ -24,7 +24,7 @@ export function DashboardView() {
   useEffect(() => {
     fetchTasks();
     fetchProjects();
-  }, []);
+  }, [fetchTasks, fetchProjects]);
 
   useEffect(() => {
     // 计算统计数据
@@ -88,7 +88,15 @@ export function DashboardView() {
     }).length },
   ];
 
-  const StatCard = ({ title, value, icon: Icon, color, trend }: any) => (
+  interface StatCardProps {
+    title: string;
+    value: number | string;
+    icon: React.ComponentType<{ className?: string }>;
+    color: string;
+    trend?: number;
+  }
+
+  const StatCard = ({ title, value, icon: Icon, color, trend }: StatCardProps) => (
     <div className="bg-white dark:bg-dark-card rounded-lg p-6 shadow-sm border border-light-border dark:border-dark-border">
       <div className="flex items-center justify-between">
         <div>

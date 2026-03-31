@@ -52,9 +52,9 @@ export function SettingsPanel({ open, onClose, darkMode, toggleDarkMode }: Setti
       } else {
         alert('导出失败：' + result.error);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('导出失败:', error);
-      alert('导出失败：' + error.message);
+      alert('导出失败：' + (error instanceof Error ? error.message : '未知错误'));
     } finally {
       setExporting(false);
     }
@@ -73,8 +73,8 @@ export function SettingsPanel({ open, onClose, darkMode, toggleDarkMode }: Setti
     try {
       // TODO: 实现数据备份功能
       alert('数据备份功能开发中...');
-    } catch (error: any) {
-      alert('备份失败：' + error.message);
+    } catch (error: unknown) {
+      alert('备份失败：' + (error instanceof Error ? error.message : '未知错误'));
     }
   };
 

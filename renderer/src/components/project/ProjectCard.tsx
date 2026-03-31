@@ -1,4 +1,4 @@
-import { FolderOpen, Users, CheckCircle, TrendingUp, MoreVertical, Edit2, Trash2 } from 'lucide-react';
+import { FolderOpen, Users, CheckCircle, TrendingUp, Edit2, Trash2 } from 'lucide-react';
 import { Project } from '../../types';
 
 interface ProjectCardProps {

@@ -1,10 +1,8 @@
 import { useEffect } from 'react';
 import { GripVertical, ChevronUp, ChevronDown } from 'lucide-react';
-import { useViewConfigStore, ViewItem } from '../../stores/viewConfigStore';
+import { useViewConfigStore } from '../../stores/viewConfigStore';
 
-interface ViewOrderSettingsProps {}
-
-export function ViewOrderSettings({}: ViewOrderSettingsProps) {
+export function ViewOrderSettings() {
   const { views, updateViewOrder, resetViews } = useViewConfigStore();
   
   // 确保视图已加载

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { 
   Sidebar, 
@@ -17,7 +17,6 @@ import {
   Network,
   Sun,
   Moon,
-  Menu,
   Plus,
   FolderOpen,
   Grid3X3,
@@ -26,12 +25,12 @@ import {
 import { SettingsPanel } from './settings/SettingsPanel';
 import { ToastContainer } from './ui/Toast';
 import { useViewStore } from '../stores/viewStore';
-import { useViewConfigStore, ViewItem } from '../stores/viewConfigStore';
+import type { ViewType } from '../stores/viewStore';
+import { useViewConfigStore } from '../stores/viewConfigStore';
 import { useProjectStore } from '../stores/projectStore';
 import { useTaskStore } from '../stores/taskStore';
-import { Project } from '../types';
 
-const ICON_MAP: Record<string, any> = {
+const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   List,
   Grid3X3,
   Network,
@@ -61,10 +60,10 @@ export function Layout({ darkMode, toggleDarkMode }: LayoutProps) {
     loadViews();
     fetchProjects();
     fetchTasks();
-  }, []);
+  }, [loadViews, fetchProjects, fetchTasks]);
 
   const handleViewChange = (view: string, path: string) => {
-    setView(view as any);
+    setView(view as ViewType);
     navigate(path);
   };
 

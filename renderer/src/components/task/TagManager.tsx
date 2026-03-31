@@ -20,7 +20,8 @@ const COLORS = [
   '#6366F1', // 靛蓝
 ];
 
-export function TagManager({ taskId, tags, onAdd, onDelete }: TagManagerProps) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function TagManager({ taskId: _taskId, tags, onAdd, onDelete }: TagManagerProps) {
   const [showAdd, setShowAdd] = useState(false);
   const [newTagName, setNewTagName] = useState('');
   const [selectedColor, setSelectedColor] = useState(COLORS[0]);

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect } from 'react';
 import { useTaskStore } from '../stores/taskStore';
 import { useProjectStore } from '../stores/projectStore';
 import { Task, TaskStatus } from '../types';
@@ -104,25 +104,18 @@ function KanbanCard({ task, onEdit, onDelete }: KanbanCardProps) {
   );
 }
 
-import { useEffect } from 'react';
-
 export function KanbanView() {
-  const { tasks, fetchTasks, updateTaskStatus, deleteTask } = useTaskStore();
-  const { projects, fetchProjects } = useProjectStore();
-  const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const [showNewTaskDialog, setShowNewTaskDialog] = useState(false);
+  const { tasks, fetchTasks, deleteTask } = useTaskStore();
+  const { fetchProjects } = useProjectStore();
 
   useEffect(() => {
     fetchTasks();
     fetchProjects();
-  }, []);
+  }, [fetchTasks, fetchProjects]);
 
-  const handleDrop = (taskId: string, newStatus: TaskStatus) => {
-    updateTaskStatus(taskId, newStatus);
-  };
-
-  const handleEdit = (task: Task) => {
-    setEditingTask(task);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const handleEdit = (_task: Task) => {
+    // TODO: 打开任务编辑对话框
   };
 
   const handleDelete = async (taskId: string) => {

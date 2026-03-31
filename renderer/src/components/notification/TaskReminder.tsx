@@ -63,13 +63,13 @@ export function TaskReminder() {
       // 发送通知（如果未静音）
       if (!muted && newReminders.length > 0) {
         newReminders.forEach(reminder => {
-          if ((window as any).electronAPI?.sendNotification) {
+          if (window.electronAPI?.sendNotification) {
             if (reminder.type === 'overdue') {
-              (window as any).electronAPI.sendNotification('任务逾期', `任务 "${reminder.taskName}" 已逾期！`);
+              window.electronAPI.sendNotification('任务逾期', `任务 "${reminder.taskName}" 已逾期！`);
             } else if (reminder.dueDate === '今天') {
-              (window as any).electronAPI.sendNotification('任务提醒', `任务 "${reminder.taskName}" 今天到期！`);
+              window.electronAPI.sendNotification('任务提醒', `任务 "${reminder.taskName}" 今天到期！`);
             } else if (reminder.dueDate === '明天') {
-              (window as any).electronAPI.sendNotification('任务提醒', `任务 "${reminder.taskName}" 明天到期！`);
+              window.electronAPI.sendNotification('任务提醒', `任务 "${reminder.taskName}" 明天到期！`);
             }
           }
         });

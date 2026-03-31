@@ -57,7 +57,7 @@ export function ProjectEditDialog({ open, project, onClose, onSave }: ProjectEdi
     onClose();
   };
 
-  const handleChange = (field: keyof Project, value: any) => {
+  const handleChange = (field: keyof Project, value: Project[keyof Project]) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 

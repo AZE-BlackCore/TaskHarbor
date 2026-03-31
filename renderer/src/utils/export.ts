@@ -112,9 +112,9 @@ export async function exportToExcel(tasks: Task[], projects: Project[], filename
     window.URL.revokeObjectURL(url);
 
     return { success: true, message: '导出成功' };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('导出 Excel 失败:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: error instanceof Error ? error.message : '未知错误' };
   }
 }
 
@@ -163,9 +163,9 @@ export function exportToCSV(tasks: Task[], projects: Project[], filename: string
     window.URL.revokeObjectURL(url);
 
     return { success: true, message: '导出成功' };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('导出 CSV 失败:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: error instanceof Error ? error.message : '未知错误' };
   }
 }
 
@@ -228,8 +228,8 @@ export function exportToMarkdown(tasks: Task[], projects: Project[], filename: s
     window.URL.revokeObjectURL(url);
 
     return { success: true, message: '导出成功' };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('导出 Markdown 失败:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: error instanceof Error ? error.message : '未知错误' };
   }
 }
