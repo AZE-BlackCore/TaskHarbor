@@ -14,7 +14,9 @@ export function Dialog({ open, onClose, title, children, className }: DialogProp
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-fade-in">
+    <div 
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-fade-in"
+    >
       <div 
         className={cn(
           'bg-white dark:bg-dark-card rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden',

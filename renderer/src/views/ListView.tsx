@@ -178,6 +178,15 @@ export function ListView() {
                 责任人
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                开始时间
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                预计完成
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                实际完成
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 操作
               </th>
             </tr>
@@ -246,27 +255,42 @@ export function ListView() {
                         </span>
                       </div>
                     </td>
-                    <td className="px-4 py-3">
-                      <div className="text-sm text-gray-500 dark:text-gray-400">
-                        {task.assignee || '-'}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <button 
-                          onClick={() => handleEdit(task)}
-                          className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
-                        >
-                          <Edit2 className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-                        </button>
-                        <button 
-                          onClick={() => deleteTask(task.id)}
-                          className="p-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded"
-                        >
-                          <Trash2 className="w-4 h-4 text-red-500" />
-                        </button>
-                      </div>
-                    </td>
+                <td className="px-4 py-3">
+                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                    {task.assignee || '-'}
+                  </div>
+                </td>
+                <td className="px-4 py-3">
+                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                    {task.startDate ? task.startDate.split('T')[0] : '-'}
+                  </div>
+                </td>
+                <td className="px-4 py-3">
+                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                    {task.estimatedEndDate ? task.estimatedEndDate.split('T')[0] : '-'}
+                  </div>
+                </td>
+                <td className="px-4 py-3">
+                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                    {task.actualEndDate ? task.actualEndDate.split('T')[0] : '-'}
+                  </div>
+                </td>
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-2">
+                    <button 
+                      onClick={() => handleEdit(task)}
+                      className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
+                    >
+                      <Edit2 className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                    </button>
+                    <button 
+                      onClick={() => deleteTask(task.id)}
+                      className="p-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded"
+                    >
+                      <Trash2 className="w-4 h-4 text-red-500" />
+                    </button>
+                  </div>
+                </td>
                   </tr>
                 ))}
               </>

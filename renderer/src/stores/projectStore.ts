@@ -44,69 +44,124 @@ export const useProjectStore = create<ProjectState>()(
       }
     }),
 
-    deleteProject: (id) => set((state) => {
-      const index = state.projects.findIndex(p => p.id === id);
-      if (index !== -1) {
-        state.projects.splice(index, 1);
+    deleteProject: async (id) => {
+      if (!window.electronAPI) {
+        useErrorStore.getState().addError('Electron API not available', 'error');
+        return;
       }
-      if (state.currentProjectId === id) {
-        state.currentProjectId = null;
+      
+      // 先检查是否是临时乐观 ID，临时 ID 直接从本地删除即可
+      if (id.startsWith('temp_')) {
+        set((state) => {
+          const index = state.projects.findIndex(p => p.id === id);
+          if (index !== -1) {
+            state.projects.splice(index, 1);
+          }
+        });
+        return;
       }
-    }),
-
-    fetchProjects: async () => {
+      
       try {
-        set({ loading: true, error: null });
-        const result = await window.electronAPI.getProjects();
+        const result = await window.electronAPI.deleteProject(id);
         
         if (result.success) {
-          set({ projects: result.data, loading: false });
+          // 从本地 store 删除
+          set((state) => {
+            const index = state.projects.findIndex(p => p.id === id);
+            if (index !== -1) {
+              state.projects.splice(index, 1);
+            }
+            if (state.currentProjectId === id) {
+              state.currentProjectId = null;
+            }
+          });
+          useErrorStore.getState().addError('项目已删除', 'success');
         } else {
-          set({ error: result.error, loading: false });
-          useErrorStore.getState().addError(result.error, 'error');
+          useErrorStore.getState().addError(result.error || '删除失败', 'error');
         }
       } catch (error: any) {
-        set({ error: error.message, loading: false });
         useErrorStore.getState().addError(error.message, 'error');
       }
     },
 
-    createProject: async (projectData) => {
-      // 乐观更新
-      const optimisticId = `temp_${Date.now()}`;
-      const optimisticProject: Project = {
-        ...projectData,
-        id: optimisticId,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      } as Project;
+  fetchProjects: async () => {
+    try {
+      set({ loading: true, error: null });
+      
+      if (!window.electronAPI) {
+        throw new Error('Electron API not available');
+      }
+      
+      const result = await window.electronAPI.getProjects();
+      
+      if (result.success) {
+        set({ projects: result.data, loading: false });
+      } else {
+        set({ error: result.error ?? null, loading: false });
+        useErrorStore.getState().addError(result.error ?? '未知错误', 'error');
+      }
+    } catch (error: any) {
+      set({ error: error.message, loading: false });
+      useErrorStore.getState().addError(error.message, 'error');
+    }
+  },
 
-      get().addProject(optimisticProject);
+  createProject: async (projectData) => {
+    if (!window.electronAPI) {
+      useErrorStore.getState().addError('Electron API not available', 'error');
+      return null;
+    }
 
-      try {
-        const result = await window.electronAPI.createProject(projectData);
-        
-        if (result.success) {
-          get().updateProject(optimisticId, { 
-            id: result.data.id,
-            ...result.data,
-            createdAt: result.data.createdAt || new Date().toISOString(),
-            updatedAt: result.data.updatedAt || new Date().toISOString(),
-          });
-          
-          useErrorStore.getState().addError('项目创建成功', 'success');
-          return result.data;
-        } else {
-          get().deleteProject(optimisticId);
-          useErrorStore.getState().addError(result.error || '创建失败', 'error');
-          return null;
+    // 乐观更新
+    const optimisticId = `temp_${Date.now()}`;
+    const optimisticProject: Project = {
+      ...projectData,
+      id: optimisticId,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    } as Project;
+
+    // 回滚辅助函数：直接从本地 store 删除，不走 IPC
+    const rollback = () => {
+      set((state) => {
+        const index = state.projects.findIndex(p => p.id === optimisticId);
+        if (index !== -1) {
+          state.projects.splice(index, 1);
         }
-      } catch (error: any) {
-        get().deleteProject(optimisticId);
-        useErrorStore.getState().addError(error.message, 'error');
+      });
+    };
+
+    get().addProject(optimisticProject);
+
+    try {
+      const result = await window.electronAPI.createProject(projectData);
+        
+      if (result.success) {
+        // 替换临时 ID 为真实数据
+        set((state) => {
+          const project = state.projects.find(p => p.id === optimisticId);
+          if (project) {
+            Object.assign(project, {
+              ...result.data,
+              createdAt: result.data.createdAt || new Date().toISOString(),
+              updatedAt: result.data.updatedAt || new Date().toISOString(),
+            });
+          }
+        });
+        
+        useErrorStore.getState().addError('项目创建成功', 'success');
+        return result.data;
+      } else {
+        rollback();
+        useErrorStore.getState().addError(result.error || '创建失败', 'error');
         return null;
       }
-    },
+    } catch (error: any) {
+      rollback();
+      useErrorStore.getState().addError(error.message, 'error');
+      return null;
+    }
+  },
 
     getProjectStats: async (projectId) => {
       try {

@@ -4,6 +4,9 @@ import { useProjectStore } from '../stores/projectStore';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { TrendingUp, CheckCircle, Clock, AlertCircle } from 'lucide-react';
 import dayjs from 'dayjs';
+import isBetween from 'dayjs/plugin/isBetween'
+
+dayjs.extend(isBetween)
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
 
@@ -162,7 +165,12 @@ export function DashboardView() {
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                  label={({ name, percent }: { name?: string; percent?: number }) => {
+                    const percentage = (percent ?? 0) * 100;
+                    // 只显示占比>0 的标签，避免重叠
+                    if (percentage <= 0) return '';
+                    return `${name ?? ''}: ${percentage.toFixed(0)}%`;
+                  }}
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="value"
@@ -171,7 +179,10 @@ export function DashboardView() {
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip />
+                <Tooltip 
+                  formatter={(value: number) => [`${value} 个任务`, '数量']}
+                  nameKey="name"
+                />
               </PieChart>
             </ResponsiveContainer>
           </div>

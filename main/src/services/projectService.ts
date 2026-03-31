@@ -16,7 +16,9 @@ export interface CreateProjectInput {
 /**
  * 项目更新参数
  */
-export interface UpdateProjectInput extends Partial<CreateProjectInput> {}
+export interface UpdateProjectInput extends Partial<CreateProjectInput> {
+  [key: string]: any;
+}
 
 /**
  * 项目统计信息
@@ -107,8 +109,8 @@ export class ProjectService {
       UPDATE projects SET ${setClauses.join(', ')} WHERE id = ?
     `);
 
-    const result = stmt.run(values);
-    return result.changes > 0;
+    stmt.run(values);
+    return true;
   }
 
   /**
@@ -117,9 +119,15 @@ export class ProjectService {
    * @returns 是否删除成功
    */
   async deleteProject(id: string) {
+    // 先检查项目是否存在
+    const project = await this.findById(id);
+    if (!project) {
+      return false;
+    }
+    
     const stmt = this.db.prepare('DELETE FROM projects WHERE id = ?');
-    const result = stmt.run([id]);
-    return result.changes > 0;
+    stmt.run([id]);
+    return true;
   }
 
   /**

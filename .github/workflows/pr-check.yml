@@ -1,0 +1,175 @@
+name: PR Check
+
+# 专为 Pull Request 设计的门控检查
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+    types: [opened, synchronize, reopened, ready_for_review]
+
+# 草稿 PR 不触发检查
+jobs:
+  # ─────────────────────────────────────────────
+  # 跳过草稿 PR
+  # ─────────────────────────────────────────────
+  guard:
+    name: 🛡️ PR 守卫
+    runs-on: ubuntu-latest
+    outputs:
+      should_skip: ${{ steps.check.outputs.skip }}
+    steps:
+      - id: check
+        run: |
+          if [ "${{ github.event.pull_request.draft }}" = "true" ]; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "🚧 草稿 PR，跳过检查"
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
+  # ─────────────────────────────────────────────
+  # TypeScript 类型检查
+  # ─────────────────────────────────────────────
+  typecheck:
+    name: 🔎 TypeScript 类型检查
+    runs-on: ubuntu-latest
+    needs: guard
+    if: needs.guard.outputs.should_skip != 'true'
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+      - run: npm ci
+        working-directory: renderer
+
+      - name: 主进程类型检查
+        run: npx tsc --noEmit --project main/tsconfig.json
+
+      - name: Preload 类型检查
+        run: npx tsc --noEmit --project preload/tsconfig.json
+
+      - name: 渲染进程类型检查
+        run: npx tsc -b --noEmit
+        working-directory: renderer
+
+  # ─────────────────────────────────────────────
+  # ESLint 检查
+  # ─────────────────────────────────────────────
+  lint:
+    name: 🧹 ESLint 代码质量
+    runs-on: ubuntu-latest
+    needs: guard
+    if: needs.guard.outputs.should_skip != 'true'
+    timeout-minutes: 8
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+        working-directory: renderer
+
+      - name: ESLint 检查
+        run: npm run lint
+        working-directory: renderer
+
+  # ─────────────────────────────────────────────
+  # 编译验证
+  # ─────────────────────────────────────────────
+  build-check:
+    name: 🔨 编译检查
+    runs-on: ubuntu-latest
+    needs: [typecheck, lint]
+    if: needs.guard.outputs.should_skip != 'true'
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+      - run: npm ci
+        working-directory: renderer
+
+      - run: npm run build:main
+      - run: npm run build:preload
+      - run: npm run build:renderer
+
+  # ─────────────────────────────────────────────
+  # PR 总结报告（将结果汇总为 PR 评论）
+  # ─────────────────────────────────────────────
+  pr-summary:
+    name: 📊 检查总结
+    runs-on: ubuntu-latest
+    needs: [typecheck, lint, build-check]
+    if: always() && needs.guard.outputs.should_skip != 'true'
+    permissions:
+      pull-requests: write
+
+    steps:
+      - name: 📝 发布检查报告
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const jobs = {
+              'TypeScript 类型检查': '${{ needs.typecheck.result }}',
+              'ESLint 代码质量':     '${{ needs.lint.result }}',
+              '编译检查':            '${{ needs.build-check.result }}'
+            };
+            
+            const statusIcon = (s) => ({
+              success: '✅', failure: '❌', cancelled: '⏭️', skipped: '⏭️'
+            }[s] || '❓');
+            
+            const allPassed = Object.values(jobs).every(s => s === 'success');
+            
+            let body = `## ${allPassed ? '✅ 所有检查通过' : '❌ 存在检查失败'}\n\n`;
+            body += '| 检查项 | 状态 |\n|--------|------|\n';
+            for (const [name, result] of Object.entries(jobs)) {
+              body += `| ${name} | ${statusIcon(result)} ${result} |\n`;
+            }
+            body += `\n*检查时间: ${new Date().toISOString()}*`;
+            
+            // 查找已有的 bot 评论，有则更新
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            
+            const botComment = comments.find(c => 
+              c.user.type === 'Bot' && c.body.includes('所有检查通过') || 
+              c.user.type === 'Bot' && c.body.includes('存在检查失败')
+            );
+            
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body
+              });
+            }

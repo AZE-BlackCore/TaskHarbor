@@ -1,0 +1,16 @@
+{
+  "name": "todolist-desktop",
+  "version": "1.0.0",
+  "description": "桌面端 Todo List 任务管理软件 - 支持悬浮窗口、项目化任务管理、多视图展示",
+  "main": "main/dist/index.js",
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "electron-store": "^8.1.0",
+    "electron-window-state": "^5.0.3",
+    "exceljs": "^4.4.0",
+    "marked": "^11.1.1",
+    "pdfkit": "^0.14.0",
+    "sql.js": "^1.10.3"
+  }
+}

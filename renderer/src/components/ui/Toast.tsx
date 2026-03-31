@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useErrorStore } from '../stores/errorStore';
+import { useErrorStore } from '../../stores/errorStore';
 import { X, CheckCircle, AlertCircle, AlertTriangle, Info } from 'lucide-react';
 
 export function ToastContainer() {

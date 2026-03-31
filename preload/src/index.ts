@@ -157,3 +157,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
 });
 
 console.log('Preload script loaded successfully');
+console.log('Preload script - contextBridge exposed:', typeof contextBridge);
+console.log('Preload script - electronAPI object created');
