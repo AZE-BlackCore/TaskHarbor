@@ -208,6 +208,29 @@ export async function setupDatabase() {
       )
     `);
 
+    // 创建日程表
+    db!.run(`
+      CREATE TABLE IF NOT EXISTS schedules (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        description TEXT,
+        location TEXT,
+        startTime TEXT NOT NULL,
+        endTime TEXT NOT NULL,
+        allDay INTEGER DEFAULT 0,
+        color TEXT DEFAULT '#3B82F6',
+        priority TEXT DEFAULT 'medium' CHECK(priority IN ('low', 'medium', 'high')),
+        reminder INTEGER,
+        repeatType TEXT CHECK(repeatType IN ('daily', 'weekly', 'monthly', 'yearly')),
+        repeatInterval INTEGER DEFAULT 1,
+        repeatEndDate TEXT,
+        relatedTaskId TEXT,
+        createdAt TEXT DEFAULT (datetime('now')),
+        updatedAt TEXT DEFAULT (datetime('now')),
+        FOREIGN KEY (relatedTaskId) REFERENCES tasks(id) ON DELETE SET NULL
+      )
+    `);
+
     // 创建索引
     db!.run(`CREATE INDEX IF NOT EXISTS idx_tasks_project ON tasks(projectId)`);
     db!.run(`CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status)`);
@@ -217,6 +240,9 @@ export async function setupDatabase() {
     db!.run(`CREATE INDEX IF NOT EXISTS idx_timelogs_task ON timelogs(taskId)`);
     db!.run(`CREATE INDEX IF NOT EXISTS idx_dependencies_task ON task_dependencies(taskId)`);
     db!.run(`CREATE INDEX IF NOT EXISTS idx_tags_task ON task_tags(taskId)`);
+    db!.run(`CREATE INDEX IF NOT EXISTS idx_schedules_startTime ON schedules(startTime)`);
+    db!.run(`CREATE INDEX IF NOT EXISTS idx_schedules_endTime ON schedules(endTime)`);
+    db!.run(`CREATE INDEX IF NOT EXISTS idx_schedules_priority ON schedules(priority)`);
 
     // 创建数据验证触发器
     // 注意：sql.js 不支持 IF EXISTS 语法，直接创建，如果已存在会报错忽略

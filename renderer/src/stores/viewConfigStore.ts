@@ -24,6 +24,7 @@ const DEFAULT_VIEWS: ViewItem[] = [
   { id: 'gantt', name: '甘特图', icon: 'Network', iconLabel: '📊', path: '/gantt', enabled: true },
   { id: 'kanban', name: '看板', icon: 'Columns', iconLabel: '📌', path: '/kanban', enabled: true },
   { id: 'calendar', name: '日历', icon: 'Calendar', iconLabel: '📅', path: '/calendar', enabled: true },
+  { id: 'schedule', name: '日程管理', icon: 'Clock', iconLabel: '🕐', path: '/schedule', enabled: true },
   { id: 'dashboard', name: '统计报表', icon: 'BarChart3', iconLabel: '📈', path: '/dashboard', enabled: true },
 ];
 
@@ -35,8 +36,22 @@ export const useViewConfigStore = create<ViewState>()(
       const saved = localStorage.getItem('viewOrder');
       if (saved) {
         try {
-          const views = JSON.parse(saved);
-          set({ views });
+          const savedViews = JSON.parse(saved);
+          // 检测并添加缺失的视图
+          const missingViews = DEFAULT_VIEWS.filter(
+            defaultView => !savedViews.some((v: ViewItem) => v.id === defaultView.id)
+          );
+          
+          if (missingViews.length > 0) {
+            // 合并保存的视图和缺失的视图
+            const mergedViews = [...savedViews, ...missingViews];
+            set({ views: mergedViews });
+            localStorage.setItem('viewOrder', JSON.stringify(mergedViews));
+            console.log('Added missing views:', missingViews.map(v => v.name));
+            return;
+          }
+          
+          set({ views: savedViews });
           return;
         } catch (e) {
           console.error('Failed to load view order:', e);

@@ -154,6 +154,37 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   getProjectStats: (projectId: string) => 
     ipcRenderer.invoke('projects:getStats', projectId),
+  
+  // ========== 日程管理 ==========
+  getSchedules: (filters?: { dateRange?: { start: string; end: string }; priority?: 'low' | 'medium' | 'high'; search?: string }) => 
+    ipcRenderer.invoke('schedules:getAll', filters),
+  
+  getScheduleById: (id: string) => 
+    ipcRenderer.invoke('schedules:getById', id),
+  
+  createSchedule: (scheduleData: { 
+    title: string; 
+    description?: string; 
+    location?: string; 
+    startTime: string; 
+    endTime: string; 
+    allDay?: boolean; 
+    color?: string; 
+    priority?: 'low' | 'medium' | 'high'; 
+    reminder?: number;
+    repeat?: { type: 'daily' | 'weekly' | 'monthly' | 'yearly'; interval?: number; endDate?: string };
+    relatedTaskId?: string;
+  }) => 
+    ipcRenderer.invoke('schedules:create', scheduleData),
+  
+  updateSchedule: (id: string, updates: any) => 
+    ipcRenderer.invoke('schedules:update', id, updates),
+  
+  deleteSchedule: (id: string) => 
+    ipcRenderer.invoke('schedules:delete', id),
+  
+  getSchedulesByDate: (date: string) => 
+    ipcRenderer.invoke('schedules:getByDate', date),
 });
 
 console.log('Preload script loaded successfully');

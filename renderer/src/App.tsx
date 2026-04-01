@@ -7,6 +7,7 @@ import { KanbanView } from './views/KanbanView'
 import { CalendarView } from './views/CalendarView'
 import { DashboardView } from './views/DashboardView'
 import { ProjectView } from './views/ProjectView'
+import { ScheduleView } from './views/ScheduleView'
 import { FloatingWindow } from './views/FloatingWindow'
 import { TaskReminder } from './components/notification/TaskReminder'
 
@@ -38,6 +39,7 @@ function App() {
           <Route path="gantt" element={<GanttView />} />
           <Route path="kanban" element={<KanbanView />} />
           <Route path="calendar" element={<CalendarView />} />
+          <Route path="schedule" element={<ScheduleView />} />
           <Route path="dashboard" element={<DashboardView />} />
         </Route>
         

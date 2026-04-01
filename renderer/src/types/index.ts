@@ -74,3 +74,34 @@ export interface ProjectStats {
   byAssignee: Array<{ assignee: string; count: number }>;
   averageProgress: number;
 }
+
+// 日程相关类型
+export interface Schedule {
+  id: string;
+  title: string;
+  description?: string;
+  location?: string;
+  startTime: string; // ISO 字符串
+  endTime: string;   // ISO 字符串
+  allDay: boolean;   // 是否全天事件
+  color: string;     // 日程颜色
+  priority: 'low' | 'medium' | 'high'; // 优先级
+  reminder?: number; // 提前提醒时间（分钟）
+  repeat?: {
+    type: 'daily' | 'weekly' | 'monthly' | 'yearly';
+    interval?: number; // 间隔，如每 2 周
+    endDate?: string;  // 重复结束日期
+  };
+  relatedTaskId?: string; // 关联的任务 ID
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ScheduleFilters {
+  dateRange?: {
+    start: string;
+    end: string;
+  };
+  priority?: 'low' | 'medium' | 'high';
+  search?: string;
+}

@@ -20,7 +20,8 @@ import {
   Plus,
   FolderOpen,
   Grid3X3,
-  Settings
+  Settings,
+  Clock
 } from 'lucide-react';
 import { SettingsPanel } from './settings/SettingsPanel';
 import { ToastContainer } from './ui/Toast';
@@ -37,6 +38,7 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   Columns,
   Calendar: CalendarIcon,
   BarChart3,
+  Clock,
 };
 
 interface LayoutProps {

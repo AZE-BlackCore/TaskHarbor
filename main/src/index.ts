@@ -5,6 +5,7 @@ import { setupTaskHandlers } from './ipc-handlers/task-handlers';
 import { setupProjectHandlers } from './ipc-handlers/project-handlers';
 import { setupWindowHandlers } from './ipc-handlers/window-handlers';
 import { setupNotificationHandlers } from './ipc-handlers/notification-handlers';
+import { setupScheduleHandlers } from './ipc-handlers/schedule-handlers';
 
 console.log('=== Main Process Started ===');
 console.log('Electron version:', process.versions.electron);
@@ -177,6 +178,7 @@ app.whenReady().then(async () => {
     await setupProjectHandlers();
     setupWindowHandlers();
     setupNotificationHandlers();
+    setupScheduleHandlers();
     
     console.log('IPC handlers setup complete');
 
