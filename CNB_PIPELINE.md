@@ -73,11 +73,16 @@ graph TD
 ```yaml
 name: 📊 代码质量检查
 runner:
-  tags: ubuntu-latest
+  tags: []  # 使用默认 Runner，避免标签不匹配
   cpus: 2
 docker:
   image: node:20
 ```
+
+**注意**：如果遇到 `No runner for namespace` 错误，请确保：
+- 使用 `tags: []` 允许使用任意可用 Runner
+- 或查看平台可用 Runner：`cnb runner list --namespace global`
+- 参考文档：https://docs.cnb.cool/build/build-node.html
 
 **执行步骤**：
 1. 📦 安装依赖 - `npm ci`
@@ -95,7 +100,7 @@ docker:
 ```yaml
 name: 🏗️ 构建 Electron 应用
 runner:
-  tags: ubuntu-latest
+  tags: []  # 使用默认 Runner
   cpus: 4
 ```
 
@@ -281,6 +286,39 @@ git push origin v1.1.0
 ## 故障排查
 
 ### 常见问题
+
+#### 0. Runner 分配失败
+
+**症状**：
+```
+Pipeline prepare error: No runner for namespace: global tags: [ubuntu-latest, cpus:4]
+```
+
+**原因**：
+- 指定的 Runner 标签在当前命名空间下不可用
+- CNB 平台的 Runner 标签配置与流水线配置不匹配
+
+**解决方案**：
+```yaml
+# 方法 1：使用默认 Runner（推荐）
+runner:
+  tags: []  # 清空标签限制
+  cpus: 4   # 保留资源控制
+
+# 方法 2：查看平台可用 Runner
+# cnb runner list --namespace global
+
+# 方法 3：使用平台实际支持的标签
+runner:
+  tags:
+    - cnb:arch:default
+    - ubuntu-22.04  # 替换为实际支持的标签
+  cpus: 4
+```
+
+**参考文档**：
+- Runner 管理：https://docs.cnb.cool/build/build-node.html
+- 标签配置：https://docs.cnb.cool/zh/build/grammar.html#pipeline-runner
 
 #### 1. 构建失败：依赖安装超时
 
