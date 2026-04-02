@@ -15,11 +15,12 @@ main:
       docker:
         image: node:20
         volumes:
-          # 缓存 node_modules 加速构建
-          - node_modules_cache:/root/.npm
+          # 缓存 node_modules 加速构建（使用工作区路径避免权限问题）
+          - npm_cache:/build/.npm-cache
       env:
         NODE_ENV: production
         CI: "true"
+        npm_config_cache: /build/.npm-cache
       # 仅在相关文件变更时执行
       ifModify:
         - "**/*.ts"
@@ -29,6 +30,14 @@ main:
         - "package.json"
         - "package-lock.json"
       stages:
+        - name: ⚙️ 配置 npm 缓存
+          script: |
+            echo "配置 npm 缓存目录..."
+            mkdir -p .npm-cache
+            npm config set cache $(pwd)/.npm-cache
+            npm config get cache
+            echo "npm 缓存配置完成"
+        
         - name: 📦 安装依赖
           script: |
             echo "开始安装依赖..."
@@ -68,13 +77,22 @@ main:
       docker:
         image: node:20
         volumes:
-          - node_modules_cache:/root/.npm
+          # 使用工作区路径避免权限问题
+          - npm_cache:/build/.npm-cache
           - release_cache:/build/release
       env:
         NODE_ENV: production
         CI: "true"
+        npm_config_cache: /build/.npm-cache
       # 依赖前一个流水线成功完成
       stages:
+        - name: ⚙️ 配置 npm 缓存
+          script: |
+            echo "配置 npm 缓存目录..."
+            mkdir -p .npm-cache
+            npm config set cache $(pwd)/.npm-cache
+            echo "npm 缓存配置完成"
+        
         - name: 📦 安装依赖
           script: |
             echo "开始安装依赖..."
@@ -127,11 +145,17 @@ main:
       docker:
         image: node:20
         volumes:
-          - node_modules_cache:/root/.npm
+          - npm_cache:/build/.npm-cache
       env:
         NODE_ENV: test
         CI: "true"
+        npm_config_cache: /build/.npm-cache
       stages:
+        - name: ⚙️ 配置 npm 缓存
+          script: |
+            mkdir -p .npm-cache
+            npm config set cache $(pwd)/.npm-cache
+        
         - name: 📦 安装依赖
           script: npm ci --prefer-offline --no-audit
         
@@ -159,13 +183,19 @@ main:
       docker:
         image: node:20
         volumes:
-          - node_modules_cache:/root/.npm
+          - npm_cache:/build/.npm-cache
           - release_cache:/build/release
       env:
         NODE_ENV: production
         CI: "true"
         GH_TOKEN: ${GH_TOKEN}
+        npm_config_cache: /build/.npm-cache
       stages:
+        - name: ⚙️ 配置 npm 缓存
+          script: |
+            mkdir -p .npm-cache
+            npm config set cache $(pwd)/.npm-cache
+        
         - name: 📦 安装依赖
           script: npm ci --prefer-offline --no-audit
         
@@ -197,11 +227,17 @@ dev:
       docker:
         image: node:20
         volumes:
-          - node_modules_cache:/root/.npm
+          - npm_cache:/build/.npm-cache
       env:
         NODE_ENV: development
         CI: "true"
+        npm_config_cache: /build/.npm-cache
       stages:
+        - name: ⚙️ 配置 npm 缓存
+          script: |
+            mkdir -p .npm-cache
+            npm config set cache $(pwd)/.npm-cache
+        
         - name: 📦 安装依赖
           script: npm ci --prefer-offline --no-audit
         
@@ -229,16 +265,22 @@ feature/*:
       docker:
         image: node:20
         volumes:
-          - node_modules_cache:/root/.npm
+          - npm_cache:/build/.npm-cache
       env:
         NODE_ENV: test
         CI: "true"
+        npm_config_cache: /build/.npm-cache
       # 仅检查关键项目
       ifModify:
         - "**/*.ts"
         - "**/*.tsx"
         - "package.json"
       stages:
+        - name: ⚙️ 配置 npm 缓存
+          script: |
+            mkdir -p .npm-cache
+            npm config set cache $(pwd)/.npm-cache
+        
         - name: 📦 快速安装
           script: npm ci --prefer-offline --no-audit
         
@@ -262,9 +304,17 @@ $:
         cpus: 1
       docker:
         image: node:20
+        volumes:
+          - npm_cache:/build/.npm-cache
       env:
         CI: "true"
+        npm_config_cache: /build/.npm-cache
       stages:
+        - name: ⚙️ 配置 npm 缓存
+          script: |
+            mkdir -p .npm-cache
+            npm config set cache $(pwd)/.npm-cache
+        
         - name: 📦 安装依赖
           script: npm ci --prefer-offline --no-audit
         
