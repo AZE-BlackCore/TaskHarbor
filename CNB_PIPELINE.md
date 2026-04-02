@@ -320,6 +320,52 @@ runner:
 - Runner 管理：https://docs.cnb.cool/build/build-node.html
 - 标签配置：https://docs.cnb.cool/zh/build/grammar.html#pipeline-runner
 
+#### 00. npm 缓存路径权限问题
+
+**症状**：
+```
+Permission denied: '/root/.npm'
+npm ERR! code ENOENT
+npm ERR! syscall mkdir
+npm ERR! path /root/.npm
+```
+
+**原因**：
+- CI/CD 环境禁止访问 `/root/.npm` 目录
+- npm 默认使用该目录作为缓存路径
+- 安全策略限制导致权限被拒绝
+
+**解决方案**：
+```yaml
+# 在流水线配置中添加前置步骤
+stages:
+  - name: ⚙️ 配置 npm 缓存
+    script: |
+      mkdir -p .npm-cache
+      npm config set cache $(pwd)/.npm-cache
+      npm config get cache
+  
+  - name: 📦 安装依赖
+    script: npm ci --prefer-offline --no-audit
+```
+
+**环境变量配置**：
+```yaml
+env:
+  npm_config_cache: /build/.npm-cache  # 设置缓存路径
+```
+
+**数据卷缓存**（可选，加速构建）：
+```yaml
+docker:
+  volumes:
+    - npm_cache:/build/.npm-cache  # 缓存跨构建复用
+```
+
+**参考**：
+- npm 配置文档：https://docs.npmjs.com/cli/v10/configuring-npm/folders
+- CNB 环境变量：https://docs.cnb.cool/zh/build/grammar.html#pipeline-env
+
 #### 1. 构建失败：依赖安装超时
 
 **症状**：
@@ -479,6 +525,15 @@ chore: 构建/工具链相关
 - ✅ 使用 `ifModify` 减少不必要的构建
 - ✅ 并行执行独立任务
 - ✅ 合理配置构建节点资源
+- ✅ 配置 npm 缓存目录避免权限问题
+- ✅ 使用数据卷缓存加速依赖安装
+
+### 6. 安全配置
+
+- ✅ 避免使用 `/root` 目录（权限限制）
+- ✅ 使用工作区内的缓存目录（如 `.npm-cache`）
+- ✅ 通过环境变量配置包管理器路径
+- ✅ 使用普通用户运行构建（如支持）
 
 ---
 
