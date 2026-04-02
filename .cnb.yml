@@ -73,8 +73,6 @@ main:
         cpus: 4
       docker:
         image: node:20
-        volumes:
-          - release_cache:/build/release
       env:
         NODE_ENV: production
         CI: "true"
@@ -175,8 +173,6 @@ main:
         cpus: 4
       docker:
         image: node:20
-        volumes:
-          - release_cache:/build/release
       env:
         NODE_ENV: production
         CI: "true"
