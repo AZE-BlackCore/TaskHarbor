@@ -107,15 +107,15 @@ export const useTaskStore = create<TaskState>()(
     fetchTasks: async (filters) => {
       try {
         set({ loading: true, error: null });
-        
+
         if (!window.electronAPI) {
           throw new Error('Electron API not available');
         }
-        
-        const result = await window.electronAPI.getTasks(filters);
-        
+
+        const result = await window.electronAPI.getTasks(filters as unknown as Record<string, unknown> || {});
+
         if (result.success) {
-          set({ tasks: result.data, filters: filters || {}, loading: false });
+          set({ tasks: result.data as unknown as Task[], filters: filters || {}, loading: false });
         } else {
           set({ error: result.error ?? null, loading: false });
           useErrorStore.getState().addError(result.error ?? '未知错误', 'error');
@@ -156,7 +156,7 @@ export const useTaskStore = create<TaskState>()(
 
       try {
         const result = await window.electronAPI.createTask(taskData);
-        
+
         if (result.success) {
           // 替换临时 ID 为真实数据
           set((state) => {
@@ -169,9 +169,9 @@ export const useTaskStore = create<TaskState>()(
               });
             }
           });
-          
+
           useErrorStore.getState().addError('任务创建成功', 'success');
-          return result.data;
+          return result.data as unknown as Task;
         } else {
           // 失败回滚
           rollback();

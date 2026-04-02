@@ -99,11 +99,14 @@ export async function createSchedule(input: CreateScheduleInput): Promise<Schedu
  */
 export async function getScheduleById(id: string): Promise<Schedule> {
   const db = await getDatabase();
-  const row: any = db!.get('SELECT * FROM schedules WHERE id = ?', [id]);
+  const stmt = db.prepare('SELECT * FROM schedules WHERE id = ?');
+  stmt.bind([id]);
 
-  if (!row) {
+  if (!stmt.step()) {
     throw new Error('Schedule not found');
   }
+
+  const row: any = stmt.getAsObject();
 
   return {
     id: row.id,
@@ -153,8 +156,14 @@ export async function getSchedules(filters?: ScheduleFilters): Promise<Schedule[
 
   query += ' ORDER BY startTime ASC';
 
-  const rows: any[] = db!.exec(query, params);
-  
+  const stmt = db.prepare(query);
+  stmt.bind(params);
+
+  const rows: any[] = [];
+  while (stmt.step()) {
+    rows.push(stmt.getAsObject());
+  }
+
   return rows.map(row => ({
     id: row.id,
     title: row.title,
@@ -267,11 +276,17 @@ export async function getSchedulesByDate(date: string): Promise<Schedule[]> {
   const endOfDay = new Date(date);
   endOfDay.setHours(23, 59, 59, 999);
 
-  const rows: any[] = db!.all(`
-    SELECT * FROM schedules 
+  const stmt = db.prepare(`
+    SELECT * FROM schedules
     WHERE startTime <= ? AND endTime >= ?
     ORDER BY startTime ASC
-  `, [endOfDay.toISOString(), startOfDay.toISOString()]);
+  `);
+  stmt.bind([endOfDay.toISOString(), startOfDay.toISOString()]);
+
+  const rows: any[] = [];
+  while (stmt.step()) {
+    rows.push(stmt.getAsObject());
+  }
 
   return rows.map(row => ({
     id: row.id,

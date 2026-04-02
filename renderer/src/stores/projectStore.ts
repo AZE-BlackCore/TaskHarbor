@@ -87,15 +87,15 @@ export const useProjectStore = create<ProjectState>()(
   fetchProjects: async () => {
     try {
       set({ loading: true, error: null });
-      
+
       if (!window.electronAPI) {
         throw new Error('Electron API not available');
       }
-      
+
       const result = await window.electronAPI.getProjects();
-      
+
       if (result.success) {
-        set({ projects: result.data, loading: false });
+        set({ projects: result.data as unknown as Project[], loading: false });
       } else {
         set({ error: result.error ?? null, loading: false });
         useErrorStore.getState().addError(result.error ?? '未知错误', 'error');
@@ -136,7 +136,7 @@ export const useProjectStore = create<ProjectState>()(
 
     try {
       const result = await window.electronAPI.createProject(projectData);
-        
+
       if (result.success) {
         // 替换临时 ID 为真实数据
         set((state) => {
@@ -149,9 +149,9 @@ export const useProjectStore = create<ProjectState>()(
             });
           }
         });
-        
+
         useErrorStore.getState().addError('项目创建成功', 'success');
-        return result.data;
+        return result.data as unknown as Project;
       } else {
         rollback();
         useErrorStore.getState().addError(result.error || '创建失败', 'error');
@@ -167,9 +167,9 @@ export const useProjectStore = create<ProjectState>()(
     getProjectStats: async (projectId) => {
       try {
         const result = await window.electronAPI.getProjectStats(projectId);
-        
+
         if (result.success) {
-          return result.data;
+          return result.data as unknown as ProjectStats;
         } else {
           return null;
         }

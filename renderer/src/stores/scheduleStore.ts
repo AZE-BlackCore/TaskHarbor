@@ -118,9 +118,9 @@ export const useScheduleStore = create<ScheduleState>()(
         const result = await window.electronAPI.getSchedules(filters);
         
         if (result.success) {
-          set({ 
-            schedules: result.data, 
-            loading: false 
+          set({
+            schedules: result.data as unknown as Schedule[],
+            loading: false
           });
         } else {
           set({ 
@@ -164,10 +164,10 @@ export const useScheduleStore = create<ScheduleState>()(
           set((state) => {
             const index = state.schedules.findIndex(s => s.id === tempId);
             if (index !== -1) {
-              state.schedules[index] = result.data;
+              state.schedules[index] = result.data as unknown as Schedule;
             }
           });
-          return result.data;
+          return result.data as unknown as Schedule;
         } else {
           // 失败则删除临时数据
           set((state) => {
@@ -236,7 +236,7 @@ export const useScheduleStore = create<ScheduleState>()(
         const result = await window.electronAPI.getSchedulesByDate(date);
         
         if (result.success) {
-          return result.data;
+          return result.data as unknown as Schedule[];
         } else {
           useErrorStore.getState().addError(result.error || '获取日程失败', 'error');
           return [];

@@ -1,8 +1,9 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useTaskStore } from '../stores/taskStore';
 import { useProjectStore } from '../stores/projectStore';
 import { Task, TaskStatus } from '../types';
 import { Plus, MoreVertical, Edit2, Trash2, Clock, User } from 'lucide-react';
+import { TaskEditDialog } from '../components/task/TaskEditDialog';
 
 const COLUMNS: Array<{ id: TaskStatus; label: string; color: string }> = [
   { id: 'todo', label: '待办', color: 'bg-gray-500' },
@@ -105,17 +106,27 @@ function KanbanCard({ task, onEdit, onDelete }: KanbanCardProps) {
 }
 
 export function KanbanView() {
-  const { tasks, fetchTasks, deleteTask } = useTaskStore();
+  const { tasks, fetchTasks, deleteTask, updateTask } = useTaskStore();
   const { fetchProjects } = useProjectStore();
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
 
   useEffect(() => {
     fetchTasks();
     fetchProjects();
   }, [fetchTasks, fetchProjects]);
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const handleEdit = (_task: Task) => {
-    // TODO: 打开任务编辑对话框
+  const handleEdit = (task: Task) => {
+    setEditingTask(task);
+    setShowEditDialog(true);
+  };
+
+  const handleSaveTask = async (taskData: Partial<Task>) => {
+    if (editingTask) {
+      await updateTask(editingTask.id, taskData);
+    }
+    setShowEditDialog(false);
+    setEditingTask(null);
   };
 
   const handleDelete = async (taskId: string) => {
@@ -133,7 +144,10 @@ export function KanbanView() {
             看板视图
           </h1>
           <button
-            onClick={() => setShowNewTaskDialog(true)}
+            onClick={() => {
+              setEditingTask(null);
+              setShowEditDialog(true);
+            }}
             className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-600 transition-colors"
           >
             <Plus className="w-4 h-4" />
@@ -189,12 +203,23 @@ export function KanbanView() {
           <div className="flex-1" />
           <span className="text-gray-600 dark:text-gray-400">总进度:</span>
           <span className="font-medium text-primary">
-            {tasks.length > 0 
+            {tasks.length > 0
               ? Math.round(tasks.reduce((sum, task) => sum + task.progress, 0) / tasks.length)
               : 0}%
           </span>
         </div>
       </div>
+
+      {/* 任务编辑对话框 */}
+      <TaskEditDialog
+        open={showEditDialog}
+        task={editingTask}
+        onClose={() => {
+          setShowEditDialog(false);
+          setEditingTask(null);
+        }}
+        onSave={handleSaveTask}
+      />
     </div>
   );
 }

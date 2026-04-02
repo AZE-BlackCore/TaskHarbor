@@ -46,8 +46,16 @@ interface ElectronAPI {
   deleteProject: (id: string) => Promise<{ success: boolean; error?: string }>;
   getProjectStats: (projectId: string) => Promise<{ success: boolean; data: Record<string, unknown>; error?: string }>;
 
+  // 日程管理
+  getSchedules: (filters?: { dateRange?: { start: string; end: string }; priority?: 'low' | 'medium' | 'high'; search?: string }) => Promise<{ success: boolean; data: Record<string, unknown>[]; error?: string }>;
+  getScheduleById: (id: string) => Promise<{ success: boolean; data: Record<string, unknown>; error?: string }>;
+  createSchedule: (scheduleData: Record<string, unknown>) => Promise<{ success: boolean; data: Record<string, unknown>; error?: string }>;
+  updateSchedule: (id: string, updates: Record<string, unknown>) => Promise<{ success: boolean; error?: string }>;
+  deleteSchedule: (id: string) => Promise<{ success: boolean; error?: string }>;
+  getSchedulesByDate: (date: string) => Promise<{ success: boolean; data: Record<string, unknown>[]; error?: string }>;
+
   // 通知
-  sendNotification?: (title: string, body: string) => void;
+  sendNotification: (title: string, body: string) => Promise<{ success: boolean }>;
 }
 
 interface Window {

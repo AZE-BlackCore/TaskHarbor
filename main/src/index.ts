@@ -71,6 +71,9 @@ function createWindow() {
   const preloadPath = getPreloadPath();
   console.log('Preload path:', preloadPath);
   
+  // 获取图标路径
+  const iconPath = path.join(__dirname, '../../renderer/public/app-logo.svg');
+  
   // 创建主窗口
   mainWindow = new BrowserWindow({
     width: 1400,
@@ -79,6 +82,7 @@ function createWindow() {
     minHeight: 768,
     frame: true,
     backgroundColor: '#1E293B',
+    icon: iconPath,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
