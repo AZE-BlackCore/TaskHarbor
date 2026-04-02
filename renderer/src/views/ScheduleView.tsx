@@ -217,7 +217,7 @@ export function ScheduleView() {
 
             <select
               value={filterPriority}
-              onChange={(e) => setFilterPriority(e.target.value as any)}
+              onChange={(e) => setFilterPriority(e.target.value as 'low' | 'medium' | 'high' | '')}
               className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-dark-bg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
             >
               <option value="all">全部优先级</option>
@@ -473,7 +473,7 @@ export function ScheduleView() {
                   <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">优先级</label>
                   <select
                     value={newSchedule.priority}
-                    onChange={(e) => setNewSchedule({ ...newSchedule, priority: e.target.value as any })}
+                    onChange={(e) => setNewSchedule({ ...newSchedule, priority: e.target.value as 'low' | 'medium' | 'high' })}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-dark-bg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
                   >
                     <option value="low">低</option>
@@ -633,7 +633,7 @@ function EditScheduleDialog({ schedule, onClose, onSave }: EditScheduleDialogPro
               <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">优先级</label>
               <select
                 value={formData.priority}
-                onChange={(e) => setFormData({ ...formData, priority: e.target.value as any })}
+                onChange={(e) => setFormData({ ...formData, priority: e.target.value as 'low' | 'medium' | 'high' })}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-dark-bg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 <option value="low">低</option>

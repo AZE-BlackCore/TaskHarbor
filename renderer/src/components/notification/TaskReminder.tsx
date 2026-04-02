@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useTaskStore } from '../../stores/taskStore';
 import { Bell, BellOff, Clock, AlertTriangle, Move } from 'lucide-react';
 import dayjs from 'dayjs';
@@ -47,7 +47,7 @@ export function TaskReminder() {
     }
   };
 
-  const handleMouseMove = (e: React.MouseEvent) => {
+  const handleMouseMove = useCallback((e: MouseEvent) => {
     if (!isDragging) return;
     e.preventDefault();
     
@@ -62,23 +62,23 @@ export function TaskReminder() {
       x: Math.max(0, Math.min(newX, maxX)),
       y: Math.max(0, Math.min(newY, maxY)),
     });
-  };
+  }, [isDragging, dragOffset]);
 
-  const handleMouseUp = () => {
+  const handleMouseUp = useCallback(() => {
     setIsDragging(false);
-  };
+  }, []);
 
   useEffect(() => {
     // 监听全局鼠标事件
     if (isDragging) {
-      document.addEventListener('mousemove', handleMouseMove as any);
+      document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
       return () => {
-        document.removeEventListener('mousemove', handleMouseMove as any);
+        document.removeEventListener('mousemove', handleMouseMove);
         document.removeEventListener('mouseup', handleMouseUp);
       };
     }
-  }, [isDragging, dragOffset]);
+  }, [isDragging, dragOffset, handleMouseMove, handleMouseUp]);
 
   useEffect(() => {
     // 每分钟检查一次任务提醒

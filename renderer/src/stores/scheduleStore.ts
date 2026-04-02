@@ -16,7 +16,7 @@ interface ScheduleState {
   deleteSchedule: (id: string) => void;
   setFilters: (filters: ScheduleFilters) => void;
   fetchSchedules: (filters?: ScheduleFilters) => Promise<void>;
-  createSchedule: (scheduleData: any) => Promise<Schedule | null>;
+  createSchedule: (scheduleData: Partial<Schedule>) => Promise<Schedule | null>;
   updateScheduleRemote: (id: string, updates: Partial<Schedule>) => Promise<void>;
   deleteScheduleRemote: (id: string) => Promise<void>;
   getSchedulesByDate: (date: string) => Promise<Schedule[]>;
