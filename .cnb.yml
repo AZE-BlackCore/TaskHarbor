@@ -10,8 +10,7 @@ main:
     # 流水线 1: 代码质量检查
     - name: 📊 代码质量检查
       runner:
-        tags:
-          - ubuntu-latest
+        tags: []
         cpus: 2
       docker:
         image: node:20
@@ -64,8 +63,7 @@ main:
     # 流水线 2: 构建应用
     - name: 🏗️ 构建 Electron 应用
       runner:
-        tags:
-          - ubuntu-latest
+        tags: []
         cpus: 4
       docker:
         image: node:20
@@ -124,8 +122,7 @@ main:
   pull_request:
     - name: 🔍 PR 代码审查
       runner:
-        tags:
-          - ubuntu-latest
+        tags: []
         cpus: 2
       docker:
         image: node:20
@@ -157,8 +154,7 @@ main:
   tag_push:
     - name: 🚀 发布新版本
       runner:
-        tags:
-          - ubuntu-latest
+        tags: []
         cpus: 4
       docker:
         image: node:20
@@ -196,8 +192,7 @@ dev:
   push:
     - name: 🧪 开发分支构建
       runner:
-        tags:
-          - ubuntu-latest
+        tags: []
         cpus: 2
       docker:
         image: node:20
@@ -229,8 +224,7 @@ feature/*:
   push:
     - name: 🎯 功能分支快速检查
       runner:
-        tags:
-          - ubuntu-latest
+        tags: []
         cpus: 2
       docker:
         image: node:20
@@ -264,8 +258,7 @@ $:
   push:
     - name: 📋 常规检查
       runner:
-        tags:
-          - ubuntu-latest
+        tags: []
         cpus: 1
       docker:
         image: node:20
