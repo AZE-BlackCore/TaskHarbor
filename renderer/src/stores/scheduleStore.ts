@@ -138,7 +138,7 @@ export const useScheduleStore = create<ScheduleState>()(
       }
     },
 
-    createSchedule: async (scheduleData) => {
+    createSchedule: async (scheduleData: Partial<Schedule>) => {
       if (!window.electronAPI) {
         useErrorStore.getState().addError('Electron API not available', 'error');
         return null;
@@ -149,9 +149,15 @@ export const useScheduleStore = create<ScheduleState>()(
       const tempSchedule: Schedule = {
         ...scheduleData,
         id: tempId,
+        title: scheduleData.title || '',
+        startTime: scheduleData.startTime || new Date().toISOString(),
+        endTime: scheduleData.endTime || new Date().toISOString(),
+        allDay: scheduleData.allDay ?? false,
+        color: scheduleData.color || '#3B82F6',
+        priority: scheduleData.priority || 'medium',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-      };
+      } as Schedule;
       
       // 乐观添加：先添加到 UI
       get().addSchedule(tempSchedule);

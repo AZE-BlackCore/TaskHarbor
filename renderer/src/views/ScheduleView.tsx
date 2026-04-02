@@ -217,7 +217,10 @@ export function ScheduleView() {
 
             <select
               value={filterPriority}
-              onChange={(e) => setFilterPriority(e.target.value as 'low' | 'medium' | 'high' | '')}
+              onChange={(e) => {
+                const value = e.target.value as 'all' | 'low' | 'medium' | 'high';
+                setFilterPriority(value === '' ? 'all' : value);
+              }}
               className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-dark-bg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
             >
               <option value="all">全部优先级</option>
