@@ -38,8 +38,13 @@ main:
         - name: 📦 安装依赖
           script: |
             echo "开始安装依赖..."
-            npm ci --prefer-offline --no-audit
+            echo "Node 版本：$(node -v)"
+            echo "npm 版本：$(npm -v)"
+            echo "当前目录：$(pwd)"
+            ls -la package.json || echo "package.json 不存在!"
+            npm install --prefer-offline --no-audit
             echo "依赖安装完成"
+            ls -d node_modules 2>/dev/null && echo "✓ node_modules 存在" || echo "✗ node_modules 不存在!"
         
         - name: 🔍 类型检查
           script: |
@@ -84,16 +89,28 @@ main:
             echo "配置 npm 缓存目录..."
             mkdir -p /home/cnb/.npm-cache
             npm config set cache /home/cnb/.npm-cache
+            npm config get cache
             echo "npm 缓存配置完成"
         
         - name: 📦 安装依赖
           script: |
             echo "开始安装依赖..."
-            npm ci --prefer-offline --no-audit
+            echo "Node 版本：$(node -v)"
+            echo "npm 版本：$(npm -v)"
+            echo "当前目录：$(pwd)"
+            echo "检查 package.json:"
+            ls -la package.json || echo "package.json 不存在!"
+            echo "\n开始安装..."
+            npm install --prefer-offline --no-audit
+            echo "\n依赖安装完成"
+            echo "检查 node_modules:"
+            ls -d node_modules 2>/dev/null && echo "node_modules 存在" || echo "node_modules 不存在!"
         
         - name: 🔨 编译主进程
           script: |
             echo "编译主进程 TypeScript..."
+            echo "检查 tsc:"
+            which tsc || echo "tsc 未找到"
             npm run build:main
         
         - name: 🔨 编译预加载脚本
