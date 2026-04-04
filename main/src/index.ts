@@ -1,5 +1,6 @@
 import { app, BrowserWindow, ipcMain, session, globalShortcut } from 'electron';
 import * as path from 'path';
+import { existsSync } from 'fs';
 import { setupDatabase } from './services/database';
 import { setupTaskHandlers } from './ipc-handlers/task-handlers';
 import { setupProjectHandlers } from './ipc-handlers/project-handlers';
@@ -11,15 +12,18 @@ console.log('=== Main Process Started ===');
 console.log('Electron version:', process.versions.electron);
 console.log('Node version:', process.versions.node);
 console.log('Chrome version:', process.versions.chrome);
+console.log('isPackaged:', app.isPackaged);
+console.log('resourcesPath:', process.resourcesPath);
+console.log('__dirname:', __dirname);
+console.log('cwd:', process.cwd());
 
 let mainWindow: BrowserWindow | null = null;
 
-// 设置 Content Security Policy（根据环境动态生成）
+// 设置 Content Security Policy
 function setupCSP() {
   const isDev = !app.isPackaged;
 
-  // 开发环境：允许 Vite 开发服务器 (localhost:5173) 和 HMR websocket
-  // 生产环境：只允许本地资源 (file://), 移除所有 localhost 引用
+  // 生产环境需要更宽松的 CSP 以支持 Vite 打包的模块
   const csp = isDev
     ? [
         "default-src 'self'; ",
@@ -31,12 +35,15 @@ function setupCSP() {
       ].join('')
     : [
         "default-src 'self'; ",
-        "script-src 'self' 'unsafe-inline'; ",
-        "style-src 'self' 'unsafe-inline'; ",
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval'; ",
+        "style-src 'self' 'unsafe-inline' data:; ",
         "font-src 'self' data:; ",
         "img-src 'self' data: blob:; ",
         "connect-src 'self';",
       ].join('');
+
+  console.log('[CSP] Mode:', isDev ? 'Dev' : 'Production');
+  console.log('[CSP] Policy:', csp);
 
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
     callback({
@@ -48,32 +55,37 @@ function setupCSP() {
   });
 }
 
-// 获取资源路径（兼容开发环境和打包后）
+// 获取资源路径
 function getResourcePath(relativePath: string): string {
   if (app.isPackaged) {
-    // 打包后：__dirname = {resourcesPath}/app.asar/main/dist
-    // 通过 __dirname 回溯到 asar 根目录，loadFile 可正确解析 asar 虚拟路径
-    return path.join(__dirname, '../../', relativePath);
+    const fullPath = path.join(process.resourcesPath, relativePath);
+    console.log('[getResourcePath] Packaged mode, path:', fullPath);
+    console.log('[getResourcePath] Exists:', existsSync(fullPath));
+    return fullPath;
   }
-  // 开发环境
-  return path.join(__dirname, '..', '..', relativePath);
+  const fullPath = path.join(__dirname, '..', '..', relativePath);
+  console.log('[getResourcePath] Dev mode, path:', fullPath);
+  return fullPath;
 }
 
-// 获取 preload 脚本路径（preload 不能在 asar 内，需从 extraResources 读取）
+// 获取 preload 脚本路径
 function getPreloadPath(): string {
   if (app.isPackaged) {
-    return path.join(process.resourcesPath, 'preload', 'dist', 'index.js');
+    const fullPath = path.join(process.resourcesPath, 'preload', 'dist', 'index.js');
+    console.log('[getPreloadPath] Packaged mode, path:', fullPath);
+    console.log('[getPreloadPath] Exists:', existsSync(fullPath));
+    return fullPath;
   }
-  return path.join(__dirname, '../../preload/dist/index.js');
+  const fullPath = path.join(__dirname, '../../preload/dist/index.js');
+  console.log('[getPreloadPath] Dev mode, path:', fullPath);
+  return fullPath;
 }
 
 function createWindow() {
   const preloadPath = getPreloadPath();
-  console.log('Preload path:', preloadPath);
-  
-  // 获取图标路径
-  const iconPath = path.join(__dirname, '../../renderer/public/app-logo.svg');
-  
+  console.log('[createWindow] Preload path:', preloadPath);
+  console.log('[createWindow] Preload exists:', existsSync(preloadPath));
+
   // 创建主窗口
   mainWindow = new BrowserWindow({
     width: 1400,
@@ -82,23 +94,60 @@ function createWindow() {
     minHeight: 768,
     frame: true,
     backgroundColor: '#1E293B',
-    icon: iconPath,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
       preload: preloadPath,
+      webSecurity: false, // 关闭 web 安全检查，允许加载本地文件
     },
+  });
+
+  // 监听渲染进程控制台消息
+  mainWindow.webContents.on('console-message', (_event, level, message, line, sourceId) => {
+    const levelStr = ['VERBOSE', 'INFO', 'WARNING', 'ERROR'][level] || 'UNKNOWN';
+    console.log(`[Renderer ${levelStr}] ${message} (${sourceId}:${line})`);
+  });
+
+  // 监听加载事件
+  mainWindow.webContents.on('did-start-loading', () => {
+    console.log('[createWindow] Web contents started loading');
+  });
+
+  mainWindow.webContents.on('did-finish-load', () => {
+    console.log('[createWindow] Web contents finished loading');
+    // 加载完成后再打开 DevTools
+    if (app.isPackaged) {
+      mainWindow?.webContents.openDevTools({ mode: 'detach' });
+    }
+  });
+
+  mainWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {
+    console.error('[createWindow] Failed to load:', errorCode, errorDescription, validatedURL);
+  });
+
+  mainWindow.webContents.on('render-process-gone', (_event, details) => {
+    console.error('[createWindow] Render process gone:', details.reason, details.exitCode);
   });
 
   // 加载应用
   if (process.env.NODE_ENV === 'development') {
+    console.log('[createWindow] Loading dev URL: http://localhost:5173');
     mainWindow.loadURL('http://localhost:5173');
     mainWindow.webContents.openDevTools();
   } else {
-    mainWindow.loadFile(getResourcePath('renderer/dist/index.html'));
+    const htmlPath = getResourcePath('renderer/dist/index.html');
+    console.log('[createWindow] Loading HTML from:', htmlPath);
+    console.log('[createWindow] HTML exists:', existsSync(htmlPath));
+    
+    // 使用 loadFile 加载本地文件，确保路由正确
+    mainWindow.loadFile(htmlPath).then(() => {
+      console.log('[createWindow] HTML loaded successfully');
+    }).catch((err) => {
+      console.error('[createWindow] Failed to load HTML:', err);
+    });
   }
 
-  // 打包后也可通过 Ctrl+Shift+I 打开 DevTools（方便排查生产问题）
+  // Ctrl+Shift+I 切换 DevTools
   mainWindow.webContents.on('before-input-event', (_event, input) => {
     if (input.control && input.shift && input.key.toLowerCase() === 'i') {
       if (mainWindow) {
@@ -111,16 +160,8 @@ function createWindow() {
     }
   });
 
-  // 监听渲染进程崩溃，打印日志方便排查
-  mainWindow.webContents.on('render-process-gone', (_event, details) => {
-    console.error('[Main] Render process gone:', details.reason, details.exitCode);
-  });
-
-  mainWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {
-    console.error('[Main] Failed to load:', errorCode, errorDescription, validatedURL);
-  });
-
   mainWindow.on('closed', () => {
+    console.log('[createWindow] Window closed');
     mainWindow = null;
   });
 }
@@ -152,7 +193,6 @@ export function createFloatingWindow(options?: {
     },
   });
 
-  // 设置点击穿透
   if (options?.clickThrough) {
     floatingWin.setIgnoreMouseEvents(true, { forward: true });
   }
@@ -160,9 +200,8 @@ export function createFloatingWindow(options?: {
   if (process.env.NODE_ENV === 'development') {
     floatingWin.loadURL('http://localhost:5173/floating');
   } else {
-    floatingWin.loadFile(getResourcePath('renderer/dist/index.html'), {
-      hash: '/floating',
-    });
+    const htmlPath = getResourcePath('renderer/dist/index.html');
+    floatingWin.loadURL(`file:///${htmlPath.replace(/\\/g, '/')}#/floating`);
   }
 
   return floatingWin;
@@ -170,23 +209,20 @@ export function createFloatingWindow(options?: {
 
 app.whenReady().then(async () => {
   try {
-    // 设置 Content Security Policy（函数内部根据环境自动选择合适的策略）
+    console.log('[App] App ready, initializing...');
+
     setupCSP();
 
-    // 初始化数据库
     await setupDatabase();
-    console.log('Database setup complete');
+    console.log('[App] Database setup complete');
 
-    // 设置 IPC 处理器（支持异步初始化）- 在创建窗口之前设置
     await setupTaskHandlers();
     await setupProjectHandlers();
     setupWindowHandlers();
     setupNotificationHandlers();
-    setupScheduleHandlers();
-    
-    console.log('IPC handlers setup complete');
+    await setupScheduleHandlers();
+    console.log('[App] IPC handlers setup complete');
 
-    // 创建主窗口
     createWindow();
 
     app.on('activate', () => {
@@ -195,11 +231,12 @@ app.whenReady().then(async () => {
       }
     });
   } catch (error) {
-    console.error('Failed to initialize app:', error);
+    console.error('[App] Failed to initialize app:', error);
   }
 });
 
 app.on('window-all-closed', () => {
+  console.log('[App] All windows closed');
   if (process.platform !== 'darwin') {
     app.quit();
   }

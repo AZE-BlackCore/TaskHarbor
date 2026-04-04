@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Layout } from './components/Layout'
 import { ListView } from './views/ListView'
 import { GanttView } from './views/GanttView'
@@ -29,7 +29,7 @@ function App() {
   const toggleDarkMode = () => setDarkMode(!darkMode)
 
   return (
-    <BrowserRouter>
+    <HashRouter>
       <Routes>
         {/* 主窗口路由 */}
         <Route path="/" element={<Layout darkMode={darkMode} toggleDarkMode={toggleDarkMode} />}>
@@ -49,7 +49,7 @@ function App() {
       
       {/* 任务提醒 */}
       <TaskReminder />
-    </BrowserRouter>
+    </HashRouter>
   )
 }
 
