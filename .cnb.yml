@@ -1,86 +1,75 @@
-# CNB 流水线配置文件 - 简化版
+# CNB 流水线配置文件
 # 文档：https://docs.cnb.cool/zh/build/grammar.html
 
 # =====================================================
-# 主分支流水线
+# 主分支流水线 - 仅编译测试（不打包 Electron）
 # =====================================================
 main:
   push:
-    # 简化流水线：仅构建，跳过检查
-    - name: 🏗️ 构建 Electron 应用
+    - name: 🏗️ 编译测试
       runner:
         tags: []
-        cpus: 4
+        cpus: 2
       docker:
         image: node:20
       env:
         NODE_ENV: production
         CI: "true"
       stages:
-        # Step 1: 环境信息
         - name: 🔧 环境信息
           script: |
-            echo "=== 环境信息 ==="
+            echo "=== 开始构建 ==="
             node -v
             npm -v
             pwd
-            ls -la
-            echo "PATH=$PATH"
-            echo "================"
+            ls -la | head -20
         
-        # Step 2: 安装根目录依赖
         - name: 📦 安装根依赖
           script: |
             echo ">>> 安装根目录依赖..."
             npm install
-            echo ">>> 检查安装结果..."
-            ls node_modules/.bin/ | head -20
-            ls -la main/tsconfig.json
-            ls -la preload/tsconfig.json
+            echo ">>> 检查 TypeScript..."
+            npx tsc --version
         
-        # Step 3: 安装 renderer 依赖
         - name: 📦 安装 Renderer 依赖
           script: |
             echo ">>> 安装 Renderer 依赖..."
             cd renderer
             npm install
-            ls node_modules/.bin/ | head -20
+            echo ">>> 检查 Vite..."
+            npx vite --version
             cd ..
         
-        # Step 4: 直接调用 npx tsc（不通过 npm run）
-        - name: 🔨 编译主进程 (直接调用)
+        - name: 🔨 编译主进程
           script: |
-            echo ">>> 直接使用 npx tsc 编译主进程..."
+            echo ">>> 编译 main..."
             npx tsc -p main/tsconfig.json
-            echo ">>> 检查编译输出..."
-            ls -la main/dist/ || echo "main/dist 不存在"
+            echo ">>> main/dist 内容:"
+            ls -la main/dist/
         
-        # Step 5: 编译 preload
         - name: 🔨 编译 Preload
           script: |
             echo ">>> 编译 preload..."
             npx tsc -p preload/tsconfig.json
-            ls -la preload/dist/ || echo "preload/dist 不存在"
+            echo ">>> preload/dist 内容:"
+            ls -la preload/dist/
         
-        # Step 6: 构建 renderer
         - name: 🎨 构建 Renderer
           script: |
             echo ">>> 构建 renderer..."
             cd renderer
             npx vite build
-            ls -la dist/ || echo "renderer/dist 不存在"
+            echo ">>> renderer/dist 内容:"
+            ls -la dist/
             cd ..
         
-        # Step 7: 打包 Electron
-        - name: 📱 打包 Electron
+        - name: ✅ 构建完成
           script: |
-            echo ">>> 打包 Electron..."
-            npx electron-builder --win portable --x64
-            ls -la release/ || echo "release 不存在"
+            echo "=== 构建成功 ==="
+            echo "所有编译产物已生成"
       
       retry: 2
 
-  # PR 检查简化版
   pull_request:
     - name: 🔍 PR 检查
       runner:
@@ -101,31 +90,6 @@ main:
             cd renderer && npx tsc -b --noEmit && cd ..
 
 # =====================================================
-# 开发分支
-# =====================================================
-dev:
-  push:
-    - name: 🧪 开发构建
-      runner:
-        tags: []
-        cpus: 2
-      docker:
-        image: node:20
-      stages:
-        - name: 📦 安装依赖
-          script: |
-            npm install
-            cd renderer && npm install && cd ..
-        
-        - name: 🔨 构建
-          script: |
-            npx tsc -p main/tsconfig.json
-            npx tsc -p preload/tsconfig.json
-            cd renderer && npx vite build && cd ..
-      
-      allowFailure: true
-
-# =====================================================
 # 其他分支
 # =====================================================
 $:
@@ -137,11 +101,8 @@ $:
       docker:
         image: node:20
       stages:
-        - name: 📦 安装依赖
+        - name: 📦 安装并编译
           script: |
             npm install
             cd renderer && npm install && cd ..
-        
-        - name: 🔨 编译测试
-          script: |
-            npx tsc -p main/tsconfig.json || true
+            npx tsc -p main/tsconfig.json
