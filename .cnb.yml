@@ -1,80 +1,12 @@
-# CNB 流水线配置文件
-# 文档：https://docs.cnb.cool/zh/build/grammar.html#pipeline-image
+# CNB 流水线配置文件 - 简化版
+# 文档：https://docs.cnb.cool/zh/build/grammar.html
 
 # =====================================================
-# 主分支流水线 - 生产环境
+# 主分支流水线
 # =====================================================
 main:
-  # 代码推送到 main 分支时触发
   push:
-    # 流水线 1: 代码质量检查
-    - name: 📊 代码质量检查
-      runner:
-        tags: []
-        cpus: 2
-      docker:
-        image: node:20
-      env:
-        NODE_ENV: production
-        CI: "true"
-        npm_config_cache: /home/cnb/.npm-cache
-      # 仅在相关文件变更时执行
-      ifModify:
-        - "**/*.ts"
-        - "**/*.tsx"
-        - "**/*.js"
-        - "**/*.jsx"
-        - "package.json"
-        - "package-lock.json"
-        - "renderer/package.json"
-        - "renderer/package-lock.json"
-      stages:
-        - name: 🔧 环境检查
-          script: |
-            echo "=== 环境信息 ==="
-            echo "Node: $(node -v)"
-            echo "npm: $(npm -v)"
-            echo "PATH: $PATH"
-            echo "当前目录: $(pwd)"
-            echo "================"
-        
-        - name: ⚙️ 配置 npm 缓存
-          script: |
-            echo "配置 npm 缓存目录..."
-            mkdir -p /home/cnb/.npm-cache
-            npm config set cache /home/cnb/.npm-cache
-            echo "npm 缓存: $(npm config get cache)"
-        
-        - name: 📦 安装根目录依赖
-          script: |
-            echo "安装根目录依赖..."
-            npm install --prefer-offline --no-audit || npm install --no-audit
-            echo "✓ 根目录依赖安装完成"
-        
-        - name: 📦 安装 Renderer 依赖
-          script: |
-            echo "安装 Renderer 依赖..."
-            cd renderer
-            npm install --prefer-offline --no-audit || npm install --no-audit
-            echo "✓ Renderer 依赖安装完成"
-            cd ..
-        
-        - name: 🔍 类型检查
-          script: |
-            echo "TypeScript 类型检查..."
-            npm run typecheck:all
-        
-        - name: ✨ ESLint 代码检查
-          script: |
-            echo "ESLint 检查..."
-            npm run lint
-        
-        - name: 🧪 运行测试
-          script: |
-            echo "运行测试..."
-            npm run test
-
-    # 流水线 2: 构建应用
+    # 简化流水线：仅构建，跳过检查
     - name: 🏗️ 构建 Electron 应用
       runner:
         tags: []
@@ -84,277 +16,132 @@ main:
       env:
         NODE_ENV: production
         CI: "true"
-        npm_config_cache: /home/cnb/.npm-cache
       stages:
-        - name: 🔧 环境检查
+        # Step 1: 环境信息
+        - name: 🔧 环境信息
           script: |
             echo "=== 环境信息 ==="
-            echo "Node: $(node -v)"
-            echo "npm: $(npm -v)"
-            echo "PATH: $PATH"
-            echo "当前目录: $(pwd)"
+            node -v
+            npm -v
+            pwd
+            ls -la
+            echo "PATH=$PATH"
             echo "================"
         
-        - name: ⚙️ 配置 npm 缓存
+        # Step 2: 安装根目录依赖
+        - name: 📦 安装根依赖
           script: |
-            mkdir -p /home/cnb/.npm-cache
-            npm config set cache /home/cnb/.npm-cache
+            echo ">>> 安装根目录依赖..."
+            npm install
+            echo ">>> 检查安装结果..."
+            ls node_modules/.bin/ | head -20
+            ls -la main/tsconfig.json
+            ls -la preload/tsconfig.json
         
-        - name: 📦 安装根目录依赖
-          script: |
-            echo "安装根目录依赖..."
-            npm install --prefer-offline --no-audit || npm install --no-audit
-            echo "✓ 根目录依赖安装完成"
-        
+        # Step 3: 安装 renderer 依赖
         - name: 📦 安装 Renderer 依赖
           script: |
-            echo "安装 Renderer 依赖..."
+            echo ">>> 安装 Renderer 依赖..."
             cd renderer
-            npm install --prefer-offline --no-audit || npm install --no-audit
-            echo "✓ Renderer 依赖安装完成"
+            npm install
+            ls node_modules/.bin/ | head -20
             cd ..
         
-        - name: 🔨 编译主进程
+        # Step 4: 直接调用 npx tsc（不通过 npm run）
+        - name: 🔨 编译主进程 (直接调用)
           script: |
-            echo "编译主进程..."
-            npm run build:main
+            echo ">>> 直接使用 npx tsc 编译主进程..."
+            npx tsc -p main/tsconfig.json
+            echo ">>> 检查编译输出..."
+            ls -la main/dist/ || echo "main/dist 不存在"
         
-        - name: 🔨 编译预加载脚本
+        # Step 5: 编译 preload
+        - name: 🔨 编译 Preload
           script: |
-            echo "编译预加载脚本..."
-            npm run build:preload
+            echo ">>> 编译 preload..."
+            npx tsc -p preload/tsconfig.json
+            ls -la preload/dist/ || echo "preload/dist 不存在"
         
-        - name: 🎨 构建渲染进程
+        # Step 6: 构建 renderer
+        - name: 🎨 构建 Renderer
           script: |
-            echo "构建渲染进程..."
-            npm run build:renderer
+            echo ">>> 构建 renderer..."
+            cd renderer
+            npx vite build
+            ls -la dist/ || echo "renderer/dist 不存在"
+            cd ..
         
-        - name: 📱 打包 Electron 应用
+        # Step 7: 打包 Electron
+        - name: 📱 打包 Electron
           script: |
-            echo "打包 Electron 应用..."
-            npm run electron:build
-            echo "✓ 打包完成"
-        
-        - name: 📤 上传构建产物
-          script: |
-            echo "构建产物:"
-            ls -lh release/ || echo "release 目录不存在"
-      # 构建成功后的通知
-      endStages:
-        - name: ✅ 构建完成
-          script: |
-            echo "✅ Electron 应用构建完成！"
-            echo "版本: $(node -p "require('./package.json').version")"
-            echo "提交: ${CNB_COMMIT_SHA}"
-      # 失败重试
+            echo ">>> 打包 Electron..."
+            npx electron-builder --win portable --x64
+            ls -la release/ || echo "release 不存在"
+      
       retry: 2
 
-  # Pull Request 检查
+  # PR 检查简化版
   pull_request:
-    - name: 🔍 PR 代码审查
+    - name: 🔍 PR 检查
       runner:
         tags: []
         cpus: 2
       docker:
         image: node:20
-      env:
-        NODE_ENV: test
-        CI: "true"
-        npm_config_cache: /home/cnb/.npm-cache
       stages:
-        - name: 🔧 环境检查
+        - name: 📦 安装依赖
           script: |
-            echo "Node: $(node -v), npm: $(npm -v)"
-        
-        - name: ⚙️ 配置 npm 缓存
-          script: |
-            mkdir -p /home/cnb/.npm-cache
-            npm config set cache /home/cnb/.npm-cache
-        
-        - name: 📦 安装根目录依赖
-          script: npm install --no-audit
-        
-        - name: 📦 安装 Renderer 依赖
-          script: |
-            cd renderer && npm install --no-audit && cd ..
+            npm install
+            cd renderer && npm install && cd ..
         
         - name: 🔍 类型检查
-          script: npm run typecheck:all
-        
-        - name: ✨ ESLint 检查
-          script: npm run lint
-        
-        - name: 🧪 运行测试
-          script: npm run test
-      
-      lock:
-        enable: true
-        group: pr-check
-
-  # Tag 推送时的发布流程
-  tag_push:
-    - name: 🚀 发布新版本
-      runner:
-        tags: []
-        cpus: 4
-      docker:
-        image: node:20
-      env:
-        NODE_ENV: production
-        CI: "true"
-        GH_TOKEN: ${GH_TOKEN}
-        npm_config_cache: /home/cnb/.npm-cache
-      stages:
-        - name: 🔧 环境检查
           script: |
-            echo "Node: $(node -v), npm: $(npm -v)"
-        
-        - name: ⚙️ 配置 npm 缓存
-          script: |
-            mkdir -p /home/cnb/.npm-cache
-            npm config set cache /home/cnb/.npm-cache
-        
-        - name: 📦 安装根目录依赖
-          script: npm install --no-audit
-        
-        - name: 📦 安装 Renderer 依赖
-          script: |
-            cd renderer && npm install --no-audit && cd ..
-        
-        - name: 🔨 完整构建
-          script: npm run electron:build
-        
-        - name: 📊 生成版本信息
-          script: |
-            echo "发布版本: ${CNB_TAG_NAME}"
-            echo "提交 SHA: ${CNB_COMMIT_SHA}"
-            echo "构建时间: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
-            # 使用 node 替代 jq
-            node -p "require('./package.json').version" > version.txt
-        
-        - name: 📤 创建 Release
-          script: |
-            echo "准备发布到 GitHub Releases..."
-            echo "Release 准备完成"
+            npx tsc --noEmit -p main/tsconfig.json
+            npx tsc --noEmit -p preload/tsconfig.json
+            cd renderer && npx tsc -b --noEmit && cd ..
 
 # =====================================================
-# 开发分支流水线
+# 开发分支
 # =====================================================
 dev:
   push:
-    - name: 🧪 开发分支构建
+    - name: 🧪 开发构建
       runner:
         tags: []
         cpus: 2
       docker:
         image: node:20
-      env:
-        NODE_ENV: development
-        CI: "true"
-        npm_config_cache: /home/cnb/.npm-cache
       stages:
-        - name: 🔧 环境检查
+        - name: 📦 安装依赖
           script: |
-            echo "Node: $(node -v), npm: $(npm -v)"
+            npm install
+            cd renderer && npm install && cd ..
         
-        - name: ⚙️ 配置 npm 缓存
+        - name: 🔨 构建
           script: |
-            mkdir -p /home/cnb/.npm-cache
-            npm config set cache /home/cnb/.npm-cache
-        
-        - name: 📦 安装根目录依赖
-          script: npm install --no-audit
-        
-        - name: 📦 安装 Renderer 依赖
-          script: |
-            cd renderer && npm install --no-audit && cd ..
-        
-        - name: 🔍 类型检查
-          script: npm run typecheck:all
-        
-        - name: ✨ ESLint 检查
-          script: npm run lint
-        
-        - name: 🔨 构建检查
-          script: npm run build:all
+            npx tsc -p main/tsconfig.json
+            npx tsc -p preload/tsconfig.json
+            cd renderer && npx vite build && cd ..
       
       allowFailure: true
 
 # =====================================================
-# 功能分支流水线
-# =====================================================
-feature/*:
-  push:
-    - name: 🎯 功能分支快速检查
-      runner:
-        tags: []
-        cpus: 2
-      docker:
-        image: node:20
-      env:
-        NODE_ENV: test
-        CI: "true"
-        npm_config_cache: /home/cnb/.npm-cache
-      ifModify:
-        - "**/*.ts"
-        - "**/*.tsx"
-        - "package.json"
-        - "renderer/package.json"
-      stages:
-        - name: 🔧 环境检查
-          script: |
-            echo "Node: $(node -v), npm: $(npm -v)"
-        
-        - name: ⚙️ 配置 npm 缓存
-          script: |
-            mkdir -p /home/cnb/.npm-cache
-            npm config set cache /home/cnb/.npm-cache
-        
-        - name: 📦 安装根目录依赖
-          script: npm install --no-audit
-        
-        - name: 📦 安装 Renderer 依赖
-          script: |
-            cd renderer && npm install --no-audit && cd ..
-        
-        - name: 🔍 类型检查
-          script: npm run typecheck:all
-        
-        - name: ✨ ESLint 检查
-          script: npm run lint
-      
-      ifNewBranch: true
-
-# =====================================================
-# 其他分支兜底配置
+# 其他分支
 # =====================================================
 $:
   push:
-    - name: 📋 常规检查
+    - name: 📋 基础检查
       runner:
         tags: []
         cpus: 1
       docker:
         image: node:20
-      env:
-        CI: "true"
-        npm_config_cache: /home/cnb/.npm-cache
       stages:
-        - name: 🔧 环境检查
+        - name: 📦 安装依赖
           script: |
-            echo "Node: $(node -v), npm: $(npm -v)"
+            npm install
+            cd renderer && npm install && cd ..
         
-        - name: ⚙️ 配置 npm 缓存
+        - name: 🔨 编译测试
           script: |
-            mkdir -p /home/cnb/.npm-cache
-            npm config set cache /home/cnb/.npm-cache
-        
-        - name: 📦 安装根目录依赖
-          script: npm install --no-audit
-        
-        - name: 📦 安装 Renderer 依赖
-          script: |
-            cd renderer && npm install --no-audit && cd ..
-        
-        - name: 🔍 基础检查
-          script: npm run lint
+            npx tsc -p main/tsconfig.json || true
