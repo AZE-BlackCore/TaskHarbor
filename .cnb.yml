@@ -29,59 +29,50 @@ main:
         - "renderer/package.json"
         - "renderer/package-lock.json"
       stages:
+        - name: 🔧 环境检查
+          script: |
+            echo "=== 环境信息 ==="
+            echo "Node: $(node -v)"
+            echo "npm: $(npm -v)"
+            echo "PATH: $PATH"
+            echo "当前目录: $(pwd)"
+            echo "================"
+        
         - name: ⚙️ 配置 npm 缓存
           script: |
             echo "配置 npm 缓存目录..."
             mkdir -p /home/cnb/.npm-cache
             npm config set cache /home/cnb/.npm-cache
-            npm config get cache
-            echo "npm 缓存配置完成"
+            echo "npm 缓存: $(npm config get cache)"
         
         - name: 📦 安装根目录依赖
           script: |
-            echo "开始安装根目录依赖..."
-            echo "Node 版本：$(node -v)"
-            echo "npm 版本：$(npm -v)"
-            echo "当前目录：$(pwd)"
-            ls -la package.json || echo "package.json 不存在!"
-            npm install --prefer-offline --no-audit
-            echo "根目录依赖安装完成"
-            ls -d node_modules 2>/dev/null && echo "✓ node_modules 存在" || echo "✗ node_modules 不存在!"
+            echo "安装根目录依赖..."
+            npm install --prefer-offline --no-audit || npm install --no-audit
+            echo "✓ 根目录依赖安装完成"
         
         - name: 📦 安装 Renderer 依赖
           script: |
-            echo "开始安装 Renderer 依赖..."
+            echo "安装 Renderer 依赖..."
             cd renderer
-            ls -la package.json || echo "renderer/package.json 不存在!"
-            npm install --prefer-offline --no-audit
-            echo "Renderer 依赖安装完成"
-            ls -d node_modules 2>/dev/null && echo "✓ renderer/node_modules 存在" || echo "✗ renderer/node_modules 不存在!"
+            npm install --prefer-offline --no-audit || npm install --no-audit
+            echo "✓ Renderer 依赖安装完成"
             cd ..
         
         - name: 🔍 类型检查
           script: |
-            echo "开始 TypeScript 类型检查..."
+            echo "TypeScript 类型检查..."
             npm run typecheck:all
-            echo "类型检查通过"
         
         - name: ✨ ESLint 代码检查
           script: |
-            echo "开始 ESLint 检查..."
+            echo "ESLint 检查..."
             npm run lint
-            echo "ESLint 检查通过"
         
         - name: 🧪 运行测试
           script: |
-            echo "开始运行测试..."
+            echo "运行测试..."
             npm run test
-            echo "测试通过"
-      # 失败时的处理
-      failStages:
-        - name: ❌ 构建失败通知
-          script: |
-            echo "❌ 代码质量检查失败！"
-            echo "请检查类型错误和 ESLint 错误"
-            exit 1
 
     # 流水线 2: 构建应用
     - name: 🏗️ 构建 Electron 应用
@@ -95,44 +86,42 @@ main:
         CI: "true"
         npm_config_cache: /home/cnb/.npm-cache
       stages:
+        - name: 🔧 环境检查
+          script: |
+            echo "=== 环境信息 ==="
+            echo "Node: $(node -v)"
+            echo "npm: $(npm -v)"
+            echo "PATH: $PATH"
+            echo "当前目录: $(pwd)"
+            echo "================"
+        
         - name: ⚙️ 配置 npm 缓存
           script: |
-            echo "配置 npm 缓存目录..."
             mkdir -p /home/cnb/.npm-cache
             npm config set cache /home/cnb/.npm-cache
-            npm config get cache
-            echo "npm 缓存配置完成"
         
         - name: 📦 安装根目录依赖
           script: |
-            echo "开始安装根目录依赖..."
-            echo "Node 版本：$(node -v)"
-            echo "npm 版本：$(npm -v)"
-            echo "当前目录：$(pwd)"
-            echo "检查 package.json:"
-            ls -la package.json || echo "package.json 不存在!"
-            npm install --prefer-offline --no-audit
-            echo "根目录依赖安装完成"
-            ls -d node_modules 2>/dev/null && echo "✓ node_modules 存在" || echo "✗ node_modules 不存在!"
+            echo "安装根目录依赖..."
+            npm install --prefer-offline --no-audit || npm install --no-audit
+            echo "✓ 根目录依赖安装完成"
         
         - name: 📦 安装 Renderer 依赖
           script: |
-            echo "开始安装 Renderer 依赖..."
+            echo "安装 Renderer 依赖..."
             cd renderer
-            ls -la package.json || echo "renderer/package.json 不存在!"
-            npm install --prefer-offline --no-audit
-            echo "Renderer 依赖安装完成"
-            ls -d node_modules 2>/dev/null && echo "✓ renderer/node_modules 存在" || echo "✗ renderer/node_modules 不存在!"
+            npm install --prefer-offline --no-audit || npm install --no-audit
+            echo "✓ Renderer 依赖安装完成"
             cd ..
         
         - name: 🔨 编译主进程
           script: |
-            echo "编译主进程 TypeScript..."
+            echo "编译主进程..."
             npm run build:main
         
         - name: 🔨 编译预加载脚本
           script: |
-            echo "编译预加载脚本 TypeScript..."
+            echo "编译预加载脚本..."
             npm run build:preload
         
         - name: 🎨 构建渲染进程
@@ -142,26 +131,23 @@ main:
         
         - name: 📱 打包 Electron 应用
           script: |
-            echo "开始打包 Electron 应用..."
+            echo "打包 Electron 应用..."
             npm run electron:build
-            echo "打包完成"
+            echo "✓ 打包完成"
         
         - name: 📤 上传构建产物
           script: |
-            echo "构建产物目录:"
-            ls -lh release/
-            echo "构建成功！"
+            echo "构建产物:"
+            ls -lh release/ || echo "release 目录不存在"
       # 构建成功后的通知
       endStages:
         - name: ✅ 构建完成
           script: |
             echo "✅ Electron 应用构建完成！"
-            echo "版本：$(node -p "require('./package.json').version")"
-            echo "提交：${CNB_COMMIT_SHA}"
+            echo "版本: $(node -p "require('./package.json').version")"
+            echo "提交: ${CNB_COMMIT_SHA}"
       # 失败重试
       retry: 2
-      # 允许失败（不阻塞其他流水线）
-      allowFailure: false
 
   # Pull Request 检查
   pull_request:
@@ -176,19 +162,21 @@ main:
         CI: "true"
         npm_config_cache: /home/cnb/.npm-cache
       stages:
+        - name: 🔧 环境检查
+          script: |
+            echo "Node: $(node -v), npm: $(npm -v)"
+        
         - name: ⚙️ 配置 npm 缓存
           script: |
             mkdir -p /home/cnb/.npm-cache
             npm config set cache /home/cnb/.npm-cache
         
         - name: 📦 安装根目录依赖
-          script: npm ci --prefer-offline --no-audit
+          script: npm install --no-audit
         
         - name: 📦 安装 Renderer 依赖
           script: |
-            cd renderer
-            npm ci --prefer-offline --no-audit
-            cd ..
+            cd renderer && npm install --no-audit && cd ..
         
         - name: 🔍 类型检查
           script: npm run typecheck:all
@@ -199,10 +187,8 @@ main:
         - name: 🧪 运行测试
           script: npm run test
       
-      # PR 检查必须通过
       lock:
         enable: true
-        # 同一时间只允许一个 PR 检查运行
         group: pr-check
 
   # Tag 推送时的发布流程
@@ -219,34 +205,36 @@ main:
         GH_TOKEN: ${GH_TOKEN}
         npm_config_cache: /home/cnb/.npm-cache
       stages:
+        - name: 🔧 环境检查
+          script: |
+            echo "Node: $(node -v), npm: $(npm -v)"
+        
         - name: ⚙️ 配置 npm 缓存
           script: |
             mkdir -p /home/cnb/.npm-cache
             npm config set cache /home/cnb/.npm-cache
         
         - name: 📦 安装根目录依赖
-          script: npm ci --prefer-offline --no-audit
+          script: npm install --no-audit
         
         - name: 📦 安装 Renderer 依赖
           script: |
-            cd renderer
-            npm ci --prefer-offline --no-audit
-            cd ..
+            cd renderer && npm install --no-audit && cd ..
         
         - name: 🔨 完整构建
           script: npm run electron:build
         
         - name: 📊 生成版本信息
           script: |
-            echo "发布版本：${CNB_TAG_NAME}"
+            echo "发布版本: ${CNB_TAG_NAME}"
             echo "提交 SHA: ${CNB_COMMIT_SHA}"
-            echo "构建时间：$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
-            cat package.json | jq '.version' > version.txt
+            echo "构建时间: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+            # 使用 node 替代 jq
+            node -p "require('./package.json').version" > version.txt
         
         - name: 📤 创建 Release
           script: |
             echo "准备发布到 GitHub Releases..."
-            # 这里可以添加 GitHub CLI 命令创建 release
             echo "Release 准备完成"
 
 # =====================================================
@@ -265,19 +253,21 @@ dev:
         CI: "true"
         npm_config_cache: /home/cnb/.npm-cache
       stages:
+        - name: 🔧 环境检查
+          script: |
+            echo "Node: $(node -v), npm: $(npm -v)"
+        
         - name: ⚙️ 配置 npm 缓存
           script: |
             mkdir -p /home/cnb/.npm-cache
             npm config set cache /home/cnb/.npm-cache
         
         - name: 📦 安装根目录依赖
-          script: npm ci --prefer-offline --no-audit
+          script: npm install --no-audit
         
         - name: 📦 安装 Renderer 依赖
           script: |
-            cd renderer
-            npm ci --prefer-offline --no-audit
-            cd ..
+            cd renderer && npm install --no-audit && cd ..
         
         - name: 🔍 类型检查
           script: npm run typecheck:all
@@ -288,7 +278,6 @@ dev:
         - name: 🔨 构建检查
           script: npm run build:all
       
-      # 允许失败（开发分支）
       allowFailure: true
 
 # =====================================================
@@ -306,26 +295,27 @@ feature/*:
         NODE_ENV: test
         CI: "true"
         npm_config_cache: /home/cnb/.npm-cache
-      # 仅检查关键项目
       ifModify:
         - "**/*.ts"
         - "**/*.tsx"
         - "package.json"
         - "renderer/package.json"
       stages:
+        - name: 🔧 环境检查
+          script: |
+            echo "Node: $(node -v), npm: $(npm -v)"
+        
         - name: ⚙️ 配置 npm 缓存
           script: |
             mkdir -p /home/cnb/.npm-cache
             npm config set cache /home/cnb/.npm-cache
         
         - name: 📦 安装根目录依赖
-          script: npm ci --prefer-offline --no-audit
+          script: npm install --no-audit
         
         - name: 📦 安装 Renderer 依赖
           script: |
-            cd renderer
-            npm ci --prefer-offline --no-audit
-            cd ..
+            cd renderer && npm install --no-audit && cd ..
         
         - name: 🔍 类型检查
           script: npm run typecheck:all
@@ -333,7 +323,6 @@ feature/*:
         - name: ✨ ESLint 检查
           script: npm run lint
       
-      # 新分支首次提交时执行
       ifNewBranch: true
 
 # =====================================================
@@ -351,35 +340,21 @@ $:
         CI: "true"
         npm_config_cache: /home/cnb/.npm-cache
       stages:
+        - name: 🔧 环境检查
+          script: |
+            echo "Node: $(node -v), npm: $(npm -v)"
+        
         - name: ⚙️ 配置 npm 缓存
           script: |
             mkdir -p /home/cnb/.npm-cache
             npm config set cache /home/cnb/.npm-cache
         
         - name: 📦 安装根目录依赖
-          script: npm ci --prefer-offline --no-audit
+          script: npm install --no-audit
         
         - name: 📦 安装 Renderer 依赖
           script: |
-            cd renderer
-            npm ci --prefer-offline --no-audit
-            cd ..
+            cd renderer && npm install --no-audit && cd ..
         
         - name: 🔍 基础检查
           script: npm run lint
-
-# =====================================================
-# 环境变量导入
-# =====================================================
-# 从密钥仓库导入敏感环境变量
-# imports:
-#   - https://cnb.cool/AZE-BlackCore/secrets/-/raw/main/env.yml
-
-# =====================================================
-# 通用配置
-# =====================================================
-# 沙箱模式（安全隔离）
-# sandbox: true
-
-# 默认重试次数
-# retry: 1
