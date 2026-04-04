@@ -26,6 +26,8 @@ main:
         - "**/*.jsx"
         - "package.json"
         - "package-lock.json"
+        - "renderer/package.json"
+        - "renderer/package-lock.json"
       stages:
         - name: ⚙️ 配置 npm 缓存
           script: |
@@ -35,16 +37,26 @@ main:
             npm config get cache
             echo "npm 缓存配置完成"
         
-        - name: 📦 安装依赖
+        - name: 📦 安装根目录依赖
           script: |
-            echo "开始安装依赖..."
+            echo "开始安装根目录依赖..."
             echo "Node 版本：$(node -v)"
             echo "npm 版本：$(npm -v)"
             echo "当前目录：$(pwd)"
             ls -la package.json || echo "package.json 不存在!"
             npm install --prefer-offline --no-audit
-            echo "依赖安装完成"
+            echo "根目录依赖安装完成"
             ls -d node_modules 2>/dev/null && echo "✓ node_modules 存在" || echo "✗ node_modules 不存在!"
+        
+        - name: 📦 安装 Renderer 依赖
+          script: |
+            echo "开始安装 Renderer 依赖..."
+            cd renderer
+            ls -la package.json || echo "renderer/package.json 不存在!"
+            npm install --prefer-offline --no-audit
+            echo "Renderer 依赖安装完成"
+            ls -d node_modules 2>/dev/null && echo "✓ renderer/node_modules 存在" || echo "✗ renderer/node_modules 不存在!"
+            cd ..
         
         - name: 🔍 类型检查
           script: |
@@ -82,7 +94,6 @@ main:
         NODE_ENV: production
         CI: "true"
         npm_config_cache: /home/cnb/.npm-cache
-      # 依赖前一个流水线成功完成
       stages:
         - name: ⚙️ 配置 npm 缓存
           script: |
@@ -92,25 +103,31 @@ main:
             npm config get cache
             echo "npm 缓存配置完成"
         
-        - name: 📦 安装依赖
+        - name: 📦 安装根目录依赖
           script: |
-            echo "开始安装依赖..."
+            echo "开始安装根目录依赖..."
             echo "Node 版本：$(node -v)"
             echo "npm 版本：$(npm -v)"
             echo "当前目录：$(pwd)"
             echo "检查 package.json:"
             ls -la package.json || echo "package.json 不存在!"
-            echo "\n开始安装..."
             npm install --prefer-offline --no-audit
-            echo "\n依赖安装完成"
-            echo "检查 node_modules:"
-            ls -d node_modules 2>/dev/null && echo "node_modules 存在" || echo "node_modules 不存在!"
+            echo "根目录依赖安装完成"
+            ls -d node_modules 2>/dev/null && echo "✓ node_modules 存在" || echo "✗ node_modules 不存在!"
+        
+        - name: 📦 安装 Renderer 依赖
+          script: |
+            echo "开始安装 Renderer 依赖..."
+            cd renderer
+            ls -la package.json || echo "renderer/package.json 不存在!"
+            npm install --prefer-offline --no-audit
+            echo "Renderer 依赖安装完成"
+            ls -d node_modules 2>/dev/null && echo "✓ renderer/node_modules 存在" || echo "✗ renderer/node_modules 不存在!"
+            cd ..
         
         - name: 🔨 编译主进程
           script: |
             echo "编译主进程 TypeScript..."
-            echo "检查 tsc:"
-            which tsc || echo "tsc 未找到"
             npm run build:main
         
         - name: 🔨 编译预加载脚本
@@ -164,8 +181,14 @@ main:
             mkdir -p /home/cnb/.npm-cache
             npm config set cache /home/cnb/.npm-cache
         
-        - name: 📦 安装依赖
+        - name: 📦 安装根目录依赖
           script: npm ci --prefer-offline --no-audit
+        
+        - name: 📦 安装 Renderer 依赖
+          script: |
+            cd renderer
+            npm ci --prefer-offline --no-audit
+            cd ..
         
         - name: 🔍 类型检查
           script: npm run typecheck:all
@@ -201,8 +224,14 @@ main:
             mkdir -p /home/cnb/.npm-cache
             npm config set cache /home/cnb/.npm-cache
         
-        - name: 📦 安装依赖
+        - name: 📦 安装根目录依赖
           script: npm ci --prefer-offline --no-audit
+        
+        - name: 📦 安装 Renderer 依赖
+          script: |
+            cd renderer
+            npm ci --prefer-offline --no-audit
+            cd ..
         
         - name: 🔨 完整构建
           script: npm run electron:build
@@ -241,8 +270,14 @@ dev:
             mkdir -p /home/cnb/.npm-cache
             npm config set cache /home/cnb/.npm-cache
         
-        - name: 📦 安装依赖
+        - name: 📦 安装根目录依赖
           script: npm ci --prefer-offline --no-audit
+        
+        - name: 📦 安装 Renderer 依赖
+          script: |
+            cd renderer
+            npm ci --prefer-offline --no-audit
+            cd ..
         
         - name: 🔍 类型检查
           script: npm run typecheck:all
@@ -276,14 +311,21 @@ feature/*:
         - "**/*.ts"
         - "**/*.tsx"
         - "package.json"
+        - "renderer/package.json"
       stages:
         - name: ⚙️ 配置 npm 缓存
           script: |
             mkdir -p /home/cnb/.npm-cache
             npm config set cache /home/cnb/.npm-cache
         
-        - name: 📦 快速安装
+        - name: 📦 安装根目录依赖
           script: npm ci --prefer-offline --no-audit
+        
+        - name: 📦 安装 Renderer 依赖
+          script: |
+            cd renderer
+            npm ci --prefer-offline --no-audit
+            cd ..
         
         - name: 🔍 类型检查
           script: npm run typecheck:all
@@ -314,8 +356,14 @@ $:
             mkdir -p /home/cnb/.npm-cache
             npm config set cache /home/cnb/.npm-cache
         
-        - name: 📦 安装依赖
+        - name: 📦 安装根目录依赖
           script: npm ci --prefer-offline --no-audit
+        
+        - name: 📦 安装 Renderer 依赖
+          script: |
+            cd renderer
+            npm ci --prefer-offline --no-audit
+            cd ..
         
         - name: 🔍 基础检查
           script: npm run lint
