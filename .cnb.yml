@@ -2,7 +2,7 @@
 # 文档：https://docs.cnb.cool/zh/build/grammar.html
 
 # =====================================================
-# 主分支流水线 - 仅编译测试（不打包 Electron）
+# 主分支流水线
 # =====================================================
 main:
   push:
@@ -13,7 +13,7 @@ main:
       docker:
         image: node:20
       env:
-        NODE_ENV: production
+        NODE_ENV: development
         CI: "true"
       stages:
         - name: 🔧 环境信息
@@ -22,51 +22,44 @@ main:
             node -v
             npm -v
             pwd
-            ls -la | head -20
         
         - name: 📦 安装根依赖
           script: |
             echo ">>> 安装根目录依赖..."
             npm install
             echo ">>> 检查 TypeScript..."
-            node node_modules/typescript/bin/tsc --version
+            ./node_modules/.bin/tsc --version
         
         - name: 📦 安装 Renderer 依赖
           script: |
             echo ">>> 安装 Renderer 依赖..."
             cd renderer
             npm install
-            echo ">>> 检查 Vite..."
-            npx vite --version
             cd ..
         
         - name: 🔨 编译主进程
           script: |
             echo ">>> 编译 main..."
-            node node_modules/typescript/bin/tsc -p main/tsconfig.json
-            echo ">>> main/dist 内容:"
+            ./node_modules/.bin/tsc -p main/tsconfig.json
             ls -la main/dist/
         
         - name: 🔨 编译 Preload
           script: |
             echo ">>> 编译 preload..."
-            node node_modules/typescript/bin/tsc -p preload/tsconfig.json
-            echo ">>> preload/dist 内容:"
+            ./node_modules/.bin/tsc -p preload/tsconfig.json
             ls -la preload/dist/
         
         - name: 🎨 构建 Renderer
           script: |
             echo ">>> 构建 renderer..."
             cd renderer
-            npx vite build
-            echo ">>> renderer/dist 内容:"
+            ./node_modules/.bin/vite build
             ls -la dist/
             cd ..
         
         - name: ✅ 构建完成
           script: |
             echo "=== 构建成功 ==="
-            echo "所有编译产物已生成"
       
       retry: 2
 
@@ -77,6 +70,8 @@ main:
         cpus: 2
       docker:
         image: node:20
+      env:
+        NODE_ENV: development
       stages:
         - name: 📦 安装依赖
           script: |
@@ -85,9 +80,9 @@ main:
         
         - name: 🔍 类型检查
           script: |
-            node node_modules/typescript/bin/tsc --noEmit -p main/tsconfig.json
-            node node_modules/typescript/bin/tsc --noEmit -p preload/tsconfig.json
-            cd renderer && npx tsc -b --noEmit && cd ..
+            ./node_modules/.bin/tsc --noEmit -p main/tsconfig.json
+            ./node_modules/.bin/tsc --noEmit -p preload/tsconfig.json
+            cd renderer && ./node_modules/.bin/tsc -b --noEmit && cd ..
 
 # =====================================================
 # 其他分支
@@ -100,9 +95,11 @@ $:
         cpus: 1
       docker:
         image: node:20
+      env:
+        NODE_ENV: development
       stages:
         - name: 📦 安装并编译
           script: |
             npm install
             cd renderer && npm install && cd ..
-            node node_modules/typescript/bin/tsc -p main/tsconfig.json
+            ./node_modules/.bin/tsc -p main/tsconfig.json
