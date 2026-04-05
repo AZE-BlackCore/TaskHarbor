@@ -29,7 +29,7 @@ main:
             echo ">>> 安装根目录依赖..."
             npm install
             echo ">>> 检查 TypeScript..."
-            npx tsc --version
+            node node_modules/typescript/bin/tsc --version
         
         - name: 📦 安装 Renderer 依赖
           script: |
@@ -43,14 +43,14 @@ main:
         - name: 🔨 编译主进程
           script: |
             echo ">>> 编译 main..."
-            npx tsc -p main/tsconfig.json
+            node node_modules/typescript/bin/tsc -p main/tsconfig.json
             echo ">>> main/dist 内容:"
             ls -la main/dist/
         
         - name: 🔨 编译 Preload
           script: |
             echo ">>> 编译 preload..."
-            npx tsc -p preload/tsconfig.json
+            node node_modules/typescript/bin/tsc -p preload/tsconfig.json
             echo ">>> preload/dist 内容:"
             ls -la preload/dist/
         
@@ -85,8 +85,8 @@ main:
         
         - name: 🔍 类型检查
           script: |
-            npx tsc --noEmit -p main/tsconfig.json
-            npx tsc --noEmit -p preload/tsconfig.json
+            node node_modules/typescript/bin/tsc --noEmit -p main/tsconfig.json
+            node node_modules/typescript/bin/tsc --noEmit -p preload/tsconfig.json
             cd renderer && npx tsc -b --noEmit && cd ..
 
 # =====================================================
@@ -105,4 +105,4 @@ $:
           script: |
             npm install
             cd renderer && npm install && cd ..
-            npx tsc -p main/tsconfig.json
+            node node_modules/typescript/bin/tsc -p main/tsconfig.json
