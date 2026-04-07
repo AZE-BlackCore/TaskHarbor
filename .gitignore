@@ -86,3 +86,17 @@ Thumbs.db
 # Misc
 *.bak
 *.backup
+
+# Build outputs (explicit)
+dist-output/
+*.exe
+*.blockmap
+*.yml
+
+# Skills and configs
+.claude/
+.qwen/
+.workbuddy/memory/
+
+# Scripts
+scripts/
