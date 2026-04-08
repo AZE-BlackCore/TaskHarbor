@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { 
@@ -12,7 +12,8 @@ import {
   Trash2,
   CheckCircle,
   AlertCircle,
-  LayoutGrid
+  LayoutGrid,
+  Maximize2
 } from 'lucide-react';
 import { useTaskStore } from '../../stores/taskStore';
 import { useProjectStore } from '../../stores/projectStore';
@@ -31,6 +32,24 @@ export function SettingsPanel({ open, onClose, darkMode, toggleDarkMode }: Setti
   const { projects } = useProjectStore();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [exporting, setExporting] = useState(false);
+  const [showMenuBar, setShowMenuBar] = useState(false);
+
+  // 加载菜单栏设置
+  useEffect(() => {
+    // 默认开发版显示菜单栏，正式版隐藏
+    const saved = localStorage.getItem('showMenuBar');
+    if (saved !== null) {
+      setShowMenuBar(JSON.parse(saved));
+    }
+  }, []);
+
+  // 切换菜单栏可见性
+  const handleToggleMenuBar = (visible: boolean) => {
+    setShowMenuBar(visible);
+    localStorage.setItem('showMenuBar', JSON.stringify(visible));
+    // @ts-ignore - electronAPI 由 preload 注入
+    window.electronAPI?.setMenuBarVisibility(visible);
+  };
 
   const handleExport = async (format: 'excel' | 'csv' | 'markdown') => {
     try {
@@ -81,6 +100,39 @@ export function SettingsPanel({ open, onClose, darkMode, toggleDarkMode }: Setti
   return (
     <Dialog open={open} onClose={onClose} title="设置" className="max-w-2xl">
       <div className="space-y-6">
+        {/* 界面设置 */}
+        <section>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+            <Maximize2 className="w-5 h-5" />
+            界面设置
+          </h3>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+              <div className="flex items-center gap-3">
+                <Maximize2 className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                <div>
+                  <p className="font-medium text-gray-900 dark:text-white">显示顶部菜单栏</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    {showMenuBar ? '已显示菜单栏' : '已隐藏菜单栏'}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => handleToggleMenuBar(!showMenuBar)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  showMenuBar ? 'bg-primary' : 'bg-gray-200'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    showMenuBar ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
+        </section>
+
         {/* 视图设置 */}
         <section>
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">

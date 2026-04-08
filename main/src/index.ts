@@ -102,6 +102,11 @@ function createWindow() {
     },
   });
 
+  // 正式版默认隐藏菜单栏
+  if (app.isPackaged) {
+    mainWindow.setMenuBarVisibility(false);
+  }
+
   // 监听渲染进程控制台消息
   mainWindow.webContents.on('console-message', (_event, level, message, line, sourceId) => {
     const levelStr = ['VERBOSE', 'INFO', 'WARNING', 'ERROR'][level] || 'UNKNOWN';
@@ -115,10 +120,6 @@ function createWindow() {
 
   mainWindow.webContents.on('did-finish-load', () => {
     console.log('[createWindow] Web contents finished loading');
-    // 加载完成后再打开 DevTools
-    if (app.isPackaged) {
-      mainWindow?.webContents.openDevTools({ mode: 'detach' });
-    }
   });
 
   mainWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {
@@ -222,6 +223,12 @@ app.whenReady().then(async () => {
     setupNotificationHandlers();
     await setupScheduleHandlers();
     console.log('[App] IPC handlers setup complete');
+
+    // 菜单栏可见性 IPC 处理器
+    ipcMain.handle('set-menu-bar-visibility', (_event, visible: boolean) => {
+      mainWindow?.setMenuBarVisibility(visible);
+      return { success: true };
+    });
 
     createWindow();
 

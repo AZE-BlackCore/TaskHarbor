@@ -92,7 +92,7 @@ export function Layout({ darkMode, toggleDarkMode }: LayoutProps) {
           <div className="flex items-center gap-2">
             <FolderOpen className="w-6 h-6 text-primary" />
             <h1 className="text-lg font-bold text-gray-900 dark:text-white">
-              Todo List
+              TaskHarbor
             </h1>
           </div>
         </SidebarHeader>

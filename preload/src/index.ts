@@ -189,6 +189,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // ========== 通知 ==========
   sendNotification: (title: string, body: string) =>
     ipcRenderer.invoke('notification:send', title, body),
+
+  // ========== 菜单栏控制 ==========
+  setMenuBarVisibility: (visible: boolean) =>
+    ipcRenderer.invoke('set-menu-bar-visibility', visible),
 });
 
 console.log('Preload script loaded successfully');
