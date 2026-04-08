@@ -1,7 +1,7 @@
 {
-  "name": "todolist-desktop",
+  "name": "taskharbor",
   "version": "1.0.0",
-  "description": "桌面端 Todo List 任务管理软件 - 支持悬浮窗口、项目化任务管理、多视图展示",
+  "description": "TaskHarbor - 桌面端任务管理软件，让任务安全停靠、高效启航",
   "main": "main/dist/index.js",
   "scripts": {
     "dev": "concurrently \"npm run dev:vite\" \"npm run dev:electron\"",
@@ -48,8 +48,8 @@
     "sql.js": "^1.10.3"
   },
   "build": {
-    "appId": "com.todolist.desktop",
-    "productName": "TodoList Desktop",
+    "appId": "com.taskharbor.desktop",
+    "productName": "TaskHarbor",
     "directories": {
       "output": "dist-output"
     },
@@ -88,7 +88,7 @@
       "icon": "build/icon.ico"
     },
     "portable": {
-      "artifactName": "TodoListDesktop-${version}-portable.exe"
+      "artifactName": "TaskHarbor-${version}-portable.exe"
     }
   }
 }
