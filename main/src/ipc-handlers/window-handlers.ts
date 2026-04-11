@@ -22,9 +22,7 @@ export function setupWindowHandlers() {
     try {
       const win = BrowserWindow.getFocusedWindow();
       if (win) {
-        // Electron BrowserWindow 没有 isIgnoreMouseEvents 方法，需要自己跟踪状态
-        // 这里简化处理，直接切换状态
-        const current = win.isAlwaysOnTop(); // 临时使用其他状态替代
+        const current = win.isAlwaysOnTop();
         win.setIgnoreMouseEvents(!current, { forward: true });
         return { success: true, clickThrough: !current };
       }
@@ -123,6 +121,35 @@ export function setupWindowHandlers() {
       return { success: false, error: 'No active window' };
     } catch (error: any) {
       console.error('Error setting window position:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // 设置窗口置顶
+  ipcMain.handle('window:setAlwaysOnTop', (_, alwaysOnTop: boolean) => {
+    try {
+      const win = BrowserWindow.getFocusedWindow();
+      if (win) {
+        win.setAlwaysOnTop(alwaysOnTop);
+        return { success: true, alwaysOnTop };
+      }
+      return { success: false, error: 'No active window' };
+    } catch (error: any) {
+      console.error('Error setting always on top:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // 获取窗口置顶状态
+  ipcMain.handle('window:isAlwaysOnTop', () => {
+    try {
+      const win = BrowserWindow.getFocusedWindow();
+      if (win) {
+        return { success: true, alwaysOnTop: win.isAlwaysOnTop() };
+      }
+      return { success: false, error: 'No active window' };
+    } catch (error: any) {
+      console.error('Error getting always on top status:', error);
       return { success: false, error: error.message };
     }
   });

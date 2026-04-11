@@ -77,3 +77,62 @@ npm run electron:build
 2. Preload 脚本使用 ESNext 模块系统
 3. 主进程使用 CommonJS 模块系统
 4. 所有 IPC 调用必须返回 Promise
+
+## 代码审查规范（2026-04-09 新增）
+
+### 审查文档
+
+1. **[审查标准与流程](./docs/CODE_REVIEW_STANDARDS.md)** - 完整的审查标准和流程
+2. **[审查检查清单](./docs/CODE_REVIEW_CHECKLIST.md)** - 可打印的审查清单
+3. **[审查模板](./docs/CODE_REVIEW_TEMPLATES.md)** - PR 模板、评论模板等
+4. **[快速入门](./docs/CODE_REVIEW_QUICKSTART.md)** - 5 分钟快速上手
+
+### 审查重点
+
+**🔴 阻塞性问题（必须修复）：**
+- 安全性问题（SQL 注入、XSS、Electron 安全配置）
+- 数据完整性问题
+- 关键路径错误处理缺失
+- 破坏性变更
+
+**🟡 建议性问题（应该修复）：**
+- 代码可维护性（命名、函数长度、职责单一）
+- 类型安全（无 any 滥用）
+- React 最佳实践
+- 性能优化
+
+**💭 优化建议（可选）：**
+- 代码风格统一
+- 文档完善
+- 测试覆盖
+
+### 自动化检查
+
+```bash
+# 类型检查
+npm run typecheck:all
+
+# Lint 检查
+npm run lint
+
+# 代码格式化
+npm run format
+
+# 完整 CI 检查
+npm run ci
+```
+
+### 审查流程
+
+1. 开发者提交 PR（使用 PR 模板）
+2. CI 自动检查（类型/Lint/测试/构建）
+3. 审查者审查（24 小时内完成）
+4. 开发者修改反馈
+5. 审查通过后合并
+
+### 工具配置
+
+- **ESLint** - 严格模式，禁止 any 滥用
+- **Prettier** - 统一代码格式
+- **GitHub Actions** - CI 自动检查
+- **审查清单** - 标准化审查流程

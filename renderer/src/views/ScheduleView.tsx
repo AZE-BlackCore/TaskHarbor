@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useScheduleStore } from '../stores/scheduleStore';
-import { Calendar, Clock, MapPin, Plus, Trash2, Edit2, ChevronLeft, ChevronRight, Search } from 'lucide-react';
+import { Calendar, Clock, MapPin, Plus, Trash2, Edit2, ChevronLeft, ChevronRight, Search, Repeat } from 'lucide-react';
 import dayjs, { Dayjs } from 'dayjs';
 import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
@@ -29,6 +29,10 @@ export function ScheduleView() {
     allDay: false,
     color: '#3B82F6',
     priority: 'medium' as 'low' | 'medium' | 'high',
+    repeat: false,
+    repeatType: 'weekly' as 'daily' | 'weekly' | 'monthly' | 'yearly',
+    repeatInterval: 1,
+    repeatEndDate: '',
   });
 
   useEffect(() => {
@@ -128,11 +132,24 @@ export function ScheduleView() {
   const handleCreateSchedule = async () => {
     if (!newSchedule.title.trim()) return;
 
-    const scheduleData = {
-      ...newSchedule,
+    const scheduleData: any = {
+      title: newSchedule.title,
+      description: newSchedule.description,
+      location: newSchedule.location,
       startTime: new Date(newSchedule.startTime).toISOString(),
       endTime: new Date(newSchedule.endTime).toISOString(),
+      allDay: newSchedule.allDay,
+      color: newSchedule.color,
+      priority: newSchedule.priority,
     };
+
+    if (newSchedule.repeat) {
+      scheduleData.repeat = {
+        type: newSchedule.repeatType,
+        interval: newSchedule.repeatInterval,
+        endDate: newSchedule.repeatEndDate || undefined,
+      };
+    }
 
     const created = await createSchedule(scheduleData);
     if (created) {
@@ -146,6 +163,10 @@ export function ScheduleView() {
         allDay: false,
         color: '#3B82F6',
         priority: 'medium',
+        repeat: false,
+        repeatType: 'weekly',
+        repeatInterval: 1,
+        repeatEndDate: '',
       });
     }
   };
@@ -288,10 +309,13 @@ export function ScheduleView() {
                         {daySchedules.slice(0, 3).map((schedule) => (
                           <div
                             key={schedule.id}
-                            className="text-xs px-2 py-1 rounded truncate text-white"
+                            className="text-xs px-2 py-1 rounded truncate text-white relative"
                             style={{ backgroundColor: schedule.color }}
                           >
                             {schedule.title}
+                            {schedule.repeat && (
+                              <Repeat className="w-3 h-3 absolute right-1 top-1/2 -translate-y-1/2 text-white/80" />
+                            )}
                           </div>
                         ))}
                         {daySchedules.length > 3 && (
@@ -340,6 +364,12 @@ export function ScheduleView() {
                             <span className={`px-2 py-0.5 text-xs rounded-full border ${getPriorityColor(schedule.priority)}`}>
                               {schedule.priority === 'high' ? '高' : schedule.priority === 'medium' ? '中' : '低'}
                             </span>
+                            {schedule.repeat && (
+                              <span className="flex items-center gap-1 px-2 py-0.5 text-xs rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 border border-purple-300 dark:border-purple-700">
+                                <Repeat className="w-3 h-3" />
+                                {getRepeatLabel(schedule.repeat)}
+                              </span>
+                            )}
                           </div>
                           
                           <div className="space-y-1 text-sm text-gray-600 dark:text-gray-400">
@@ -404,6 +434,12 @@ export function ScheduleView() {
                 <div className="text-xs text-gray-500 dark:text-gray-400">
                   {dayjs(schedule.startTime).format('HH:mm')} - {dayjs(schedule.endTime).format('HH:mm')}
                 </div>
+                {schedule.repeat && (
+                  <div className="flex items-center gap-1 mt-1 text-xs text-purple-600 dark:text-purple-400">
+                    <Repeat className="w-3 h-3" />
+                    <span>{getRepeatLabel(schedule.repeat)}</span>
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -412,120 +448,12 @@ export function ScheduleView() {
 
       {/* 新建日程对话框 */}
       {showCreateDialog && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-dark-card rounded-lg p-6 w-[500px] max-h-[90vh] overflow-y-auto shadow-xl">
-            <h2 className="text-lg font-bold mb-4 text-gray-900 dark:text-white">新建日程</h2>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">标题 *</label>
-                <input
-                  type="text"
-                  value={newSchedule.title}
-                  onChange={(e) => setNewSchedule({ ...newSchedule, title: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-dark-bg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
-                  placeholder="输入日程标题..."
-                  autoFocus
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">描述</label>
-                <textarea
-                  value={newSchedule.description}
-                  onChange={(e) => setNewSchedule({ ...newSchedule, description: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-dark-bg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
-                  placeholder="日程描述..."
-                  rows={3}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">开始时间</label>
-                  <input
-                    type="datetime-local"
-                    value={newSchedule.startTime}
-                    onChange={(e) => setNewSchedule({ ...newSchedule, startTime: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-dark-bg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">结束时间</label>
-                  <input
-                    type="datetime-local"
-                    value={newSchedule.endTime}
-                    onChange={(e) => setNewSchedule({ ...newSchedule, endTime: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-dark-bg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">地点</label>
-                <input
-                  type="text"
-                  value={newSchedule.location}
-                  onChange={(e) => setNewSchedule({ ...newSchedule, location: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-dark-bg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
-                  placeholder="会议地点、地址等"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">优先级</label>
-                  <select
-                    value={newSchedule.priority}
-                    onChange={(e) => setNewSchedule({ ...newSchedule, priority: e.target.value as 'low' | 'medium' | 'high' })}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-dark-bg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
-                  >
-                    <option value="low">低</option>
-                    <option value="medium">中</option>
-                    <option value="high">高</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">颜色</label>
-                  <input
-                    type="color"
-                    value={newSchedule.color}
-                    onChange={(e) => setNewSchedule({ ...newSchedule, color: e.target.value })}
-                    className="w-full h-10 px-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-dark-bg cursor-pointer"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="allDay"
-                  checked={newSchedule.allDay}
-                  onChange={(e) => setNewSchedule({ ...newSchedule, allDay: e.target.checked })}
-                  className="rounded border-gray-300 dark:border-gray-600 text-primary focus:ring-primary"
-                />
-                <label htmlFor="allDay" className="text-sm text-gray-700 dark:text-gray-300">全天事件</label>
-              </div>
-            </div>
-
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={() => setShowCreateDialog(false)}
-                className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
-              >
-                取消
-              </button>
-              <button
-                onClick={handleCreateSchedule}
-                className="flex-1 px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-600"
-              >
-                创建
-              </button>
-            </div>
-          </div>
-        </div>
+        <CreateScheduleDialog
+          newSchedule={newSchedule}
+          setNewSchedule={setNewSchedule}
+          onClose={() => setShowCreateDialog(false)}
+          onCreate={handleCreateSchedule}
+        />
       )}
 
       {/* 编辑日程对话框 */}
@@ -540,6 +468,221 @@ export function ScheduleView() {
           }}
         />
       )}
+    </div>
+  );
+}
+
+function getRepeatLabel(repeat: Schedule['repeat']): string {
+  if (!repeat) return '';
+  const typeMap = { daily: '天', weekly: '周', monthly: '月', yearly: '年' };
+  const baseType = typeMap[repeat.type];
+  if (repeat.interval && repeat.interval > 1) {
+    return `每${repeat.interval}${baseType}`;
+  }
+  return `每${baseType}`;
+}
+
+interface CreateScheduleDialogProps {
+  newSchedule: {
+    title: string;
+    description: string;
+    location: string;
+    startTime: string;
+    endTime: string;
+    allDay: boolean;
+    color: string;
+    priority: 'low' | 'medium' | 'high';
+    repeat: boolean;
+    repeatType: 'daily' | 'weekly' | 'monthly' | 'yearly';
+    repeatInterval: number;
+    repeatEndDate: string;
+  };
+  setNewSchedule: (schedule: any) => void;
+  onClose: () => void;
+  onCreate: () => void;
+}
+
+function CreateScheduleDialog({ newSchedule, setNewSchedule, onClose, onCreate }: CreateScheduleDialogProps) {
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-white dark:bg-dark-card rounded-lg p-6 w-[500px] max-h-[90vh] overflow-y-auto shadow-xl">
+        <h2 className="text-lg font-bold mb-4 text-gray-900 dark:text-white">新建日程</h2>
+        
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">标题 *</label>
+            <input
+              type="text"
+              value={newSchedule.title}
+              onChange={(e) => setNewSchedule({ ...newSchedule, title: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-dark-bg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+              placeholder="输入日程标题..."
+              autoFocus
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">描述</label>
+            <textarea
+              value={newSchedule.description}
+              onChange={(e) => setNewSchedule({ ...newSchedule, description: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-dark-bg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+              placeholder="日程描述..."
+              rows={3}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">开始时间</label>
+              <input
+                type="datetime-local"
+                value={newSchedule.startTime}
+                onChange={(e) => setNewSchedule({ ...newSchedule, startTime: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-dark-bg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">结束时间</label>
+              <input
+                type="datetime-local"
+                value={newSchedule.endTime}
+                onChange={(e) => setNewSchedule({ ...newSchedule, endTime: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-dark-bg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">地点</label>
+            <input
+              type="text"
+              value={newSchedule.location}
+              onChange={(e) => setNewSchedule({ ...newSchedule, location: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-dark-bg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+              placeholder="会议地点、地址等"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">优先级</label>
+              <select
+                value={newSchedule.priority}
+                onChange={(e) => setNewSchedule({ ...newSchedule, priority: e.target.value as 'low' | 'medium' | 'high' })}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-dark-bg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                <option value="low">低</option>
+                <option value="medium">中</option>
+                <option value="high">高</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">颜色</label>
+              <input
+                type="color"
+                value={newSchedule.color}
+                onChange={(e) => setNewSchedule({ ...newSchedule, color: e.target.value })}
+                className="w-full h-10 px-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-dark-bg cursor-pointer"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="allDay"
+              checked={newSchedule.allDay}
+              onChange={(e) => setNewSchedule({ ...newSchedule, allDay: e.target.checked })}
+              className="rounded border-gray-300 dark:border-gray-600 text-primary focus:ring-primary"
+            />
+            <label htmlFor="allDay" className="text-sm text-gray-700 dark:text-gray-300">全天事件</label>
+          </div>
+
+          {/* 重复设置 */}
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Repeat className="w-4 h-4 text-primary" />
+              <h4 className="text-sm font-semibold text-gray-900 dark:text-white">重复设置</h4>
+            </div>
+
+            <div className="flex items-center gap-2 mb-3">
+              <input
+                type="checkbox"
+                id="repeat"
+                checked={newSchedule.repeat}
+                onChange={(e) => setNewSchedule({ ...newSchedule, repeat: e.target.checked })}
+                className="rounded border-gray-300 dark:border-gray-600 text-primary focus:ring-primary"
+              />
+              <label htmlFor="repeat" className="text-sm text-gray-700 dark:text-gray-300">启用重复</label>
+            </div>
+
+            {newSchedule.repeat && (
+              <div className="space-y-3 pl-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">重复类型</label>
+                    <select
+                      value={newSchedule.repeatType}
+                      onChange={(e) => setNewSchedule({ ...newSchedule, repeatType: e.target.value as any })}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-dark-bg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                    >
+                      <option value="daily">每天</option>
+                      <option value="weekly">每周</option>
+                      <option value="monthly">每月</option>
+                      <option value="yearly">每年</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">间隔</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={newSchedule.repeatInterval}
+                      onChange={(e) => setNewSchedule({ ...newSchedule, repeatInterval: parseInt(e.target.value) || 1 })}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-dark-bg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                      placeholder="1"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
+                    结束日期（可选）
+                  </label>
+                  <input
+                    type="date"
+                    value={newSchedule.repeatEndDate}
+                    onChange={(e) => setNewSchedule({ ...newSchedule, repeatEndDate: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-dark-bg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    不设置则一直重复
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="flex gap-3 mt-6">
+          <button
+            onClick={onClose}
+            className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+          >
+            取消
+          </button>
+          <button
+            onClick={onCreate}
+            className="flex-1 px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-600"
+          >
+            创建
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -560,15 +703,32 @@ function EditScheduleDialog({ schedule, onClose, onSave }: EditScheduleDialogPro
     allDay: schedule.allDay,
     color: schedule.color,
     priority: schedule.priority,
+    repeat: !!schedule.repeat,
+    repeatType: schedule.repeat?.type || 'weekly',
+    repeatInterval: schedule.repeat?.interval || 1,
+    repeatEndDate: schedule.repeat?.endDate || '',
   });
 
   const handleSave = () => {
     if (!formData.title.trim()) return;
-    onSave({
+    
+    const updates: any = {
       ...formData,
       startTime: new Date(formData.startTime).toISOString(),
       endTime: new Date(formData.endTime).toISOString(),
-    });
+    };
+
+    if (formData.repeat) {
+      updates.repeat = {
+        type: formData.repeatType,
+        interval: formData.repeatInterval,
+        endDate: formData.repeatEndDate || undefined,
+      };
+    } else {
+      updates.repeat = undefined;
+    }
+
+    onSave(updates);
   };
 
   return (
@@ -667,6 +827,72 @@ function EditScheduleDialog({ schedule, onClose, onSave }: EditScheduleDialogPro
               className="rounded border-gray-300 dark:border-gray-600 text-primary focus:ring-primary"
             />
             <label htmlFor="editAllDay" className="text-sm text-gray-700 dark:text-gray-300">全天事件</label>
+          </div>
+
+          {/* 重复设置 */}
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Repeat className="w-4 h-4 text-primary" />
+              <h4 className="text-sm font-semibold text-gray-900 dark:text-white">重复设置</h4>
+            </div>
+
+            <div className="flex items-center gap-2 mb-3">
+              <input
+                type="checkbox"
+                id="editRepeat"
+                checked={formData.repeat}
+                onChange={(e) => setFormData({ ...formData, repeat: e.target.checked })}
+                className="rounded border-gray-300 dark:border-gray-600 text-primary focus:ring-primary"
+              />
+              <label htmlFor="editRepeat" className="text-sm text-gray-700 dark:text-gray-300">启用重复</label>
+            </div>
+
+            {formData.repeat && (
+              <div className="space-y-3 pl-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">重复类型</label>
+                    <select
+                      value={formData.repeatType}
+                      onChange={(e) => setFormData({ ...formData, repeatType: e.target.value as any })}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-dark-bg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                    >
+                      <option value="daily">每天</option>
+                      <option value="weekly">每周</option>
+                      <option value="monthly">每月</option>
+                      <option value="yearly">每年</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">间隔</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={formData.repeatInterval}
+                      onChange={(e) => setFormData({ ...formData, repeatInterval: parseInt(e.target.value) || 1 })}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-dark-bg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                      placeholder="1"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
+                    结束日期（可选）
+                  </label>
+                  <input
+                    type="date"
+                    value={formData.repeatEndDate}
+                    onChange={(e) => setFormData({ ...formData, repeatEndDate: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-dark-bg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    不设置则一直重复
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

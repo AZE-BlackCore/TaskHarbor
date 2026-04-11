@@ -8,6 +8,7 @@ import { Input, TextArea, Select } from '../ui/input';
 import { Task, TaskStatus } from '../../types';
 import { useProjectStore } from '../../stores/projectStore';
 import { useErrorStore } from '../../stores/errorStore';
+import { Clock, Bell } from 'lucide-react';
 
 // Zod 验证 schema
 const taskSchema = z.object({
@@ -23,6 +24,11 @@ const taskSchema = z.object({
   estimatedEndDate: z.string().optional(),
   issues: z.string().optional(),
   notes: z.string().optional(),
+  // 提醒相关字段
+  reminderEnabled: z.boolean().optional(),
+  reminderTime: z.string().optional(),
+  reminderCycle: z.enum(['once', 'daily', 'weekly', 'monthly']).optional(),
+  customReminderTimes: z.string().optional(),
 }).refine(
   (data) => {
     if (data.startDate && data.estimatedEndDate) {
@@ -53,6 +59,13 @@ const STATUS_OPTIONS: Array<{ value: string; label: string }> = [
   { value: 'blocked', label: '已阻塞' },
 ];
 
+const REMINDER_CYCLE_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: 'once', label: '仅一次' },
+  { value: 'daily', label: '每天' },
+  { value: 'weekly', label: '每周' },
+  { value: 'monthly', label: '每月' },
+];
+
 export function TaskEditDialog({ open, task, onClose, onSave }: TaskEditDialogProps) {
   const { projects } = useProjectStore();
   const { addError } = useErrorStore();
@@ -78,6 +91,10 @@ export function TaskEditDialog({ open, task, onClose, onSave }: TaskEditDialogPr
       estimatedEndDate: '',
       issues: '',
       notes: '',
+      reminderEnabled: false,
+      reminderTime: '',
+      reminderCycle: 'once',
+      customReminderTimes: '',
     },
   });
 
@@ -96,6 +113,11 @@ export function TaskEditDialog({ open, task, onClose, onSave }: TaskEditDialogPr
         estimatedEndDate: task.estimatedEndDate ? task.estimatedEndDate.split('T')[0] : '',
         issues: task.issues || '',
         notes: task.notes || '',
+        // 提醒相关 - 从 notes 或扩展字段解析
+        reminderEnabled: !!(task as any).reminderEnabled || false,
+        reminderTime: (task as any).reminderTime || '',
+        reminderCycle: (task as any).reminderCycle || 'once',
+        customReminderTimes: (task as any).customReminderTimes || '',
       });
     } else {
       reset({
@@ -111,6 +133,10 @@ export function TaskEditDialog({ open, task, onClose, onSave }: TaskEditDialogPr
         estimatedEndDate: '',
         issues: '',
         notes: '',
+        reminderEnabled: false,
+        reminderTime: '',
+        reminderCycle: 'once',
+        customReminderTimes: '',
       });
     }
   }, [task, open, reset]);
@@ -233,6 +259,85 @@ export function TaskEditDialog({ open, task, onClose, onSave }: TaskEditDialogPr
               <p className="text-red-500 text-xs mt-1">{errors.estimatedEndDate.message}</p>
             )}
           </div>
+        </div>
+
+        {/* 提醒设置 */}
+        <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-800/50">
+          <div className="flex items-center gap-2 mb-3">
+            <Bell className="w-4 h-4 text-primary" />
+            <h4 className="text-sm font-semibold text-gray-900 dark:text-white">任务提醒设置</h4>
+          </div>
+
+          <div className="flex items-center gap-2 mb-3">
+            <input
+              type="checkbox"
+              id="reminderEnabled"
+              checked={watch('reminderEnabled')}
+              onChange={(e) => setValue('reminderEnabled', e.target.checked)}
+              className="rounded border-gray-300 dark:border-gray-600 text-primary focus:ring-primary"
+            />
+            <label htmlFor="reminderEnabled" className="text-sm text-gray-700 dark:text-gray-300">
+              启用任务提醒
+            </label>
+          </div>
+
+          {watch('reminderEnabled') && (
+            <div className="space-y-3 pl-6 border-l-2 border-primary/30">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
+                    提醒时间
+                  </label>
+                  <Input
+                    type="datetime-local"
+                    value={watch('reminderTime') || ''}
+                    onChange={(e) => setValue('reminderTime', e.target.value)}
+                    placeholder="选择提醒时间"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
+                    提醒周期
+                  </label>
+                  <Select
+                    value={watch('reminderCycle') || 'once'}
+                    onChange={(e) => setValue('reminderCycle', e.target.value as any)}
+                    options={REMINDER_CYCLE_OPTIONS}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
+                  自定义提醒时间（多个时间用逗号分隔）
+                </label>
+                <Input
+                  value={watch('customReminderTimes') || ''}
+                  onChange={(e) => setValue('customReminderTimes', e.target.value)}
+                  placeholder="例如：09:00,14:00,18:00"
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  格式：HH:mm，多个时间用英文逗号分隔。例如：09:00,14:00,18:00 表示每天 9 点、14 点和 18 点提醒
+                </p>
+              </div>
+
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded p-3">
+                <div className="flex items-start gap-2">
+                  <Clock className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5" />
+                  <div className="text-xs text-blue-700 dark:text-blue-300">
+                    <p className="font-medium mb-1">提醒周期说明：</p>
+                    <ul className="list-disc list-inside space-y-0.5">
+                      <li><strong>仅一次</strong>：只在指定时间提醒一次</li>
+                      <li><strong>每天</strong>：每天的指定时间提醒</li>
+                      <li><strong>每周</strong>：每周的同一天提醒</li>
+                      <li><strong>每月</strong>：每月的同一天提醒</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* 存在的问题 */}

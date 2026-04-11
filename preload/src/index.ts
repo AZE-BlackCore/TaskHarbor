@@ -65,7 +65,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   minimizeToTray: () => 
     ipcRenderer.invoke('window:minimizeToTray'),
   
-  createFloatingWindow: (options?: { opacity?: number; clickThrough?: boolean; x?: number; y?: number }) => 
+  createFloatingWindow: (options?: { opacity?: number; clickThrough?: boolean; x?: number; y?: number; page?: 'floating' | 'desktop-card' }) => 
     ipcRenderer.invoke('window:createFloating', options),
   
   closeFloatingWindow: (windowId: number) => 
@@ -73,6 +73,24 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   toggleAlwaysOnTop: () => 
     ipcRenderer.invoke('window:toggleAlwaysOnTop'),
+
+  setAlwaysOnTop: (alwaysOnTop: boolean) => 
+    ipcRenderer.invoke('window:setAlwaysOnTop', alwaysOnTop),
+
+  isAlwaysOnTop: () => 
+    ipcRenderer.invoke('window:isAlwaysOnTop'),
+
+  setWindowPosition: (x: number, y: number) => 
+    ipcRenderer.invoke('window:setPosition', x, y),
+
+  // 监听关闭偏好设置
+  onClosePreference: (callback: (action: 'minimize' | 'exit') => void) => {
+    ipcRenderer.on('close-preference', (_event, action) => callback(action));
+  },
+
+  removeClosePreferenceListener: () => {
+    ipcRenderer.removeAllListeners('close-preference');
+  },
   
   // ========== 任务 CRUD ==========
   getTasks: (filters?: TaskFilters) => 
@@ -193,6 +211,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // ========== 菜单栏控制 ==========
   setMenuBarVisibility: (visible: boolean) =>
     ipcRenderer.invoke('set-menu-bar-visibility', visible),
+
+  // ========== 应用信息 ==========
+  getAppInfo: () =>
+    ipcRenderer.invoke('get-app-info'),
 });
 
 console.log('Preload script loaded successfully');

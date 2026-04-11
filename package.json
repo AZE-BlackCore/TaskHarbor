@@ -1,6 +1,6 @@
 {
   "name": "taskharbor",
-  "version": "1.0.0",
+  "version": "1.0.5",
   "description": "TaskHarbor - 桌面端任务管理软件，让任务安全停靠、高效启航",
   "main": "main/dist/index.js",
   "scripts": {
@@ -22,7 +22,10 @@
     "typecheck:all": "npm run typecheck && cd renderer && npx tsc -b --noEmit",
     "test": "node tests/run-tests.js",
     "lint": "cd renderer && npm run lint",
-    "ci": "npm run typecheck:all && npm run test"
+    "lint:fix": "cd renderer && npm run lint -- --fix",
+    "format": "cd renderer && npx prettier --write \"src/**/*.{ts,tsx,js,jsx,json,css,md}\"",
+    "format:check": "cd renderer && npx prettier --check \"src/**/*.{ts,tsx,js,jsx,json,css,md}\"",
+    "ci": "npm run typecheck:all && npm run lint && npm run test"
   },
   "author": "",
   "license": "MIT",
@@ -71,6 +74,11 @@
       {
         "from": "renderer/public",
         "to": "renderer/public",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "build",
+        "to": "build",
         "filter": ["**/*"]
       }
     ],

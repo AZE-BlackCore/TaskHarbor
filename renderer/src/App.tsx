@@ -9,6 +9,7 @@ import { DashboardView } from './views/DashboardView'
 import { ProjectView } from './views/ProjectView'
 import { ScheduleView } from './views/ScheduleView'
 import { FloatingWindow } from './views/FloatingWindow'
+import { DesktopCard } from './views/DesktopCard'
 import { TaskReminder } from './components/notification/TaskReminder'
 
 function App() {
@@ -45,6 +46,9 @@ function App() {
         
         {/* 悬浮窗口路由 */}
         <Route path="/floating" element={<FloatingWindow />} />
+        
+        {/* 桌面卡片路由 */}
+        <Route path="/desktop-card" element={<DesktopCard />} />
       </Routes>
       
       {/* 任务提醒 */}
