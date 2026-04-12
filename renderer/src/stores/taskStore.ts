@@ -187,36 +187,13 @@ export const useTaskStore = create<TaskState>()(
     },
 
     updateTaskStatus: async (id, status) => {
-      // 乐观更新
-      get().updateTask(id, { status });
-
-      try {
-        const result = await window.electronAPI.updateTask(id, { status });
-        
-        if (!result.success) {
-          // 失败回滚
-          useErrorStore.getState().addError(result.error || '更新失败', 'error');
-        }
-      } catch (error: unknown) {
-        console.error('Error updating task status:', error);
-        useErrorStore.getState().addError(error instanceof Error ? error.message : '未知错误', 'error');
-      }
+      // 直接复用 updateTask，避免双重 IPC 调用
+      await get().updateTask(id, { status });
     },
 
     updateTaskProgress: async (id, progress) => {
-      // 乐观更新
-      get().updateTask(id, { progress });
-
-      try {
-        const result = await window.electronAPI.updateTask(id, { progress });
-        
-        if (!result.success) {
-          useErrorStore.getState().addError(result.error || '更新进度失败', 'error');
-        }
-      } catch (error: unknown) {
-        console.error('Error updating task progress:', error);
-        useErrorStore.getState().addError(error instanceof Error ? error.message : '未知错误', 'error');
-      }
+      // 直接复用 updateTask，避免双重 IPC 调用
+      await get().updateTask(id, { progress });
     },
   }))
 );
