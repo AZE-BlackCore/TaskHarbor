@@ -152,6 +152,9 @@ export function ListView() {
         <table className="w-full">
           <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0">
             <tr>
+              <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-12">
+                #
+              </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 任务描述
               </th>
@@ -209,8 +212,11 @@ export function ListView() {
               </>
             ) : (
               <>
-                {filteredTasks.map((task) => (
+                {filteredTasks.map((task, index) => (
                   <tr key={task.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                    <td className="px-4 py-3 text-center">
+                      <span className="text-sm font-mono text-gray-400 dark:text-gray-500">{index + 1}</span>
+                    </td>
                     <td className="px-4 py-3">
                       <div className="text-sm text-gray-900 dark:text-white">{task.description}</div>
                     </td>

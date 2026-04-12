@@ -16,6 +16,12 @@ export function Dialog({ open, onClose, title, children, className }: DialogProp
   return (
     <div 
       className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-fade-in"
+      onMouseDown={(e) => {
+        // 点击遮罩本身时关闭，但不阻止事件传递到内部元素
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
     >
       <div 
         className={cn(
@@ -23,6 +29,7 @@ export function Dialog({ open, onClose, title, children, className }: DialogProp
           'animate-slide-in',
           className
         )}
+        onMouseDown={(e) => e.stopPropagation()}
         onClick={(e) => e.stopPropagation()}
       >
         {/* 头部 */}
