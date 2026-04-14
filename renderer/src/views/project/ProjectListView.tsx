@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import { useTaskStore } from '../stores/taskStore';
-import { useProjectStore } from '../stores/projectStore';
-import { Task, TaskStatus } from '../types';
+import { useTaskStore } from '../../stores/taskStore';
+import { useProjectStore } from '../../stores/projectStore';
+import { Task, TaskStatus } from '../../types';
 import { Plus, Search, Edit2, Trash2 } from 'lucide-react';
-import { TaskEditDialog } from '../components/task/TaskEditDialog';
+import { TaskEditDialog } from '../../components/task/TaskEditDialog';
 
-export function ListView() {
+export function ProjectListView() {
   const { tasks, fetchTasks, createTask, updateTaskStatus, deleteTask, updateTask, loading } = useTaskStore();
   const { currentProjectId } = useProjectStore();
   const [showEditDialog, setShowEditDialog] = useState(false);

@@ -173,7 +173,7 @@ export function ScheduleStats() {
                       <Cell key={index} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value: number) => `${value} 个`} />
+                  <Tooltip formatter={(value) => `${value} 个`} />
                 </PieChart>
               </ResponsiveContainer>
             ) : (
@@ -201,7 +201,7 @@ export function ScheduleStats() {
                       <Cell key={index} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value: number) => `${value} 个`} />
+                  <Tooltip formatter={(value) => `${value} 个`} />
                 </PieChart>
               </ResponsiveContainer>
             ) : (
@@ -228,7 +228,7 @@ export function ScheduleStats() {
               <BarChart data={timelineData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
                 <XAxis dataKey="name" tick={{ fontSize: 12 }} />
                 <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
-                <Tooltip formatter={(value: number) => [`${value} 个日程`, '数量']} />
+                <Tooltip formatter={(value) => [`${value} 个日程`, '数量']} />
                 <Bar dataKey="count" fill="#6366F1" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>

@@ -231,6 +231,38 @@ export async function setupDatabase() {
       )
     `);
 
+    // ===== 任务提醒配置表 =====
+    // 存储每个任务的提醒规则（可与 tasks 表分离，支持多条提醒规则）
+    db!.run(`
+      CREATE TABLE IF NOT EXISTS task_reminders (
+        id            TEXT PRIMARY KEY,
+        taskId        TEXT NOT NULL,
+        reminderTime  TEXT NOT NULL,          -- 首次/基准提醒时间 (ISO)
+        cycle         TEXT NOT NULL DEFAULT 'once'
+                      CHECK(cycle IN ('once', 'daily', 'weekly', 'monthly', 'custom')),
+        intervalDays  INTEGER DEFAULT 0,      -- 自定义周期：间隔天数（cycle='custom' 时有效）
+        intervalHours INTEGER DEFAULT 0,      -- 自定义周期：间隔小时（cycle='custom' 时有效）
+        customTimes   TEXT,                   -- 每日固定提醒时间列表，逗号分隔 "09:00,14:00"
+        lastFiredAt   TEXT,                   -- 上次触发时间 (ISO)
+        nextFireAt    TEXT,                   -- 下次触发时间 (ISO, 预计算，用于调度)
+        enabled       INTEGER NOT NULL DEFAULT 1, -- 是否启用
+        createdAt     TEXT DEFAULT (datetime('now')),
+        updatedAt     TEXT DEFAULT (datetime('now')),
+        FOREIGN KEY (taskId) REFERENCES tasks(id) ON DELETE CASCADE
+      )
+    `);
+
+    // ===== 数据库在线迁移（为现有 tasks 表添加提醒字段）=====
+    // 若字段已存在，ALTER TABLE 会抛异常，catch 掉即可（sqlite 无 IF NOT EXISTS 语法）
+    const migrateColumn = (sql: string) => { try { db!.run(sql); } catch (_) {} };
+    migrateColumn(`ALTER TABLE tasks ADD COLUMN reminderEnabled INTEGER DEFAULT 0`);
+    migrateColumn(`ALTER TABLE tasks ADD COLUMN reminderTime TEXT`);
+    migrateColumn(`ALTER TABLE tasks ADD COLUMN reminderCycle TEXT DEFAULT 'once'`);
+    migrateColumn(`ALTER TABLE tasks ADD COLUMN reminderInterval INTEGER DEFAULT 1`);
+    migrateColumn(`ALTER TABLE tasks ADD COLUMN reminderIntervalUnit TEXT DEFAULT 'day'`);
+    migrateColumn(`ALTER TABLE tasks ADD COLUMN customReminderTimes TEXT`);
+    migrateColumn(`ALTER TABLE tasks ADD COLUMN reminderLastFired TEXT`);
+
     // 创建索引
     db!.run(`CREATE INDEX IF NOT EXISTS idx_tasks_project ON tasks(projectId)`);
     db!.run(`CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status)`);
@@ -243,6 +275,9 @@ export async function setupDatabase() {
     db!.run(`CREATE INDEX IF NOT EXISTS idx_schedules_startTime ON schedules(startTime)`);
     db!.run(`CREATE INDEX IF NOT EXISTS idx_schedules_endTime ON schedules(endTime)`);
     db!.run(`CREATE INDEX IF NOT EXISTS idx_schedules_priority ON schedules(priority)`);
+    db!.run(`CREATE INDEX IF NOT EXISTS idx_task_reminders_task ON task_reminders(taskId)`);
+    db!.run(`CREATE INDEX IF NOT EXISTS idx_task_reminders_nextFire ON task_reminders(nextFireAt)`);
+    db!.run(`CREATE INDEX IF NOT EXISTS idx_task_reminders_enabled ON task_reminders(enabled)`);
 
     // 创建数据验证触发器
     // 注意：sql.js 不支持 IF EXISTS 语法，直接创建，如果已存在会报错忽略

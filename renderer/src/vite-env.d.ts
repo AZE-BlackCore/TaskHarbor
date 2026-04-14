@@ -56,6 +56,42 @@ interface ElectronAPI {
 
   // 通知
   sendNotification: (title: string, body: string) => Promise<{ success: boolean }>;
+
+  // 任务提醒
+  getRemindersByTask: (taskId: string) => Promise<{ success: boolean; data: TaskReminderInfo[]; error?: string }>;
+  createReminder: (input: {
+    taskId: string;
+    reminderTime: string;
+    cycle: 'once' | 'daily' | 'weekly' | 'monthly' | 'custom';
+    intervalDays?: number;
+    intervalHours?: number;
+    customTimes?: string;
+  }) => Promise<{ success: boolean; data: TaskReminderInfo; error?: string }>;
+  updateReminder: (id: string, updates: Record<string, unknown>) => Promise<{ success: boolean; data: TaskReminderInfo; error?: string }>;
+  deleteReminder: (id: string) => Promise<{ success: boolean; error?: string }>;
+  deleteRemindersByTask: (taskId: string) => Promise<{ success: boolean; error?: string }>;
+  calcNextReminderTime: (
+    reminderTime: string,
+    cycle: string,
+    intervalDays: number,
+    intervalHours: number,
+    customTimes: string
+  ) => Promise<{ success: boolean; data: string; error?: string }>;
+}
+
+interface TaskReminderInfo {
+  id: string;
+  taskId: string;
+  reminderTime: string;
+  cycle: 'once' | 'daily' | 'weekly' | 'monthly' | 'custom';
+  intervalDays: number;
+  intervalHours: number;
+  customTimes?: string;
+  lastFiredAt?: string;
+  nextFireAt?: string;
+  enabled: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface Window {

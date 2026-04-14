@@ -50,19 +50,41 @@ npm run electron:build
 3. **Tailwind CSS 3.4**: 原子化 CSS，支持深色模式
 4. **TypeScript 严格模式**: 确保类型安全
 
+## 视图结构（2026-04-13 重构）
+
+### project/ 子视图文件夹
+```
+renderer/src/views/project/
+├── index.ts               # 统一导出
+├── ProjectMain.tsx        # 主容器（Tab 导航）
+├── ProjectList.tsx        # 项目列表组件
+├── ProjectListView.tsx    # 任务列表视图
+├── ProjectGanttView.tsx   # 甘特图视图
+├── ProjectKanbanView.tsx  # 看板视图
+└── ProjectCalendarView.tsx # 日历视图
+```
+
+### schedule/ 子视图文件夹
+```
+renderer/src/views/schedule/
+├── ScheduleCalendar.tsx    # 日历视图
+├── ScheduleKanban.tsx     # 看板视图
+└── ScheduleStats.tsx      # 统计视图
+```
+
 ## 核心功能
 
 ### 已实现（✅）
-- 列表视图（完整 CRUD）
-- 甘特图视图（时间轴、缩放控制）
-- 看板视图（状态列、任务卡片）
-- 日历视图（月/周/日、任务标记）
-- **日程管理**（2026-04-01 新增：月/日视图、优先级筛选、搜索、颜色标记）
-- 统计报表（饼图、柱状图、燃尽图）
-- 项目管理（个人/公司）
+- **项目管理（主入口，含 5 个子视图 Tab）**（2026-04-13 重构）
+  - 项目列表（卡片式，点击切换项目）
+  - 任务列表（完整 CRUD）
+  - 甘特图（时间轴、缩放控制）
+  - 看板（状态列、任务卡片、拖拽）
+  - 日历（月/周/日、任务标记）
+- **日程管理**（2026-04-01 新增：日历/看板/统计三个子视图）
 - 悬浮窗口（透明度、点击穿透）
 - 深色/浅色主题切换
-- 侧边栏导航
+- 侧边栏导航（仅「项目管理」和「日程管理」两个入口）
 
 ### 待开发（🚧）
 - 任务编辑对话框优化

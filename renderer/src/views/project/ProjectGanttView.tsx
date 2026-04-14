@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { useTaskStore } from '../stores/taskStore';
-import { useProjectStore } from '../stores/projectStore';
-import type { Task } from '../types';
+import { useTaskStore } from '../../stores/taskStore';
+import { useProjectStore } from '../../stores/projectStore';
+import type { Task } from '../../types';
 import { ZoomIn, ZoomOut, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import dayjs from 'dayjs';
 import weekOfYear from 'dayjs/plugin/weekOfYear';
@@ -9,7 +9,7 @@ import weekOfYear from 'dayjs/plugin/weekOfYear';
 // 启用 weekOfYear 插件
 dayjs.extend(weekOfYear);
 
-export function GanttView() {
+export function ProjectGanttView() {
   const { tasks, fetchTasks } = useTaskStore();
   const { projects, fetchProjects } = useProjectStore();
   const [zoomLevel, setZoomLevel] = useState<'day' | 'week' | 'month'>('week');

@@ -212,6 +212,44 @@ contextBridge.exposeInMainWorld('electronAPI', {
   setMenuBarVisibility: (visible: boolean) =>
     ipcRenderer.invoke('set-menu-bar-visibility', visible),
 
+  // ========== 任务提醒 ==========
+  getRemindersByTask: (taskId: string) =>
+    ipcRenderer.invoke('reminders:getByTask', taskId),
+
+  createReminder: (input: {
+    taskId: string;
+    reminderTime: string;
+    cycle: 'once' | 'daily' | 'weekly' | 'monthly' | 'custom';
+    intervalDays?: number;
+    intervalHours?: number;
+    customTimes?: string;
+  }) =>
+    ipcRenderer.invoke('reminders:create', input),
+
+  updateReminder: (id: string, updates: {
+    reminderTime?: string;
+    cycle?: 'once' | 'daily' | 'weekly' | 'monthly' | 'custom';
+    intervalDays?: number;
+    intervalHours?: number;
+    customTimes?: string;
+  }) =>
+    ipcRenderer.invoke('reminders:update', id, updates),
+
+  deleteReminder: (id: string) =>
+    ipcRenderer.invoke('reminders:delete', id),
+
+  deleteRemindersByTask: (taskId: string) =>
+    ipcRenderer.invoke('reminders:deleteByTask', taskId),
+
+  calcNextReminderTime: (
+    reminderTime: string,
+    cycle: string,
+    intervalDays: number,
+    intervalHours: number,
+    customTimes: string
+  ) =>
+    ipcRenderer.invoke('reminders:calcNext', reminderTime, cycle, intervalDays, intervalHours, customTimes),
+
   // ========== 应用信息 ==========
   getAppInfo: () =>
     ipcRenderer.invoke('get-app-info'),

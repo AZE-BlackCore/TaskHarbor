@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useTaskStore } from '../stores/taskStore';
+import { useTaskStore } from '../../stores/taskStore';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
 import dayjs, { Dayjs } from 'dayjs';
 import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
@@ -8,7 +8,7 @@ import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
 dayjs.extend(isSameOrAfter);
 dayjs.extend(isSameOrBefore);
 
-export function CalendarView() {
+export function ProjectCalendarView() {
   const { tasks, fetchTasks } = useTaskStore();
   const [currentMonth, setCurrentMonth] = useState(dayjs());
   const [viewMode, setViewMode] = useState<'month' | 'week' | 'day'>('month');

@@ -27,7 +27,9 @@ const taskSchema = z.object({
   // 提醒相关字段
   reminderEnabled: z.boolean().optional(),
   reminderTime: z.string().optional(),
-  reminderCycle: z.enum(['once', 'daily', 'weekly', 'monthly']).optional(),
+  reminderCycle: z.enum(['once', 'daily', 'weekly', 'monthly', 'custom']).optional(),
+  reminderIntervalDays: z.number().min(0).max(365).optional(),
+  reminderIntervalHours: z.number().min(0).max(23).optional(),
   customReminderTimes: z.string().optional(),
 }).refine(
   (data) => {
@@ -60,10 +62,11 @@ const STATUS_OPTIONS: Array<{ value: string; label: string }> = [
 ];
 
 const REMINDER_CYCLE_OPTIONS: Array<{ value: string; label: string }> = [
-  { value: 'once', label: '仅一次' },
-  { value: 'daily', label: '每天' },
-  { value: 'weekly', label: '每周' },
+  { value: 'once',    label: '仅一次' },
+  { value: 'daily',   label: '每天' },
+  { value: 'weekly',  label: '每周' },
   { value: 'monthly', label: '每月' },
+  { value: 'custom',  label: '自定义周期' },
 ];
 
 export function TaskEditDialog({ open, task, onClose, onSave }: TaskEditDialogProps) {
@@ -94,6 +97,8 @@ export function TaskEditDialog({ open, task, onClose, onSave }: TaskEditDialogPr
       reminderEnabled: false,
       reminderTime: '',
       reminderCycle: 'once',
+      reminderIntervalDays: 1,
+      reminderIntervalHours: 0,
       customReminderTimes: '',
     },
   });
@@ -117,6 +122,8 @@ export function TaskEditDialog({ open, task, onClose, onSave }: TaskEditDialogPr
         reminderEnabled: !!(task as any).reminderEnabled || false,
         reminderTime: (task as any).reminderTime || '',
         reminderCycle: (task as any).reminderCycle || 'once',
+        reminderIntervalDays: (task as any).reminderIntervalDays ?? 1,
+        reminderIntervalHours: (task as any).reminderIntervalHours ?? 0,
         customReminderTimes: (task as any).customReminderTimes || '',
       });
     } else {
@@ -136,13 +143,37 @@ export function TaskEditDialog({ open, task, onClose, onSave }: TaskEditDialogPr
         reminderEnabled: false,
         reminderTime: '',
         reminderCycle: 'once',
+        reminderIntervalDays: 1,
+        reminderIntervalHours: 0,
         customReminderTimes: '',
       });
     }
   }, [task, open, reset]);
 
-  const onSubmit = (data: TaskFormData) => {
+  const onSubmit = async (data: TaskFormData) => {
+    // 先保存任务（不含提醒字段，onSave 由父组件处理）
     onSave(data);
+
+    // 保存提醒到数据库
+    if (window.electronAPI?.createReminder && task?.id) {
+      try {
+        // 先删除旧提醒，再按需重建
+        await window.electronAPI.deleteRemindersByTask(task.id);
+        if (data.reminderEnabled && data.reminderTime) {
+          await window.electronAPI.createReminder({
+            taskId: task.id,
+            reminderTime: new Date(data.reminderTime).toISOString(),
+            cycle: (data.reminderCycle as any) || 'once',
+            intervalDays: data.reminderIntervalDays ?? 1,
+            intervalHours: data.reminderIntervalHours ?? 0,
+            customTimes: data.customReminderTimes || undefined,
+          });
+        }
+      } catch (err) {
+        console.error('[TaskEditDialog] 保存提醒失败:', err);
+      }
+    }
+
     addError(task ? '任务已更新' : '任务已创建', 'success');
     onClose();
   };
@@ -283,10 +314,11 @@ export function TaskEditDialog({ open, task, onClose, onSave }: TaskEditDialogPr
 
           {watch('reminderEnabled') && (
             <div className="space-y-3 pl-6 border-l-2 border-primary/30">
+              {/* 提醒时间 + 提醒周期 */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
-                    提醒时间
+                    首次提醒时间
                   </label>
                   <Input
                     type="datetime-local"
@@ -308,30 +340,72 @@ export function TaskEditDialog({ open, task, onClose, onSave }: TaskEditDialogPr
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
-                  自定义提醒时间（多个时间用逗号分隔）
-                </label>
-                <Input
-                  value={watch('customReminderTimes') || ''}
-                  onChange={(e) => setValue('customReminderTimes', e.target.value)}
-                  placeholder="例如：09:00,14:00,18:00"
-                />
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  格式：HH:mm，多个时间用英文逗号分隔。例如：09:00,14:00,18:00 表示每天 9 点、14 点和 18 点提醒
-                </p>
-              </div>
+              {/* 自定义周期：间隔天数 + 间隔小时 */}
+              {watch('reminderCycle') === 'custom' && (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
+                        间隔天数
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          min={0}
+                          max={365}
+                          value={watch('reminderIntervalDays') ?? 1}
+                          onChange={(e) => setValue('reminderIntervalDays', parseInt(e.target.value) || 0)}
+                          placeholder="0"
+                        />
+                        <span className="text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">天</span>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
+                        间隔小时
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          min={0}
+                          max={23}
+                          value={watch('reminderIntervalHours') ?? 0}
+                          onChange={(e) => setValue('reminderIntervalHours', parseInt(e.target.value) || 0)}
+                          placeholder="0"
+                        />
+                        <span className="text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">小时</span>
+                      </div>
+                    </div>
+                  </div>
 
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
+                      每日固定提醒时间点（多个用逗号分隔，与间隔模式二选一）
+                    </label>
+                    <Input
+                      value={watch('customReminderTimes') || ''}
+                      onChange={(e) => setValue('customReminderTimes', e.target.value)}
+                      placeholder="例如：09:00,14:00,18:00"
+                    />
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      填写此项时，将忽略上方的间隔天数/小时，改为每天在指定时刻触发
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* 说明卡片 */}
               <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded p-3">
                 <div className="flex items-start gap-2">
-                  <Clock className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5" />
+                  <Clock className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
                   <div className="text-xs text-blue-700 dark:text-blue-300">
                     <p className="font-medium mb-1">提醒周期说明：</p>
                     <ul className="list-disc list-inside space-y-0.5">
-                      <li><strong>仅一次</strong>：只在指定时间提醒一次</li>
-                      <li><strong>每天</strong>：每天的指定时间提醒</li>
-                      <li><strong>每周</strong>：每周的同一天提醒</li>
-                      <li><strong>每月</strong>：每月的同一天提醒</li>
+                      <li><strong>仅一次</strong>：在指定时间提醒一次，触发后自动停止</li>
+                      <li><strong>每天</strong>：每天的指定时刻自动提醒</li>
+                      <li><strong>每周</strong>：每周的同一天同一时刻提醒</li>
+                      <li><strong>每月</strong>：每月的同一日期提醒</li>
+                      <li><strong>自定义周期</strong>：按间隔天数/小时重复，或设置每日多个固定时间点</li>
                     </ul>
                   </div>
                 </div>

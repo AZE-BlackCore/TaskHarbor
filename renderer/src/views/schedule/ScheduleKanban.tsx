@@ -81,7 +81,7 @@ export function ScheduleKanban() {
       const now = dayjs();
       await updateSchedule(schedule.id, {
         startTime: now.toISOString(),
-        endTime: dayjs.max(dayjs(schedule.endTime), now.add(30, 'minute')).toISOString(),
+        endTime: (dayjs(schedule.endTime).isBefore(now.add(30, 'minute')) ? now.add(30, 'minute') : dayjs(schedule.endTime)).toISOString(),
       });
     }
     setDraggingId(null);
@@ -189,7 +189,7 @@ export function ScheduleKanban() {
                         <div className="flex items-center gap-2 mb-1">
                           <span className="font-medium text-gray-900 dark:text-white truncate">{schedule.title}</span>
                           {schedule.repeat && (
-                            <Repeat className="w-3 h-3 text-purple-500 flex-shrink-0" title={getRepeatLabel(schedule.repeat)} />
+                            <Repeat className="w-3 h-3 text-purple-500 flex-shrink-0" aria-label={getRepeatLabel(schedule.repeat)} />
                           )}
                         </div>
                         <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">

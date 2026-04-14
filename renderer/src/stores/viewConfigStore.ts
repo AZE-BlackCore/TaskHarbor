@@ -19,13 +19,8 @@ interface ViewState {
 }
 
 const DEFAULT_VIEWS: ViewItem[] = [
-  { id: 'list', name: '任务列表', icon: 'List', iconLabel: '📋', path: '/list', enabled: true },
   { id: 'projects', name: '项目管理', icon: 'Grid3X3', iconLabel: '📁', path: '/projects', enabled: true },
-  { id: 'gantt', name: '甘特图', icon: 'Network', iconLabel: '📊', path: '/gantt', enabled: true },
-  { id: 'kanban', name: '看板', icon: 'Columns', iconLabel: '📌', path: '/kanban', enabled: true },
-  { id: 'calendar', name: '日历', icon: 'Calendar', iconLabel: '📅', path: '/calendar', enabled: true },
   { id: 'schedule', name: '日程管理', icon: 'Clock', iconLabel: '🕐', path: '/schedule', enabled: true },
-  { id: 'dashboard', name: '统计报表', icon: 'BarChart3', iconLabel: '📈', path: '/dashboard', enabled: true },
 ];
 
 export const useViewConfigStore = create<ViewState>()(
@@ -37,21 +32,26 @@ export const useViewConfigStore = create<ViewState>()(
       if (saved) {
         try {
           const savedViews = JSON.parse(saved);
+          // 过滤掉已不在 DEFAULT_VIEWS 中的残留视图
+          const validSavedViews = savedViews.filter(
+            (v: ViewItem) => DEFAULT_VIEWS.some(d => d.id === v.id)
+          );
           // 检测并添加缺失的视图
           const missingViews = DEFAULT_VIEWS.filter(
-            defaultView => !savedViews.some((v: ViewItem) => v.id === defaultView.id)
+            defaultView => !validSavedViews.some((v: ViewItem) => v.id === defaultView.id)
           );
-          
-          if (missingViews.length > 0) {
-            // 合并保存的视图和缺失的视图
-            const mergedViews = [...savedViews, ...missingViews];
+
+          if (missingViews.length > 0 || validSavedViews.length !== savedViews.length) {
+            // 合并：保留有效视图 + 补充缺失视图
+            const mergedViews = [...validSavedViews, ...missingViews];
             set({ views: mergedViews });
             localStorage.setItem('viewOrder', JSON.stringify(mergedViews));
-            console.log('Added missing views:', missingViews.map(v => v.name));
+            if (missingViews.length > 0) console.log('Added missing views:', missingViews.map(v => v.name));
+            if (validSavedViews.length !== savedViews.length) console.log('Removed stale views from localStorage');
             return;
           }
-          
-          set({ views: savedViews });
+
+          set({ views: validSavedViews });
           return;
         } catch (e) {
           console.error('Failed to load view order:', e);

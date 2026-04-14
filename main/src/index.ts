@@ -7,6 +7,8 @@ import { setupProjectHandlers } from './ipc-handlers/project-handlers';
 import { setupWindowHandlers } from './ipc-handlers/window-handlers';
 import { setupNotificationHandlers } from './ipc-handlers/notification-handlers';
 import { setupScheduleHandlers } from './ipc-handlers/schedule-handlers';
+import { setupReminderHandlers } from './ipc-handlers/reminder-handlers';
+import { startReminderScheduler, stopReminderScheduler } from './services/reminderService';
 
 let tray: Tray | null = null;
 let mainWindow: BrowserWindow | null = null;
@@ -508,7 +510,12 @@ app.whenReady().then(async () => {
     setupWindowHandlers();
     setupNotificationHandlers();
     await setupScheduleHandlers();
+    setupReminderHandlers();
     console.log('[App] IPC handlers setup complete');
+
+    // 启动提醒调度器（每 60 秒扫描一次到期提醒）
+    startReminderScheduler(async (_taskId) => null);
+    console.log('[App] Reminder scheduler started');
 
     // 菜单栏可见性 IPC 处理器
     ipcMain.handle('set-menu-bar-visibility', (_event, visible: boolean) => {
@@ -553,6 +560,7 @@ app.on('window-all-closed', () => {
 // 所有窗口关闭时退出应用（仅当没有托盘时）
 app.on('before-quit', () => {
   console.log('[App] Before quit');
+  stopReminderScheduler();
   if (tray) {
     tray.destroy();
     tray = null;

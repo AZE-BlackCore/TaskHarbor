@@ -1,12 +1,7 @@
 import { useState, useEffect } from 'react'
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Layout } from './components/Layout'
-import { ListView } from './views/ListView'
-import { GanttView } from './views/GanttView'
-import { KanbanView } from './views/KanbanView'
-import { CalendarView } from './views/CalendarView'
-import { DashboardView } from './views/DashboardView'
-import { ProjectView } from './views/ProjectView'
+import { ProjectMain } from './views/project/ProjectMain'
 import { ScheduleView } from './views/ScheduleView'
 import { FloatingWindow } from './views/FloatingWindow'
 import { DesktopCard } from './views/DesktopCard'
@@ -34,14 +29,15 @@ function App() {
       <Routes>
         {/* 主窗口路由 */}
         <Route path="/" element={<Layout darkMode={darkMode} toggleDarkMode={toggleDarkMode} />}>
-          <Route index element={<Navigate to="/list" replace />} />
-          <Route path="list" element={<ListView />} />
-          <Route path="projects" element={<ProjectView />} />
-          <Route path="gantt" element={<GanttView />} />
-          <Route path="kanban" element={<KanbanView />} />
-          <Route path="calendar" element={<CalendarView />} />
+          <Route index element={<Navigate to="/projects" replace />} />
+          <Route path="projects" element={<ProjectMain />} />
           <Route path="schedule" element={<ScheduleView />} />
-          <Route path="dashboard" element={<DashboardView />} />
+          {/* 旧路由兼容重定向 */}
+          <Route path="list" element={<Navigate to="/projects" replace />} />
+          <Route path="gantt" element={<Navigate to="/projects" replace />} />
+          <Route path="kanban" element={<Navigate to="/projects" replace />} />
+          <Route path="calendar" element={<Navigate to="/projects" replace />} />
+          <Route path="dashboard" element={<Navigate to="/projects" replace />} />
         </Route>
         
         {/* 悬浮窗口路由 */}

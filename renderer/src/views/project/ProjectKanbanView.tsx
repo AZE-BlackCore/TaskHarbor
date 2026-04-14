@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { useTaskStore } from '../stores/taskStore';
-import { useProjectStore } from '../stores/projectStore';
-import { Task, TaskStatus } from '../types';
+import { useTaskStore } from '../../stores/taskStore';
+import { useProjectStore } from '../../stores/projectStore';
+import { Task, TaskStatus } from '../../types';
 import { Plus, MoreVertical, Edit2, Trash2, Clock, User } from 'lucide-react';
-import { TaskEditDialog } from '../components/task/TaskEditDialog';
+import { TaskEditDialog } from '../../components/task/TaskEditDialog';
 import {
   DndContext,
   DragEndEvent,
@@ -202,7 +202,7 @@ function DroppableColumn({
   );
 }
 
-export function KanbanView() {
+export function ProjectKanbanView() {
   const { tasks, fetchTasks, deleteTask, updateTask, updateTaskStatus } = useTaskStore();
   const { fetchProjects } = useProjectStore();
   const [showEditDialog, setShowEditDialog] = useState(false);
