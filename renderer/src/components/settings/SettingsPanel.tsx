@@ -21,6 +21,7 @@ import { useTaskStore } from '../../stores/taskStore';
 import { useProjectStore } from '../../stores/projectStore';
 import { exportToExcel, exportToCSV, exportToMarkdown } from '../../utils/export';
 import { ViewOrderSettings } from './ViewOrderSettings';
+import { ReminderSettings } from './ReminderSettings';
 
 interface SettingsPanelProps {
   open: boolean;
@@ -367,6 +368,9 @@ export function SettingsPanel({ open, onClose, darkMode, toggleDarkMode }: Setti
                 />
               </button>
             </div>
+
+            {/* 自动到期提醒设置 */}
+            <ReminderSettings />
           </div>
         </section>
 

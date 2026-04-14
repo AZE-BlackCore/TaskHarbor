@@ -2,13 +2,45 @@
  * TaskReminder - 悬浮任务提醒面板
  *
  * 两层提醒来源：
- * 1. 基于到期日自动检测（daysUntilDue <= 3 或已逾期）
+ * 1. 基于到期日自动检测（可配置：提前天数、提醒类型、检查频率）
  * 2. 基于 task_reminders 表中已触发（lastFiredAt 在最近 2 分钟内）的定制提醒
  */
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useTaskStore } from '../../stores/taskStore';
 import { Bell, BellOff, Clock, AlertTriangle, Move, CalendarClock } from 'lucide-react';
 import dayjs from 'dayjs';
+
+// 提醒设置接口
+interface ReminderSettings {
+  autoReminderEnabled: boolean;
+  autoReminderDays: number;
+  autoReminderInterval: number;
+  autoReminderOverdue: boolean;
+  autoReminderToday: boolean;
+  autoReminderTomorrow: boolean;
+}
+
+const DEFAULT_REMINDER_SETTINGS: ReminderSettings = {
+  autoReminderEnabled: true,
+  autoReminderDays: 1,
+  autoReminderInterval: 60,
+  autoReminderOverdue: true,
+  autoReminderToday: true,
+  autoReminderTomorrow: false,
+};
+
+// 加载提醒设置
+const loadReminderSettings = (): ReminderSettings => {
+  const saved = localStorage.getItem('taskReminderSettings');
+  if (saved) {
+    try {
+      return { ...DEFAULT_REMINDER_SETTINGS, ...JSON.parse(saved) };
+    } catch {
+      return DEFAULT_REMINDER_SETTINGS;
+    }
+  }
+  return DEFAULT_REMINDER_SETTINGS;
+};
 
 interface ReminderItem {
   id: string;
@@ -23,6 +55,7 @@ export function TaskReminder() {
   const { tasks } = useTaskStore();
   const [reminders, setReminders] = useState<ReminderItem[]>([]);
   const [muted, setMuted] = useState(false);
+  const [settings, setSettings] = useState<ReminderSettings>(loadReminderSettings);
   const [collapsed, setCollapsed] = useState(false);
   const [position, setPosition] = useState({ x: window.innerWidth - 340, y: window.innerHeight - 100 });
   const [isDragging, setIsDragging] = useState(false);
@@ -45,6 +78,14 @@ export function TaskReminder() {
       localStorage.setItem('taskReminderPosition', JSON.stringify(position));
     }
   }, [position]);
+
+  // 监听设置变化
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setSettings(loadReminderSettings());
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('.drag-handle')) {
@@ -86,24 +127,30 @@ export function TaskReminder() {
       const newReminders: ReminderItem[] = [];
       const notified = new Set<string>();
 
-      // ── 层 1：基于 estimatedEndDate 的到期/逾期提醒 ──
-      tasks.forEach(task => {
-        if (!task.estimatedEndDate || task.status === 'done') return;
-        const dueDate = dayjs(task.estimatedEndDate);
-        const daysUntilDue = dueDate.diff(now, 'day');
+      // ── 层 1：基于 estimatedEndDate 的到期/逾期提醒（受设置控制） ──
+      if (settings.autoReminderEnabled) {
+        tasks.forEach(task => {
+          if (!task.estimatedEndDate || task.status === 'done') return;
+          const dueDate = dayjs(task.estimatedEndDate);
+          const daysUntilDue = dueDate.diff(now, 'day');
 
-        if (daysUntilDue < 0) {
-          newReminders.push({ id: task.id, taskName: task.description,
-            dueDate: dueDate.format('YYYY-MM-DD'), type: 'overdue' });
-        } else if (daysUntilDue === 0) {
-          newReminders.push({ id: task.id, taskName: task.description, dueDate: '今天', type: 'reminder' });
-        } else if (daysUntilDue === 1) {
-          newReminders.push({ id: task.id, taskName: task.description, dueDate: '明天', type: 'reminder' });
-        } else if (daysUntilDue <= 3) {
-          newReminders.push({ id: task.id, taskName: task.description,
-            dueDate: dueDate.format('MM-DD'), type: 'reminder' });
-        }
-      });
+          // 逾期提醒
+          if (daysUntilDue < 0 && settings.autoReminderOverdue) {
+            newReminders.push({ id: task.id, taskName: task.description,
+              dueDate: dueDate.format('YYYY-MM-DD'), type: 'overdue' });
+          } else if (daysUntilDue === 0 && settings.autoReminderToday) {
+            // 今天到期
+            newReminders.push({ id: task.id, taskName: task.description, dueDate: '今天', type: 'reminder' });
+          } else if (daysUntilDue === 1 && settings.autoReminderTomorrow) {
+            // 明天到期
+            newReminders.push({ id: task.id, taskName: task.description, dueDate: '明天', type: 'reminder' });
+          } else if (daysUntilDue > 1 && daysUntilDue <= settings.autoReminderDays) {
+            // 提前 N 天提醒（不含今天和明天，由 autoReminderDays 控制上限）
+            newReminders.push({ id: task.id, taskName: task.description,
+              dueDate: dueDate.format('MM-DD'), type: 'reminder' });
+          }
+        });
+      }
 
       // ── 层 2：从数据库读取最近触发的自定义提醒 ──
       if (window.electronAPI?.getRemindersByTask) {
@@ -157,9 +204,11 @@ export function TaskReminder() {
     };
 
     checkReminders();
-    const interval = setInterval(checkReminders, 60_000);
+    // 使用配置的检查间隔（毫秒）
+    const intervalMs = settings.autoReminderInterval * 60_000;
+    const interval = setInterval(checkReminders, intervalMs);
     return () => clearInterval(interval);
-  }, [tasks, muted]);
+  }, [tasks, muted, settings]);
 
   if (reminders.length === 0) return null;
 
