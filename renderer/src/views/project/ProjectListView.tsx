@@ -7,16 +7,17 @@ import { TaskEditDialog } from '../../components/task/TaskEditDialog';
 
 export function ProjectListView() {
   const { tasks, fetchTasks, createTask, updateTaskStatus, deleteTask, updateTask, loading } = useTaskStore();
-  const { currentProjectId } = useProjectStore();
+  const { projects } = useProjectStore();
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterAssignee, setFilterAssignee] = useState<string>('all');
+  const [filterProjectId, setFilterProjectId] = useState<string>('all');
 
   useEffect(() => {
-    fetchTasks(currentProjectId ? { projectId: currentProjectId } : undefined);
-  }, [currentProjectId, fetchTasks]);
+    fetchTasks(filterProjectId !== 'all' ? { projectId: filterProjectId } : undefined);
+  }, [filterProjectId, fetchTasks]);
 
   const handleEdit = (task: Task) => {
     setEditingTask(task);
@@ -70,6 +71,11 @@ export function ProjectListView() {
   // 获取所有责任人列表
   const assignees = Array.from(new Set(tasks.map(t => t.assignee).filter(Boolean)));
 
+  // 当前选中项目名称（用于标题显示）
+  const selectedProjectName = filterProjectId !== 'all'
+    ? projects.find(p => p.id === filterProjectId)?.name ?? '未知项目'
+    : null;
+
   return (
     <div className="h-full flex flex-col bg-white dark:bg-dark-card">
       {/* 顶部工具栏 */}
@@ -77,6 +83,11 @@ export function ProjectListView() {
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
             任务列表
+            {selectedProjectName && (
+              <span className="ml-2 text-base font-normal text-gray-500 dark:text-gray-400">
+                · {selectedProjectName}
+              </span>
+            )}
           </h1>
           <button
             onClick={() => {
@@ -102,6 +113,20 @@ export function ProjectListView() {
               className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-dark-bg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
+
+          {/* 项目筛选 */}
+          <select
+            value={filterProjectId}
+            onChange={(e) => setFilterProjectId(e.target.value)}
+            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-dark-bg text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+          >
+            <option value="all">全部项目</option>
+            {projects.map(project => (
+              <option key={project.id} value={project.id}>
+                {project.name}
+              </option>
+            ))}
+          </select>
 
           {/* 状态过滤 */}
           <select
@@ -132,9 +157,10 @@ export function ProjectListView() {
           </select>
 
           {/* 清除过滤 */}
-          {(filterStatus !== 'all' || filterAssignee !== 'all' || searchQuery) && (
+          {(filterProjectId !== 'all' || filterStatus !== 'all' || filterAssignee !== 'all' || searchQuery) && (
             <button
               onClick={() => {
+                setFilterProjectId('all');
                 setFilterStatus('all');
                 setFilterAssignee('all');
                 setSearchQuery('');
