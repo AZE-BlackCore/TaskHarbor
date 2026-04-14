@@ -1,6 +1,6 @@
 {
   "name": "taskharbor",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "TaskHarbor - 桌面端任务管理软件，让任务安全停靠、高效启航",
   "main": "main/dist/index.js",
   "scripts": {
