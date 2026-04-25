@@ -77,6 +77,30 @@ interface ElectronAPI {
     intervalHours: number,
     customTimes: string
   ) => Promise<{ success: boolean; data: string; error?: string }>;
+
+  // 应用信息
+  getAppInfo: () => Promise<{ success: boolean; version: string; buildDate: string; author: string; productName: string; description: string }>;
+  setMenuBarVisibility: (visible: boolean) => Promise<{ success: boolean }>;
+  setAlwaysOnTop: (alwaysOnTop: boolean) => Promise<{ success: boolean }>;
+  isAlwaysOnTop: () => Promise<{ success: boolean; alwaysOnTop: boolean }>;
+  setWindowPosition: (x: number, y: number) => Promise<{ success: boolean }>;
+  onClosePreference: (callback: (action: 'minimize' | 'exit') => void) => void;
+  removeClosePreferenceListener: () => void;
+
+  // AI Agent
+  agentChat: (request: { conversationId?: string; message: string; context?: Record<string, unknown> }) => Promise<{ success: boolean; error?: string }>;
+  agentConfirmToolCall: (toolCallId: string, approved: boolean) => Promise<{ success: boolean }>;
+  agentCancel: () => Promise<{ success: boolean }>;
+  agentGetConfig: () => Promise<{ success: boolean; config?: Record<string, unknown>; error?: string }>;
+  agentUpdateConfig: (config: Record<string, unknown>) => Promise<{ success: boolean; config?: Record<string, unknown>; error?: string }>;
+  agentTestConnection: (providerType?: string) => Promise<{ success: boolean; available: boolean; provider?: string; model?: string; error?: string }>;
+  agentListConversations: () => Promise<{ success: boolean; conversations?: { id: string; title: string; createdAt: string; updatedAt: string }[]; error?: string }>;
+  agentGetMessages: (conversationId: string) => Promise<{ success: boolean; messages?: Record<string, unknown>[]; error?: string }>;
+  agentDeleteConversation: (conversationId: string) => Promise<{ success: boolean; error?: string }>;
+  agentClearHistory: () => Promise<{ success: boolean; error?: string }>;
+  agentExportConversation: (conversationId: string) => Promise<{ success: boolean; markdown?: string; error?: string }>;
+  onAgentStream: (callback: (chunk: unknown) => void) => () => void;
+  removeAgentStreamListeners: () => void;
 }
 
 interface TaskReminderInfo {

@@ -9,6 +9,9 @@ import { setupNotificationHandlers } from './ipc-handlers/notification-handlers'
 import { setupScheduleHandlers } from './ipc-handlers/schedule-handlers';
 import { setupReminderHandlers } from './ipc-handlers/reminder-handlers';
 import { startReminderScheduler, stopReminderScheduler } from './services/reminderService';
+import { setupAgentHandlers } from './ipc-handlers/agent-handlers';
+import { getAgentConfig } from './services/agentConfigService';
+import { coPawConfig } from './agent/copaw/CoPawConfig';
 
 let tray: Tray | null = null;
 let mainWindow: BrowserWindow | null = null;
@@ -24,6 +27,9 @@ function setupCSP() {
   const isDev = !app.isPackaged;
 
   // 生产环境需要更宽松的 CSP 以支持 Vite 打包的模块
+  // LLM API 域名白名单（主进程直接调用，无需 CSP 控制；但如有 fetch 需求则在此添加）
+  const llmApiSrcs = "https://api.deepseek.com https://dashscope.aliyuncs.com http://localhost:* ws://localhost:*";
+
   const csp = isDev
     ? [
         "default-src 'self'; ",
@@ -31,7 +37,7 @@ function setupCSP() {
         "style-src 'self' 'unsafe-inline' http://localhost:5173; ",
         "font-src 'self' data:; ",
         "img-src 'self' data: blob: http://localhost:5173; ",
-        "connect-src 'self' http://localhost:5173 ws://localhost:5173;",
+        `connect-src 'self' http://localhost:5173 ws://localhost:5173 ${llmApiSrcs};`,
       ].join('')
     : [
         "default-src 'self'; ",
@@ -39,7 +45,7 @@ function setupCSP() {
         "style-src 'self' 'unsafe-inline' data:; ",
         "font-src 'self' data:; ",
         "img-src 'self' data: blob:; ",
-        "connect-src 'self';",
+        `connect-src 'self' ${llmApiSrcs};`,
       ].join('');
 
   console.log('[CSP] Mode:', isDev ? 'Dev' : 'Production');
@@ -511,7 +517,19 @@ app.whenReady().then(async () => {
     setupNotificationHandlers();
     await setupScheduleHandlers();
     setupReminderHandlers();
+    setupAgentHandlers();
     console.log('[App] IPC handlers setup complete');
+
+    // 如果配置了 CoPaw，自动初始化连接检测
+    try {
+      const agentCfg = getAgentConfig();
+      if (agentCfg.provider === 'copaw' && agentCfg.baseUrl) {
+        coPawConfig.initialize(agentCfg.baseUrl, agentCfg.apiKey);
+        console.log('[App] CoPaw connection polling started');
+      }
+    } catch (e) {
+      // 非致命错误，忽略
+    }
 
     // 启动提醒调度器（每 60 秒扫描一次到期提醒）
     startReminderScheduler(async (_taskId) => null);
