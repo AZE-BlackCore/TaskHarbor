@@ -40,13 +40,13 @@ const PROVIDER_INFO: Record<LLMProviderType, { label: string; desc: string; defa
     needsKey: false,
     needsBaseUrl: true,
   },
-  copaw: {
-    label: 'CoPaw（增强版）',
-    desc: '连接 CoPaw 获取最强 AI 能力',
-    defaultModel: 'copaw-default',
-    models: ['copaw-default'],
-    needsKey: false,
-    needsBaseUrl: true,
+  moonshot: {
+    label: 'Kimi（月之暗面）',
+    desc: 'Kimi 长上下文模型，中文理解强',
+    defaultModel: 'moonshot-v1-8k',
+    models: ['moonshot-v1-8k', 'moonshot-v1-32k', 'moonshot-v1-128k'],
+    needsKey: true,
+    needsBaseUrl: false,
   },
 };
 
@@ -90,7 +90,6 @@ export function AISettings() {
     setModel(PROVIDER_INFO[p].defaultModel);
     setApiKey('');
     if (p === 'ollama') setBaseUrl('http://localhost:11434');
-    else if (p === 'copaw') setBaseUrl('http://localhost:3456');
     else setBaseUrl('');
   }, []);
 
@@ -192,7 +191,7 @@ export function AISettings() {
         </div>
       )}
 
-      {/* Base URL（Ollama / CoPaw） */}
+      {/* Base URL（Ollama） */}
       {info.needsBaseUrl && (
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
@@ -202,7 +201,7 @@ export function AISettings() {
             type="text"
             value={baseUrl}
             onChange={(e) => setBaseUrl(e.target.value)}
-            placeholder={provider === 'ollama' ? 'http://localhost:11434' : 'http://localhost:3456'}
+            placeholder={provider === 'ollama' ? 'http://localhost:11434' : ''}
             className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:border-primary transition-colors"
           />
         </div>

@@ -258,8 +258,10 @@ export async function setupDatabase() {
       CREATE TABLE IF NOT EXISTS agent_conversations (
         id          TEXT PRIMARY KEY,
         title       TEXT NOT NULL DEFAULT '新对话',
-        createdAt   TEXT DEFAULT (datetime('now')),
-        updatedAt   TEXT DEFAULT (datetime('now'))
+        created_at  TEXT DEFAULT (datetime('now')),
+        updated_at  TEXT DEFAULT (datetime('now')),
+        provider    TEXT,
+        model       TEXT
       )
     `);
 
@@ -267,24 +269,30 @@ export async function setupDatabase() {
     db!.run(`
       CREATE TABLE IF NOT EXISTS agent_messages (
         id              TEXT PRIMARY KEY,
-        conversationId  TEXT NOT NULL,
+        conversation_id TEXT NOT NULL,
         role            TEXT NOT NULL CHECK(role IN ('system', 'user', 'assistant', 'tool')),
         content         TEXT NOT NULL,
         toolCalls       TEXT,   -- JSON 序列化的 ToolCall[] 数组
         toolCallId      TEXT,   -- 工具调用 ID（role='tool' 时使用）
-        createdAt       TEXT DEFAULT (datetime('now')),
-        FOREIGN KEY (conversationId) REFERENCES agent_conversations(id) ON DELETE CASCADE
+        created_at      TEXT DEFAULT (datetime('now')),
+        FOREIGN KEY (conversation_id) REFERENCES agent_conversations(id) ON DELETE CASCADE
       )
     `);
 
     // Agent 相关索引
     db!.run(`CREATE INDEX IF NOT EXISTS idx_agent_messages_conv ON agent_messages(conversationId)`);
     db!.run(`CREATE INDEX IF NOT EXISTS idx_agent_messages_role ON agent_messages(role)`);
-    db!.run(`CREATE INDEX IF NOT EXISTS idx_agent_conv_updated ON agent_conversations(updatedAt)`);
+    db!.run(`CREATE INDEX IF NOT EXISTS idx_agent_conv_updated ON agent_conversations(updated_at)`);
 
-    // ===== 数据库在线迁移（为现有 tasks 表添加提醒字段）=====
+    // ===== 数据库在线迁移（为现有表添加缺失字段）=====
     // 若字段已存在，ALTER TABLE 会抛异常，catch 掉即可（sqlite 无 IF NOT EXISTS 语法）
     const migrateColumn = (sql: string) => { try { db!.run(sql); } catch (_) {} };
+    
+    // Agent 表迁移：添加 provider/model 字段
+    migrateColumn(`ALTER TABLE agent_conversations ADD COLUMN provider TEXT`);
+    migrateColumn(`ALTER TABLE agent_conversations ADD COLUMN model TEXT`);
+    
+    // tasks 表迁移：添加提醒字段
     migrateColumn(`ALTER TABLE tasks ADD COLUMN reminderEnabled INTEGER DEFAULT 0`);
     migrateColumn(`ALTER TABLE tasks ADD COLUMN reminderTime TEXT`);
     migrateColumn(`ALTER TABLE tasks ADD COLUMN reminderCycle TEXT DEFAULT 'once'`);

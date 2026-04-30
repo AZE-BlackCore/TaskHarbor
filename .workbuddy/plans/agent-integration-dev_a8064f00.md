@@ -1,6 +1,6 @@
 ---
 name: agent-integration-dev
-overview: 基于 CoPaw Agent 集成方案设计文档，分阶段实现 TaskHarbor 的 AI Agent 功能集成。Phase 1 搭建基础架构（LLM Provider、Agent 引擎、工具注册表、IPC、Store），Phase 2 实现 UI（侧边栏、浮动窗口、设置面板），Phase 3 实现智能功能（上下文感知、分析、报告），Phase 4 CoPaw 集成，Phase 5 优化测试。
+overview: AI Agent 功能集成到 TaskHarbor 桌面应用。Phase 1 搭建基础架构（LLM Provider、Agent 引擎、工具注册表、IPC、Store），Phase 2 实现 UI（侧边栏、浮动窗口、设置面板），Phase 3 实现智能功能（上下文感知、分析、报告）。
 todos:
   - id: phase1-agent-core
     content: 搭建 Agent 主进程基础架构：LLM Provider 抽象层 + AgentEngine + ToolRegistry + 基础工具 + IPC handlers + 配置持久化 + CSP 更新 + 数据库建表
@@ -25,20 +25,15 @@ todos:
     status: completed
     dependencies:
       - phase2-floating-settings
-  - id: phase4-copaw
-    content: 实现 CoPaw 集成：CoPawClient + CoPawProvider + 连接检测 UI + Provider 自动切换逻辑
-    status: completed
-    dependencies:
-      - phase3-smart-tools
 ---
 
 ## 产品概述
 
-基于已有的 CoPaw Agent 混合集成方案设计文档（docs/CoPaw Agent 集成方案设计.md），在 feature/agent-integration 分支上实施 AI Agent 功能集成到 TaskHarbor 桌面应用。
+在 feature/agent-integration 分支上实施 AI Agent 功能集成到 TaskHarbor 桌面应用。
 
 ## 核心功能
 
-- **混合 LLM 接入**：内置轻量 Agent 引擎（DeepSeek/通义千问/Ollama），同时可选连接 CoPaw 获取增强能力
+- **多 Provider LLM 接入**：内置轻量 Agent 引擎（DeepSeek/通义千问/Ollama）
 - **自然语言任务操作**：通过对话创建/查询/修改/删除任务和项目
 - **智能分析洞察**：项目进度分析、逾期风险预警、工作量分布统计
 - **自动化报告生成**：自动生成日报/周报/月报
@@ -90,11 +85,10 @@ todos:
 - 新增 agent_conversations 和 agent_messages 两张表，遵循现有 database.ts 的建表模式
 - 使用 getDatabase() 获取数据库实例，遵循 DatabaseManager 单例模式
 
-**5. CoPaw 集成作为可选增强**
+**5. LLM Provider 可选增强**
 
-- CoPawProvider 实现相同的 LLMProvider 接口
 - 通过 agentConfigService 管理连接配置
-- 启动时检测 CoPaw 可用性，可用时自动切换，不可用时降级到内置 Provider
+- 启动时检测 Provider 可用性，用户可在设置中切换
 
 ### 架构设计
 
@@ -129,12 +123,10 @@ graph TB
             DP[DeepSeekProvider]
             QP[QwenProvider]
             OP[OllamaProvider]
-            CP[CoPawProvider]
         end
         AE --> DP
         AE --> QP
         AE --> OP
-        AE --> CP
 
         subgraph Tools - 直接调用 Service
             TT[TaskTools]
@@ -212,9 +204,6 @@ main/src/
       taskPrompt.ts                 # [NEW] 任务操作相关提示词
       analysisPrompt.ts             # [NEW] 分析洞察相关提示词
       reportPrompt.ts               # [NEW] 报告生成相关提示词
-    copaw/
-      CoPawClient.ts                # [NEW] CoPaw HTTP 客户端
-      CoPawConfig.ts                # [NEW] CoPaw 连接配置管理
   ipc-handlers/
     agent-handlers.ts               # [NEW] Agent IPC 处理器（流式对话、确认、配置、历史）
   services/
@@ -239,7 +228,7 @@ renderer/src/
       StreamingText.tsx             # [NEW] 流式文本渲染组件
       AIFloatingWindow.tsx          # [NEW] 浮动 AI 助手窗口
     settings/
-      AISettings.tsx                # [NEW] AI 设置面板（LLM Provider/API Key/CoPaw 配置）
+      AISettings.tsx                # [NEW] AI 设置面板（LLM Provider/API Key 配置）
 
 ### 修改文件
 
@@ -266,7 +255,7 @@ package.json (renderer)             # [MODIFY] 新增 react-markdown、remark-gf
 ```typescript
 // main/src/agent/LLMProvider.ts
 interface LLMConfig {
-  provider: 'deepseek' | 'qwen' | 'ollama' | 'copaw';
+  provider: 'deepseek' | 'qwen' | 'ollama';
   apiKey?: string;
   baseUrl?: string;
   model: string;

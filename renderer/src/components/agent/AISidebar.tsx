@@ -85,14 +85,14 @@ export function AISidebar({ onOpenSettings }: AISidebarProps) {
           <Bot className="w-4 h-4 text-white" />
         </div>
         <span className="font-semibold text-gray-900 dark:text-white text-sm flex-1">
-          CoPaw AI
+          AI 助手
         </span>
 
         {/* 状态指示 */}
         {agent.status === 'thinking' || agent.status === 'streaming' || agent.status === 'tool_calling' ? (
           <Loader2 className="w-4 h-4 text-primary animate-spin" />
         ) : agent.status === 'error' ? (
-          <AlertCircle className="w-4 h-4 text-red-500" title={agent.error} />
+          <AlertCircle className="w-4 h-4 text-red-500" />
         ) : null}
 
         {/* 工具栏按钮 */}

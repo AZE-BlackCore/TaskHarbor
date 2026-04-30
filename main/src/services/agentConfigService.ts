@@ -5,7 +5,6 @@
 
 import type { AgentConfig } from '../agent/types';
 import { DEFAULT_AGENT_CONFIG } from '../agent/types';
-import { coPawConfig } from '../agent/copaw/CoPawConfig';
 
 let storeInstance: any = null;
 
@@ -39,7 +38,6 @@ export function getAgentConfig(): AgentConfig {
 
 /**
  * 保存 Agent 配置
- * 当 provider 为 copaw 时，自动初始化 CoPaw 客户端
  */
 export function saveAgentConfig(config: Partial<AgentConfig>): AgentConfig {
   try {
@@ -48,11 +46,6 @@ export function saveAgentConfig(config: Partial<AgentConfig>): AgentConfig {
     const updated = { ...current, ...config };
     store.set('agentConfig', updated);
     console.log('[AgentConfigService] Config saved, provider:', updated.provider);
-
-    // CoPaw 自动初始化
-    if (updated.provider === 'copaw' && updated.baseUrl) {
-      coPawConfig.initialize(updated.baseUrl, updated.apiKey);
-    }
 
     return updated;
   } catch (error) {

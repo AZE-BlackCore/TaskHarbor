@@ -77,7 +77,7 @@ export const QuickActions = memo(({ onAction }: QuickActionsProps) => {
         <span className="text-2xl">✨</span>
       </div>
       <h3 className="text-base font-bold text-gray-900 dark:text-white mb-1">
-        CoPaw AI 助手
+        AI 助手
       </h3>
       <p className="text-xs text-gray-500 dark:text-gray-400 text-center mb-5">
         用自然语言管理任务、分析进度、生成报告

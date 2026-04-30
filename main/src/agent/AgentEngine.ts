@@ -11,7 +11,7 @@ import type {
   PageContext,
 } from './types';
 import type { LLMProvider } from './types';
-import { createLLMProvider } from './LLMProvider';
+import { createLLMProvider, setAbortController } from './LLMProvider';
 import { toolRegistry } from './ToolRegistry';
 import { conversationMemory } from './ConversationMemory';
 import { contextCollector } from './ContextCollector';
@@ -47,6 +47,7 @@ let abortController: AbortController | null = null;
 export function cancelCurrentChat(): void {
   if (abortController) {
     abortController.abort();
+    setAbortController(null);
     abortController = null;
   }
 }
@@ -87,6 +88,7 @@ export async function* chat(request: AgentRequest): AsyncGenerator<AgentStreamCh
   initializeTools();
 
   abortController = new AbortController();
+  setAbortController(abortController);
   const provider = createCurrentProvider();
   const config = getAgentConfig();
 
@@ -152,25 +154,45 @@ export async function* chat(request: AgentRequest): AsyncGenerator<AgentStreamCh
         return;
       }
 
-      // 调用 LLM
-      let llmResponse: { content: string; toolCalls?: ToolCall[]; finishReason: string } | null = null;
+      // 调用 LLM（真正的流式：每个 text delta 立即 yield，工具调用在流结束时一次性 yield）
+      let fullContent = '';
+      let collectedToolCalls: ToolCall[] | undefined;
+      let finishReason: string = 'stop';
 
-      for await (const chunk of provider.chat(messages, toolRegistry.getDefinitions())) {
-        llmResponse = chunk;
+      for await (const chunk of provider.chat(messages, toolRegistry.getDefinitions(), abortController?.signal)) {
+        if (abortController?.signal.aborted) break;
+
+        // 文本 delta — 立即 yield 给渲染进程（打字机效果）
+        if (chunk.content) {
+          fullContent += chunk.content;
+          assistantContentAccumulator += chunk.content;
+          yield { type: 'text', content: chunk.content, conversationId };
+        }
+
+        // 工具调用 — 在流结束时一次性返回
+        if (chunk.toolCalls && chunk.toolCalls.length > 0) {
+          collectedToolCalls = chunk.toolCalls;
+        }
+
+        // finishReason — 从 SSE 数据中正确提取
+        if (chunk.finishReason) {
+          finishReason = chunk.finishReason;
+        }
       }
 
-      if (!llmResponse) {
+      // 检查是否被用户取消
+      if (abortController?.signal.aborted) {
+        yield { type: 'error', content: '用户取消了对话' };
+        return;
+      }
+
+      if (!fullContent && !collectedToolCalls) {
         yield { type: 'error', content: 'LLM 没有返回响应' };
         return;
       }
 
-      const { content, toolCalls, finishReason } = llmResponse;
-
-      // yield 文本内容（流式）
-      if (content) {
-        assistantContentAccumulator += content;
-        yield { type: 'text', content, conversationId };
-      }
+      const content = fullContent;
+      const toolCalls = collectedToolCalls;
 
       // ---- 5. 处理工具调用 ----
       if (finishReason === 'tool_calls' && toolCalls && toolCalls.length > 0) {
@@ -298,5 +320,6 @@ export async function* chat(request: AgentRequest): AsyncGenerator<AgentStreamCh
     yield { type: 'error', content: userMessage };
   } finally {
     abortController = null;
+    setAbortController(null);
   }
 }

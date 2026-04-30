@@ -5,7 +5,7 @@
 
 // ========== LLM Provider ==========
 
-export type LLMProviderType = 'deepseek' | 'qwen' | 'ollama' | 'copaw';
+export type LLMProviderType = 'deepseek' | 'qwen' | 'ollama' | 'moonshot';
 
 export interface AgentConfig {
   provider: LLMProviderType;

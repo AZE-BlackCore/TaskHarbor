@@ -110,7 +110,7 @@ export function AIFloatingWindow({ initialX = 40, initialY = 200 }: AIFloatingWi
         className="flex items-center gap-2 px-3 py-2.5 bg-gradient-to-r from-violet-500 to-primary cursor-grab active:cursor-grabbing"
       >
         <Bot className="w-4 h-4 text-white flex-shrink-0" />
-        <span className="text-white text-sm font-semibold flex-1">CoPaw AI</span>
+        <span className="text-white text-sm font-semibold flex-1">AI 助手</span>
         {isStreaming && <Loader2 className="w-3.5 h-3.5 text-white/80 animate-spin" />}
 
         <button

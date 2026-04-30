@@ -1,15 +1,23 @@
 /**
  * LLM Provider 抽象层
  * 使用 Node.js 原生 https/http 模块调用 LLM API，避免 CommonJS 兼容问题
+ *
+ * 修复要点（2026-04-25）：
+ * - makeRequest 返回 IncomingMessage 实现真正的流式 SSE
+ * - parseSSEStream 逐行解析，每个 delta 立即 yield（打字机效果）
+ * - finishReason 从 SSE 数据中正确提取，不再硬编码
+ * - AbortController 绑定到 HTTP 请求，取消功能生效
+ * - 工具调用 ID 使用服务端返回的值
  */
 
 import * as https from 'https';
 import * as http from 'http';
+import type { IncomingMessage } from 'http';
 import type { LLMProvider, LLMMessage, LLMResponse, LLMConfig, ToolDefinition, ToolCall } from './types';
 import { PROVIDER_MODELS } from './types';
 
 /**
- * 创建唯一 ID
+ * 创建唯一 ID（仅作 fallback）
  */
 function generateToolCallId(): string {
   return `call_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -18,6 +26,9 @@ function generateToolCallId(): string {
 /**
  * DeepSeek Provider 实现
  * API 兼容 OpenAI 格式
+ *
+ * 流式实现：逐行读取 SSE，每个有内容的 chunk 立即 yield
+ * 工具调用在流结束时一次性 yield（因为需要累积完整的参数 JSON）
  */
 class DeepSeekProvider implements LLMProvider {
   protected config: LLMConfig;
@@ -30,7 +41,7 @@ class DeepSeekProvider implements LLMProvider {
     };
   }
 
-  async *chat(messages: LLMMessage[], tools?: ToolDefinition[]): AsyncGenerator<LLMResponse> {
+  async *chat(messages: LLMMessage[], tools?: ToolDefinition[], signal?: AbortSignal): AsyncGenerator<LLMResponse> {
     const body: any = {
       model: this.config.model,
       messages,
@@ -44,13 +55,13 @@ class DeepSeekProvider implements LLMProvider {
       body.tool_choice = 'auto';
     }
 
-    const response = await this.makeRequest(body);
-    yield* this.parseSSEStream(response, tools);
+    const res = await this.makeRequest(body, signal);
+    yield* this.parseSSEStream(res);
   }
 
   async isAvailable(): Promise<boolean> {
     try {
-      const response = await this.makeRequest({
+      await this.makeRequest({
         model: this.config.model,
         messages: [{ role: 'user', content: 'hi' }],
         max_tokens: 1,
@@ -66,7 +77,11 @@ class DeepSeekProvider implements LLMProvider {
     return this.config.model;
   }
 
-  private makeRequest(body: any): Promise<string> {
+  /**
+   * 发送 HTTP 请求，返回 IncomingMessage 供流式读取
+   * 支持通过 AbortSignal 中止请求
+   */
+  protected makeRequest(body: any, signal?: AbortSignal): Promise<IncomingMessage> {
     return new Promise((resolve, reject) => {
       const url = new URL(`${this.config.baseUrl}/v1/chat/completions`);
       const isHttps = url.protocol === 'https:';
@@ -74,7 +89,7 @@ class DeepSeekProvider implements LLMProvider {
 
       const postData = JSON.stringify(body);
 
-      const options = {
+      const options: https.RequestOptions = {
         hostname: url.hostname,
         port: url.port || (isHttps ? 443 : 80),
         path: url.pathname,
@@ -86,96 +101,164 @@ class DeepSeekProvider implements LLMProvider {
         },
       };
 
+      // 绑定 AbortSignal
+      if (signal) {
+        if (signal.aborted) {
+          reject(new Error('Request was aborted'));
+          return;
+        }
+        signal.addEventListener('abort', () => {
+          req.destroy(new Error('Request was aborted'));
+        }, { once: true });
+      }
+
       const req = lib.request(options, (res) => {
         if (res.statusCode && res.statusCode >= 400) {
           let errorData = '';
           res.on('data', (chunk) => { errorData += chunk; });
           res.on('end', () => {
-            reject(new Error(`DeepSeek API error ${res.statusCode}: ${errorData}`));
+            reject(new Error(`${this.constructor.name} API error ${res.statusCode}: ${errorData}`));
           });
           return;
         }
 
-        const chunks: Buffer[] = [];
-        res.on('data', (chunk) => chunks.push(chunk));
-        res.on('end', () => resolve(Buffer.concat(chunks).toString('utf-8')));
+        resolve(res);
       });
 
       req.on('error', reject);
       req.setTimeout(60000, () => {
         req.destroy();
-        reject(new Error('DeepSeek API request timeout (60s)'));
+        reject(new Error(`${this.constructor.name} API request timeout (60s)`));
       });
       req.write(postData);
       req.end();
     });
   }
 
-  private async *parseSSEStream(data: string, _tools?: ToolDefinition[]): AsyncGenerator<LLMResponse> {
-    const lines = data.split('\n');
+  /**
+   * 真正的流式 SSE 解析器
+   *
+   * 逐行读取 IncomingMessage，每个包含文本内容的 delta 立即 yield
+   * 工具调用增量累积，在流结束时（[DONE]）一次性 yield
+   * finishReason 从最后一条有效 SSE chunk 中提取
+   */
+  protected async *parseSSEStream(res: IncomingMessage): AsyncGenerator<LLMResponse> {
+    let buffer = '';
     let content = '';
-    const toolCalls: ToolCall[] = [];
-    const toolCallMap = new Map<number, { name: string; args: string }>();
+    const toolCallMap = new Map<number, { id: string; name: string; args: string }>();
+    let lastFinishReason: string | null = null;
 
-    for (const line of lines) {
-      if (!line.startsWith('data: ')) continue;
-      const jsonStr = line.slice(6).trim();
-      if (jsonStr === '[DONE]') break;
+    for await (const chunk of res) {
+      if (abortController?.signal.aborted) break;
 
-      try {
-        const parsed = JSON.parse(jsonStr);
-        const delta = parsed.choices?.[0]?.delta;
-        if (!delta) continue;
+      buffer += chunk.toString('utf-8');
+      const lines = buffer.split('\n');
+      // 最后一个元素可能是不完整的行，保留在 buffer 中
+      buffer = lines.pop() || '';
 
-        // 累积文本内容
-        if (delta.content) {
-          content += delta.content;
+      for (const line of lines) {
+        const trimmed = line.replace(/\r$/, ''); // 兼容 \r\n
+        if (!trimmed.startsWith('data: ')) continue;
+
+        const jsonStr = trimmed.slice(6).trim();
+        if (jsonStr === '[DONE]') {
+          // 流结束，yield 工具调用（如果有）
+          if (toolCallMap.size > 0) {
+            const toolCalls: ToolCall[] = [];
+            for (const [, entry] of toolCallMap) {
+              let parsedArgs: Record<string, any> = {};
+              try {
+                parsedArgs = JSON.parse(entry.args || '{}');
+              } catch {
+                parsedArgs = { raw: entry.args };
+              }
+              toolCalls.push({
+                id: entry.id || generateToolCallId(),
+                name: entry.name,
+                args: parsedArgs,
+              });
+            }
+            yield {
+              content: '', // 工具调用 chunk 不携带文本
+              toolCalls,
+              finishReason: (lastFinishReason as any) || 'tool_calls',
+            };
+          }
+          return; // 流结束
         }
 
-        // 累积工具调用
-        if (delta.tool_calls) {
-          for (const tc of delta.tool_calls) {
-            if (tc.index !== undefined) {
-              if (!toolCallMap.has(tc.index)) {
-                toolCallMap.set(tc.index, { name: '', args: '' });
+        try {
+          const parsed = JSON.parse(jsonStr);
+          const delta = parsed.choices?.[0]?.delta;
+          const finishReason = parsed.choices?.[0]?.finish_reason;
+
+          // 记录 finishReason（最后一条有效值）
+          if (finishReason) {
+            lastFinishReason = finishReason;
+          }
+
+          if (!delta) continue;
+
+          // 文本内容 — 立即 yield，实现打字机效果
+          if (delta.content) {
+            content += delta.content;
+            yield {
+              content: delta.content, // 每次 yield 增量文本
+              finishReason: undefined as any, // 中间 chunk 无 finishReason
+            };
+          }
+
+          // 累积工具调用增量
+          if (delta.tool_calls) {
+            for (const tc of delta.tool_calls) {
+              if (tc.index !== undefined) {
+                if (!toolCallMap.has(tc.index)) {
+                  toolCallMap.set(tc.index, { id: '', name: '', args: '' });
+                }
+                const entry = toolCallMap.get(tc.index)!;
+                if (tc.id) entry.id = tc.id; // 保留服务端返回的 ID
+                if (tc.function?.name) entry.name += tc.function.name;
+                if (tc.function?.arguments) entry.args += tc.function.arguments;
               }
-              const entry = toolCallMap.get(tc.index)!;
-              if (tc.id) {
-                // 新的工具调用使用服务端 ID 或本地 ID
-              }
-              if (tc.function?.name) entry.name += tc.function.name;
-              if (tc.function?.arguments) entry.args += tc.function.arguments;
             }
           }
+        } catch {
+          // 跳过解析失败的行
         }
-      } catch {
-        // 跳过解析失败的行
       }
     }
 
-    // 构建工具调用
+    // 如果流没有正常结束（异常断开），仍然尝试 yield 工具调用
     if (toolCallMap.size > 0) {
-      for (const [_, entry] of toolCallMap) {
+      const toolCalls: ToolCall[] = [];
+      for (const [, entry] of toolCallMap) {
         let parsedArgs: Record<string, any> = {};
         try {
-          parsedArgs = JSON.parse(entry.args);
+          parsedArgs = JSON.parse(entry.args || '{}');
         } catch {
           parsedArgs = { raw: entry.args };
         }
         toolCalls.push({
-          id: generateToolCallId(),
+          id: entry.id || generateToolCallId(),
           name: entry.name,
           args: parsedArgs,
         });
       }
+      yield {
+        content: '',
+        toolCalls,
+        finishReason: (lastFinishReason as any) || 'tool_calls',
+      };
     }
-
-    yield {
-      content,
-      toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
-      finishReason: toolCalls.length > 0 ? 'tool_calls' : 'stop',
-    };
   }
+}
+
+// 引用外部的 abortController（AgentEngine 模块级变量）
+// 通过 setAbortController 注入，避免循环依赖
+let abortController: AbortController | null = null;
+
+export function setAbortController(ac: AbortController | null): void {
+  abortController = ac;
 }
 
 /**
@@ -188,6 +271,24 @@ class QwenProvider extends DeepSeekProvider implements LLMProvider {
       ...config,
       baseUrl: config.baseUrl || PROVIDER_MODELS.qwen.baseUrl,
       model: config.model || PROVIDER_MODELS.qwen.defaultModel,
+    });
+  }
+
+  getModelName(): string {
+    return this.config.model;
+  }
+}
+
+/**
+ * Kimi (Moonshot) Provider 实现
+ * API 兼容 OpenAI 格式
+ */
+class MoonshotProvider extends DeepSeekProvider implements LLMProvider {
+  constructor(config: LLMConfig) {
+    super({
+      ...config,
+      baseUrl: config.baseUrl || PROVIDER_MODELS.moonshot.baseUrl,
+      model: config.model || PROVIDER_MODELS.moonshot.defaultModel,
     });
   }
 
@@ -315,53 +416,6 @@ class OllamaProvider implements LLMProvider {
 }
 
 /**
- * CoPaw Provider 实现
- *
- * 通过 CoPaw 本地服务（或远程服务）提供 LLM 能力
- * CoPaw 服务暴露 OpenAI 兼容的 /api/chat 端点
- */
-class CoPawProvider extends DeepSeekProvider {
-  constructor(config: LLMConfig) {
-    super({
-      ...config,
-      baseUrl: config.baseUrl || PROVIDER_MODELS.copaw.baseUrl,
-      model: config.model || PROVIDER_MODELS.copaw.defaultModel,
-    });
-  }
-
-  async isAvailable(): Promise<boolean> {
-    return new Promise((resolve) => {
-      const baseUrl = this.config.baseUrl || PROVIDER_MODELS.copaw.baseUrl;
-      // 检测 /api/health 端点
-      const url = new URL('/api/health', baseUrl);
-      const lib = url.protocol === 'https:' ? https : http;
-
-      const req = lib.request(
-        {
-          hostname: url.hostname,
-          port: url.port || (url.protocol === 'https:' ? '443' : '80'),
-          path: url.pathname,
-          method: 'GET',
-        },
-        (res) => {
-          resolve(res.statusCode !== undefined && res.statusCode < 500);
-        }
-      );
-      req.on('error', () => resolve(false));
-      req.setTimeout(5000, () => {
-        req.destroy();
-        resolve(false);
-      });
-      req.end();
-    });
-  }
-
-  getModelName(): string {
-    return `CoPaw/${this.config.model}`;
-  }
-}
-
-/**
  * 创建 LLM Provider 实例
  */
 export function createLLMProvider(config: LLMConfig): LLMProvider {
@@ -372,11 +426,11 @@ export function createLLMProvider(config: LLMConfig): LLMProvider {
       return new QwenProvider(config);
     case 'ollama':
       return new OllamaProvider(config);
-    case 'copaw':
-      return new CoPawProvider(config);
+    case 'moonshot':
+      return new MoonshotProvider(config);
     default:
       return new DeepSeekProvider(config);
   }
 }
 
-export { DeepSeekProvider, QwenProvider, OllamaProvider, CoPawProvider };
+export { DeepSeekProvider, QwenProvider, OllamaProvider, MoonshotProvider };

@@ -191,7 +191,7 @@ export function useAgent() {
     try {
       const result = await window.electronAPI.agentGetConfig();
       if (result.success && result.config) {
-        store.setConfig(result.config as Parameters<typeof store.setConfig>[0]);
+        store.setConfig(result.config as unknown as Parameters<typeof store.setConfig>[0]);
       }
     } catch (err) {
       console.error('加载 Agent 配置失败:', err);
@@ -204,7 +204,7 @@ export function useAgent() {
       try {
         const result = await window.electronAPI.agentUpdateConfig(config);
         if (result.success && result.config) {
-          store.setConfig(result.config as Parameters<typeof store.setConfig>[0]);
+          store.setConfig(result.config as unknown as Parameters<typeof store.setConfig>[0]);
         }
         return result.success;
       } catch (err) {

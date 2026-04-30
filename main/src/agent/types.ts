@@ -5,7 +5,7 @@
 
 // ========== LLM 相关类型 ==========
 
-export type LLMProviderType = 'deepseek' | 'qwen' | 'ollama' | 'copaw';
+export type LLMProviderType = 'deepseek' | 'qwen' | 'ollama' | 'moonshot';
 
 export interface LLMConfig {
   provider: LLMProviderType;
@@ -36,7 +36,7 @@ export interface LLMResponse {
 }
 
 export interface LLMProvider {
-  chat(messages: LLMMessage[], tools?: ToolDefinition[]): AsyncGenerator<LLMResponse>;
+  chat(messages: LLMMessage[], tools?: ToolDefinition[], signal?: AbortSignal): AsyncGenerator<LLMResponse>;
   isAvailable(): Promise<boolean>;
   getModelName(): string;
 }
@@ -130,20 +130,16 @@ export interface AgentConfig {
   model: string;
   temperature: number;
   maxTokens: number;
-  copawUrl: string;
-  copawEnabled: boolean;
   streamEnabled: boolean;
 }
 
 export const DEFAULT_AGENT_CONFIG: AgentConfig = {
   provider: 'deepseek',
   apiKey: '',
-  baseUrl: '',
+  baseUrl: 'https://api.deepseek.com',
   model: 'deepseek-chat',
   temperature: 0.7,
   maxTokens: 4096,
-  copawUrl: 'http://localhost:8000',
-  copawEnabled: false,
   streamEnabled: true,
 };
 
@@ -165,9 +161,9 @@ export const PROVIDER_MODELS: Record<LLMProviderType, { defaultModel: string; ba
     baseUrl: 'http://localhost:11434',
     models: ['qwen2.5:7b', 'llama3:8b', 'codellama:13b'],
   },
-  copaw: {
-    defaultModel: 'default',
-    baseUrl: 'http://localhost:8000',
-    models: ['default'],
+  moonshot: {
+    defaultModel: 'moonshot-v1-8k',
+    baseUrl: 'https://api.moonshot.cn',
+    models: ['moonshot-v1-8k', 'moonshot-v1-32k', 'moonshot-v1-128k'],
   },
 };
