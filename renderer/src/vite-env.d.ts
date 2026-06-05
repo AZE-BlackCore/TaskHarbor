@@ -35,8 +35,16 @@ interface ElectronAPI {
   
   // 标签
   getTags: (taskId: string) => Promise<{ success: boolean; data: Record<string, unknown>[]; error?: string }>;
-  addTag: (taskId: string, tagName: string, tagColor?: string) => Promise<{ success: boolean; error?: string }>;
+  getAllTags: () => Promise<{ success: boolean; data: Record<string, unknown>[]; error?: string }>;
+  getTagById: (id: string) => Promise<{ success: boolean; data: Record<string, unknown>; error?: string }>;
+  createTag: (tagData: { name: string; color?: string }) => Promise<{ success: boolean; data: Record<string, unknown>; error?: string }>;
+  updateTag: (id: string, updates: Record<string, unknown>) => Promise<{ success: boolean; error?: string }>;
   deleteTag: (id: string) => Promise<{ success: boolean; error?: string }>;
+  getTagStats: (tagId: string) => Promise<{ success: boolean; data: Record<string, unknown>; error?: string }>;
+  addTagToTask: (taskId: string, tagId: string) => Promise<{ success: boolean; error?: string }>;
+  removeTagFromTask: (taskId: string, tagId: string) => Promise<{ success: boolean; error?: string }>;
+  getTasksByTag: (tagId: string) => Promise<{ success: boolean; data: Record<string, unknown>[]; error?: string }>;
+  addTag: (taskId: string, tagName: string, tagColor?: string) => Promise<{ success: boolean; error?: string }>;
   
   // 项目
   getProjects: () => Promise<{ success: boolean; data: Record<string, unknown>[]; error?: string }>;
@@ -86,21 +94,6 @@ interface ElectronAPI {
   setWindowPosition: (x: number, y: number) => Promise<{ success: boolean }>;
   onClosePreference: (callback: (action: 'minimize' | 'exit') => void) => void;
   removeClosePreferenceListener: () => void;
-
-  // AI Agent
-  agentChat: (request: { conversationId?: string; message: string; context?: Record<string, unknown> }) => Promise<{ success: boolean; error?: string }>;
-  agentConfirmToolCall: (toolCallId: string, approved: boolean) => Promise<{ success: boolean }>;
-  agentCancel: () => Promise<{ success: boolean }>;
-  agentGetConfig: () => Promise<{ success: boolean; config?: Record<string, unknown>; error?: string }>;
-  agentUpdateConfig: (config: Record<string, unknown>) => Promise<{ success: boolean; config?: Record<string, unknown>; error?: string }>;
-  agentTestConnection: (providerType?: string) => Promise<{ success: boolean; available: boolean; provider?: string; model?: string; error?: string }>;
-  agentListConversations: () => Promise<{ success: boolean; conversations?: { id: string; title: string; createdAt: string; updatedAt: string }[]; error?: string }>;
-  agentGetMessages: (conversationId: string) => Promise<{ success: boolean; messages?: Record<string, unknown>[]; error?: string }>;
-  agentDeleteConversation: (conversationId: string) => Promise<{ success: boolean; error?: string }>;
-  agentClearHistory: () => Promise<{ success: boolean; error?: string }>;
-  agentExportConversation: (conversationId: string) => Promise<{ success: boolean; markdown?: string; error?: string }>;
-  onAgentStream: (callback: (chunk: unknown) => void) => () => void;
-  removeAgentStreamListeners: () => void;
 }
 
 interface TaskReminderInfo {

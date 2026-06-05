@@ -3,6 +3,7 @@ import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Layout } from './components/Layout'
 import { TagMain } from './views/tag/TagMain'
 import { ScheduleView } from './views/ScheduleView'
+import { StatsView } from './views/StatsView'
 import { FloatingWindow } from './views/FloatingWindow'
 import { DesktopCard } from './views/DesktopCard'
 import { TaskReminder } from './components/notification/TaskReminder'
@@ -29,7 +30,8 @@ function App() {
       <Routes>
         {/* 主窗口路由 */}
         <Route path="/" element={<Layout darkMode={darkMode} toggleDarkMode={toggleDarkMode} />}>
-          <Route index element={<Navigate to="/tags" replace />} />
+          <Route index element={<Navigate to="/stats" replace />} />
+          <Route path="stats" element={<StatsView />} />
           <Route path="tags" element={<TagMain />} />
           <Route path="schedule" element={<ScheduleView />} />
           {/* 旧路由兼容重定向 */}
@@ -37,7 +39,7 @@ function App() {
           <Route path="gantt" element={<Navigate to="/tags" replace />} />
           <Route path="kanban" element={<Navigate to="/tags" replace />} />
           <Route path="calendar" element={<Navigate to="/tags" replace />} />
-          <Route path="dashboard" element={<Navigate to="/tags" replace />} />
+          <Route path="dashboard" element={<Navigate to="/stats" replace />} />
           <Route path="projects" element={<Navigate to="/tags" replace />} />
         </Route>
         

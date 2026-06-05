@@ -205,18 +205,6 @@ export async function setupDatabase() {
       )
     `);
 
-    // 创建任务标签关联表
-    db!.run(`
-      CREATE TABLE IF NOT EXISTS task_tags (
-        id TEXT PRIMARY KEY,
-        taskId TEXT NOT NULL,
-        tagName TEXT NOT NULL,
-        tagColor TEXT DEFAULT '#3B82F6',
-        createdAt TEXT DEFAULT (datetime('now')),
-        FOREIGN KEY (taskId) REFERENCES tasks(id) ON DELETE CASCADE
-      )
-    `);
-
     // 创建日程表
     db!.run(`
       CREATE TABLE IF NOT EXISTS schedules (
@@ -317,7 +305,6 @@ export async function setupDatabase() {
     db!.run(`CREATE INDEX IF NOT EXISTS idx_subtasks_task ON subtasks(taskId)`);
     db!.run(`CREATE INDEX IF NOT EXISTS idx_timelogs_task ON timelogs(taskId)`);
     db!.run(`CREATE INDEX IF NOT EXISTS idx_dependencies_task ON task_dependencies(taskId)`);
-    db!.run(`CREATE INDEX IF NOT EXISTS idx_tags_task ON task_tags(taskId)`);
     db!.run(`CREATE INDEX IF NOT EXISTS idx_task_tag_relations_task ON task_tag_relations(taskId)`);
     db!.run(`CREATE INDEX IF NOT EXISTS idx_task_tag_relations_tag ON task_tag_relations(tagId)`);
     db!.run(`CREATE INDEX IF NOT EXISTS idx_schedules_startTime ON schedules(startTime)`);

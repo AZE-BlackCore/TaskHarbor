@@ -19,7 +19,8 @@ interface ViewState {
 }
 
 const DEFAULT_VIEWS: ViewItem[] = [
-  { id: 'tags', name: '标签管理', icon: 'Tag', iconLabel: '🏷️', path: '/tags', enabled: true },
+  { id: 'stats', name: '数据统计', icon: 'BarChart3', iconLabel: '📊', path: '/stats', enabled: true },
+  { id: 'tags', name: '任务管理', icon: 'Tag', iconLabel: '🏷️', path: '/tags', enabled: true },
   { id: 'schedule', name: '日程管理', icon: 'Clock', iconLabel: '🕐', path: '/schedule', enabled: true },
 ];
 

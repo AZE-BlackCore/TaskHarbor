@@ -16,14 +16,12 @@ import {
   Maximize2,
   Pin,
   Info,
-  Bot
 } from 'lucide-react';
 import { useTaskStore } from '../../stores/taskStore';
 import { useProjectStore } from '../../stores/projectStore';
 import { exportToExcel, exportToCSV, exportToMarkdown } from '../../utils/export';
 import { ViewOrderSettings } from './ViewOrderSettings';
 import { ReminderSettings } from './ReminderSettings';
-import { AISettings } from './AISettings';
 
 interface SettingsPanelProps {
   open: boolean;
@@ -35,7 +33,6 @@ interface SettingsPanelProps {
 export function SettingsPanel({ open, onClose, darkMode, toggleDarkMode }: SettingsPanelProps) {
   const { tasks } = useTaskStore();
   const { projects } = useProjectStore();
-  const [activeTab, setActiveTab] = useState<'general' | 'ai'>('general');
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [showMenuBar, setShowMenuBar] = useState(false);
@@ -178,37 +175,7 @@ export function SettingsPanel({ open, onClose, darkMode, toggleDarkMode }: Setti
 
   return (
     <Dialog open={open} onClose={onClose} title="设置" className="max-w-2xl">
-      {/* Tab 切换 */}
-      <div className="flex gap-1 mb-5 p-1 bg-gray-100 dark:bg-gray-800 rounded-lg">
-        <button
-          onClick={() => setActiveTab('general')}
-          className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
-            activeTab === 'general'
-              ? 'bg-white dark:bg-dark-card text-gray-900 dark:text-white shadow-sm'
-              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-          }`}
-        >
-          <Settings className="w-4 h-4" />
-          通用设置
-        </button>
-        <button
-          onClick={() => setActiveTab('ai')}
-          className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
-            activeTab === 'ai'
-              ? 'bg-white dark:bg-dark-card text-gray-900 dark:text-white shadow-sm'
-              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-          }`}
-        >
-          <Bot className="w-4 h-4" />
-          AI 设置
-        </button>
-      </div>
-
-      {/* AI 设置面板 */}
-      {activeTab === 'ai' && <AISettings />}
-
       {/* 通用设置 */}
-      {activeTab === 'general' && (
       <div className="space-y-6">
         {/* 界面设置 */}
         <section>
@@ -562,7 +529,6 @@ export function SettingsPanel({ open, onClose, darkMode, toggleDarkMode }: Setti
           </div>
         </section>
       </div>
-      )} {/* end activeTab === 'general' */}
     </Dialog>
   );
 }

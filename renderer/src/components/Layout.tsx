@@ -5,8 +5,6 @@ import type { ViewType } from '../stores/viewStore';
 import { useViewConfigStore } from '../stores/viewConfigStore';
 import { SettingsPanel } from './settings/SettingsPanel';
 import { ToastContainer } from './ui/Toast';
-import { AISidebar } from './agent/AISidebar';
-import { useAgent } from '../hooks/useAgent';
 import { 
   Sun, 
   Moon, 
@@ -14,7 +12,7 @@ import {
   Calendar as CalendarIcon,
   ChevronLeft,
   ChevronRight,
-  Bot,
+  BarChart3,
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -29,18 +27,10 @@ export function Layout({ darkMode, toggleDarkMode }: LayoutProps) {
   const { views, loadViews } = useViewConfigStore();
   const [showSettings, setShowSettings] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
-  const agent = useAgent();
 
   useEffect(() => {
     loadViews();
   }, [loadViews]);
-
-  // 路由变化时自动更新 Agent 上下文（上下文感知）
-  useEffect(() => {
-    const path = location.pathname.replace('/', '') || 'tags';
-    agent.setContext({ page: path });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.pathname]);
 
   const handleViewChange = (view: string, path: string) => {
     setView(view as ViewType);
@@ -85,7 +75,9 @@ export function Layout({ darkMode, toggleDarkMode }: LayoutProps) {
                 title={collapsed ? view.name : undefined}
               >
                 <span className="flex-shrink-0">
-                  {view.id === 'tags' ? (
+                  {view.id === 'stats' ? (
+                    <BarChart3 className="w-5 h-5" />
+                  ) : view.id === 'tags' ? (
                     <Tag className="w-5 h-5" />
                   ) : (
                     <CalendarIcon className="w-5 h-5" />
@@ -130,28 +122,6 @@ export function Layout({ darkMode, toggleDarkMode }: LayoutProps) {
               <span className="text-sm font-medium">{darkMode ? '浅色模式' : '深色模式'}</span>
             )}
           </button>
-          {/* AI 助手按钮 */}
-          <button
-            onClick={agent.toggleSidebar}
-            className={`h-11 rounded-lg flex items-center gap-3 transition-colors ${
-              collapsed ? 'justify-center px-0' : 'px-3'
-            } ${
-              agent.sidebarOpen
-                ? 'bg-gradient-to-r from-violet-500/10 to-primary/10 text-primary'
-                : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
-            }`}
-            title={collapsed ? 'AI 助手' : undefined}
-          >
-            <span className="flex-shrink-0 relative">
-              <Bot className="w-5 h-5" />
-              {/* 小红点：有 pending 确认时显示 */}
-              {agent.pendingConfirmation && (
-                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-red-500 ring-2 ring-white dark:ring-dark-card" />
-              )}
-            </span>
-            {!collapsed && <span className="text-sm font-medium">AI 助手</span>}
-          </button>
-
           {/* 收缩/展开按钮 */}
           <button
             onClick={() => setCollapsed(c => !c)}
@@ -172,9 +142,6 @@ export function Layout({ darkMode, toggleDarkMode }: LayoutProps) {
       <main className="flex-1 overflow-auto">
         <Outlet />
       </main>
-
-      {/* AI 助手侧边栏 */}
-      <AISidebar onOpenSettings={() => setShowSettings(true)} />
 
       {/* 设置面板 */}
       <SettingsPanel

@@ -10,8 +10,8 @@ import { Grid3X3, List, GanttChart, Columns, Calendar } from 'lucide-react';
 type TagTab = 'tags' | 'list' | 'gantt' | 'kanban' | 'calendar';
 
 const TABS: { id: TagTab; label: string; icon: typeof Grid3X3 }[] = [
-  { id: 'tags', label: '标签列表', icon: Grid3X3 },
   { id: 'list',     label: '任务列表', icon: List },
+  { id: 'tags', label: '标签列表', icon: Grid3X3 },
   { id: 'gantt',    label: '甘特图',   icon: GanttChart },
   { id: 'kanban',   label: '看板',     icon: Columns },
   { id: 'calendar', label: '日历',     icon: Calendar },
@@ -19,7 +19,7 @@ const TABS: { id: TagTab; label: string; icon: typeof Grid3X3 }[] = [
 
 export function TagMain() {
   const { fetchTags } = useTagStore();
-  const [activeTab, setActiveTab] = useState<TagTab>('tags');
+  const [activeTab, setActiveTab] = useState<TagTab>('list');
 
   useEffect(() => {
     fetchTags();

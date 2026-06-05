@@ -4,12 +4,12 @@ import { existsSync } from 'fs';
 import { setupDatabase } from './services/database';
 import { setupTaskHandlers } from './ipc-handlers/task-handlers';
 import { setupTagHandlers } from './ipc-handlers/tag-handlers';
+import { setupProjectHandlers } from './ipc-handlers/project-handlers';
 import { setupWindowHandlers } from './ipc-handlers/window-handlers';
 import { setupNotificationHandlers } from './ipc-handlers/notification-handlers';
 import { setupScheduleHandlers } from './ipc-handlers/schedule-handlers';
 import { setupReminderHandlers } from './ipc-handlers/reminder-handlers';
 import { startReminderScheduler, stopReminderScheduler } from './services/reminderService';
-import { setupAgentHandlers } from './ipc-handlers/agent-handlers';
 
 let tray: Tray | null = null;
 let mainWindow: BrowserWindow | null = null;
@@ -24,10 +24,6 @@ let mainWindowVisible = true;
 function setupCSP() {
   const isDev = !app.isPackaged;
 
-  // 生产环境需要更宽松的 CSP 以支持 Vite 打包的模块
-  // LLM API 域名白名单（主进程直接调用，无需 CSP 控制；但如有 fetch 需求则在此添加）
-  const llmApiSrcs = "https://api.deepseek.com https://dashscope.aliyuncs.com https://api.moonshot.cn http://localhost:* ws://localhost:*";
-
   const csp = isDev
     ? [
         "default-src 'self'; ",
@@ -35,7 +31,7 @@ function setupCSP() {
         "style-src 'self' 'unsafe-inline' http://localhost:5173; ",
         "font-src 'self' data:; ",
         "img-src 'self' data: blob: http://localhost:5173; ",
-        `connect-src 'self' http://localhost:5173 ws://localhost:5173 ${llmApiSrcs};`,
+        "connect-src 'self' http://localhost:5173 ws://localhost:5173; ",
       ].join('')
     : [
         "default-src 'self'; ",
@@ -43,7 +39,7 @@ function setupCSP() {
         "style-src 'self' 'unsafe-inline' data:; ",
         "font-src 'self' data:; ",
         "img-src 'self' data: blob:; ",
-        `connect-src 'self' ${llmApiSrcs};`,
+        "connect-src 'self'; ",
       ].join('');
 
   console.log('[CSP] Mode:', isDev ? 'Dev' : 'Production');
@@ -511,11 +507,11 @@ app.whenReady().then(async () => {
 
     await setupTaskHandlers();
     await setupTagHandlers();
+    await setupProjectHandlers();
     setupWindowHandlers();
     setupNotificationHandlers();
     await setupScheduleHandlers();
     setupReminderHandlers();
-    setupAgentHandlers();
     console.log('[App] IPC handlers setup complete');
 
     // 启动提醒调度器（每 60 秒扫描一次到期提醒）

@@ -172,6 +172,25 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getTasksByTag: (tagId: string) => 
     ipcRenderer.invoke('tags:getTasks', tagId),
 
+  // ========== 项目管理 ==========
+  getProjects: () => 
+    ipcRenderer.invoke('projects:getAll'),
+  
+  getProjectById: (id: string) => 
+    ipcRenderer.invoke('projects:getById', id),
+  
+  createProject: (projectData: any) => 
+    ipcRenderer.invoke('projects:create', projectData),
+  
+  updateProject: (id: string, updates: any) => 
+    ipcRenderer.invoke('projects:update', id, updates),
+  
+  deleteProject: (id: string) => 
+    ipcRenderer.invoke('projects:delete', id),
+  
+  getProjectStats: (projectId: string) => 
+    ipcRenderer.invoke('projects:getStats', projectId),
+
   // ========== 日程管理 ==========
   getSchedules: (filters?: { dateRange?: { start: string; end: string }; priority?: 'low' | 'medium' | 'high'; search?: string }) =>
     ipcRenderer.invoke('schedules:getAll', filters),
@@ -252,65 +271,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // ========== 应用信息 ==========
   getAppInfo: () =>
     ipcRenderer.invoke('get-app-info'),
-
-  // ========== AI Agent ==========
-
-  // 发起对话（流式，chunk 通过 onAgentStream 接收）
-  agentChat: (request: { conversationId?: string; message: string; context?: Record<string, unknown> }) =>
-    ipcRenderer.invoke('agent:chat', request),
-
-  // 确认或取消工具调用
-  agentConfirmToolCall: (toolCallId: string, approved: boolean) =>
-    ipcRenderer.invoke('agent:confirmToolCall', toolCallId, approved),
-
-  // 取消当前正在进行的对话
-  agentCancel: () =>
-    ipcRenderer.invoke('agent:cancel'),
-
-  // 获取 Agent 配置（脱敏）
-  agentGetConfig: () =>
-    ipcRenderer.invoke('agent:getConfig'),
-
-  // 更新 Agent 配置
-  agentUpdateConfig: (config: Record<string, unknown>) =>
-    ipcRenderer.invoke('agent:updateConfig', config),
-
-  // 测试 LLM 连接可用性
-  agentTestConnection: (providerType?: string) =>
-    ipcRenderer.invoke('agent:testConnection', providerType),
-
-  // 获取对话历史列表
-  agentListConversations: () =>
-    ipcRenderer.invoke('agent:listConversations'),
-
-  // 获取指定对话的消息记录
-  agentGetMessages: (conversationId: string) =>
-    ipcRenderer.invoke('agent:getMessages', conversationId),
-
-  // 删除指定对话
-  agentDeleteConversation: (conversationId: string) =>
-    ipcRenderer.invoke('agent:deleteConversation', conversationId),
-
-  // 清空所有对话历史
-  agentClearHistory: () =>
-    ipcRenderer.invoke('agent:clearHistory'),
-
-  // 导出对话为 Markdown
-  agentExportConversation: (conversationId: string) =>
-    ipcRenderer.invoke('agent:exportConversation', conversationId),
-
-  // 监听流式输出事件
-  onAgentStream: (callback: (chunk: unknown) => void) => {
-    const listener = (_event: Electron.IpcRendererEvent, chunk: unknown) => callback(chunk);
-    ipcRenderer.on('agent:stream', listener);
-    // 返回清理函数
-    return () => ipcRenderer.removeListener('agent:stream', listener);
-  },
-
-  // 移除所有 agent:stream 监听器
-  removeAgentStreamListeners: () => {
-    ipcRenderer.removeAllListeners('agent:stream');
-  },
 });
 
 console.log('Preload script loaded successfully');
