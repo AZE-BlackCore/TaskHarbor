@@ -8,7 +8,6 @@ import { cacheService, getTasksCacheKey, getQueryCacheKey } from './cacheService
  * 任务创建输入参数
  */
 export interface CreateTaskInput {
-  projectId: string;
   moduleId?: string;
   module?: string;
   functionModule?: string;
@@ -34,7 +33,7 @@ export interface UpdateTaskInput extends Partial<CreateTaskInput> {
  * 任务查询过滤器
  */
 export interface TaskFilters {
-  projectId?: string;
+  tagId?: string;
   status?: string;
   assignee?: string;
 }
@@ -67,16 +66,15 @@ export class TaskService {
 
     const stmt = this.db.prepare(`
       INSERT INTO tasks (
-        id, projectId, moduleId, module, functionModule,
+        id, moduleId, module, functionModule,
         description, progress, status, assignee,
         startDate, estimatedEndDate, issues, notes,
         createdAt, updatedAt
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     stmt.run([
       id,
-      input.projectId,
       input.moduleId || null,
       input.module || null,
       input.functionModule || null,
@@ -226,12 +224,18 @@ export class TaskService {
       return cached;
     }
 
-    let query = 'SELECT * FROM tasks WHERE 1=1';
+    let query: string;
     const params: any[] = [];
 
-    if (filters?.projectId) {
-      query += ' AND projectId = ?';
-      params.push(filters.projectId);
+    if (filters?.tagId) {
+      query = `
+        SELECT DISTINCT t.* FROM tasks t
+        JOIN task_tag_relations r ON t.id = r.taskId
+        WHERE r.tagId = ?
+      `;
+      params.push(filters.tagId);
+    } else {
+      query = 'SELECT * FROM tasks WHERE 1=1';
     }
 
     if (filters?.status) {
@@ -271,12 +275,19 @@ export class TaskService {
       return cached;
     }
 
-    let query = 'SELECT COUNT(*) as count FROM tasks WHERE 1=1';
+    let query: string;
     const params: any[] = [];
 
-    if (filters?.projectId) {
-      query += ' AND projectId = ?';
-      params.push(filters.projectId);
+    if (filters?.tagId) {
+      query = `
+        SELECT COUNT(DISTINCT t.id) as count 
+        FROM tasks t
+        JOIN task_tag_relations r ON t.id = r.taskId
+        WHERE r.tagId = ?
+      `;
+      params.push(filters.tagId);
+    } else {
+      query = 'SELECT COUNT(*) as count FROM tasks WHERE 1=1';
     }
 
     if (filters?.status) {
@@ -303,23 +314,29 @@ export class TaskService {
 
   /**
    * 按状态统计任务
-   * @param projectId 项目 ID
+   * @param tagId 标签 ID
    * @returns 各状态的任务数量
    */
-  async countByStatus(projectId?: string) {
-    let query = `
-      SELECT status, COUNT(*) as count 
-      FROM tasks 
-      WHERE 1=1
-    `;
+  async countByStatus(tagId?: string) {
+    let query: string;
     const params: any[] = [];
 
-    if (projectId) {
-      query += ' AND projectId = ?';
-      params.push(projectId);
+    if (tagId) {
+      query = `
+        SELECT t.status, COUNT(*) as count 
+        FROM tasks t
+        JOIN task_tag_relations r ON t.id = r.taskId
+        WHERE r.tagId = ?
+        GROUP BY t.status
+      `;
+      params.push(tagId);
+    } else {
+      query = `
+        SELECT status, COUNT(*) as count 
+        FROM tasks 
+        GROUP BY status
+      `;
     }
-
-    query += ' GROUP BY status';
 
     const stmt = this.db.prepare(query);
     stmt.bind(params);
@@ -335,19 +352,23 @@ export class TaskService {
 
   /**
    * 按责任人统计任务
-   * @param projectId 项目 ID
+   * @param tagId 标签 ID
    * @returns 各责任人的任务数量
    */
-  async countByAssignee(projectId?: string) {
-    let query = `
-      SELECT assignee, COUNT(*) as count 
-      FROM tasks 
-      WHERE projectId = ? AND assignee IS NOT NULL
-      GROUP BY assignee
-    `;
+  async countByAssignee(tagId?: string) {
+    let query: string;
+    const params: any[] = [];
 
-    const params: any[] = [projectId || '%'];
-    if (!projectId) {
+    if (tagId) {
+      query = `
+        SELECT t.assignee, COUNT(*) as count 
+        FROM tasks t
+        JOIN task_tag_relations r ON t.id = r.taskId
+        WHERE r.tagId = ? AND t.assignee IS NOT NULL
+        GROUP BY t.assignee
+      `;
+      params.push(tagId);
+    } else {
       query = `
         SELECT assignee, COUNT(*) as count 
         FROM tasks 
@@ -370,16 +391,23 @@ export class TaskService {
 
   /**
    * 计算平均进度
-   * @param projectId 项目 ID
+   * @param tagId 标签 ID
    * @returns 平均进度百分比
    */
-  async averageProgress(projectId?: string) {
-    let query = 'SELECT AVG(progress) as avgProgress FROM tasks WHERE 1=1';
+  async averageProgress(tagId?: string) {
+    let query: string;
     const params: any[] = [];
 
-    if (projectId) {
-      query += ' AND projectId = ?';
-      params.push(projectId);
+    if (tagId) {
+      query = `
+        SELECT AVG(t.progress) as avgProgress 
+        FROM tasks t
+        JOIN task_tag_relations r ON t.id = r.taskId
+        WHERE r.tagId = ?
+      `;
+      params.push(tagId);
+    } else {
+      query = 'SELECT AVG(progress) as avgProgress FROM tasks';
     }
 
     const stmt = this.db.prepare(query);

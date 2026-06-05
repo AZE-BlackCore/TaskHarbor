@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Layout } from './components/Layout'
-import { ProjectMain } from './views/project/ProjectMain'
+import { TagMain } from './views/tag/TagMain'
 import { ScheduleView } from './views/ScheduleView'
 import { FloatingWindow } from './views/FloatingWindow'
 import { DesktopCard } from './views/DesktopCard'
@@ -29,15 +29,16 @@ function App() {
       <Routes>
         {/* 主窗口路由 */}
         <Route path="/" element={<Layout darkMode={darkMode} toggleDarkMode={toggleDarkMode} />}>
-          <Route index element={<Navigate to="/projects" replace />} />
-          <Route path="projects" element={<ProjectMain />} />
+          <Route index element={<Navigate to="/tags" replace />} />
+          <Route path="tags" element={<TagMain />} />
           <Route path="schedule" element={<ScheduleView />} />
           {/* 旧路由兼容重定向 */}
-          <Route path="list" element={<Navigate to="/projects" replace />} />
-          <Route path="gantt" element={<Navigate to="/projects" replace />} />
-          <Route path="kanban" element={<Navigate to="/projects" replace />} />
-          <Route path="calendar" element={<Navigate to="/projects" replace />} />
-          <Route path="dashboard" element={<Navigate to="/projects" replace />} />
+          <Route path="list" element={<Navigate to="/tags" replace />} />
+          <Route path="gantt" element={<Navigate to="/tags" replace />} />
+          <Route path="kanban" element={<Navigate to="/tags" replace />} />
+          <Route path="calendar" element={<Navigate to="/tags" replace />} />
+          <Route path="dashboard" element={<Navigate to="/tags" replace />} />
+          <Route path="projects" element={<Navigate to="/tags" replace />} />
         </Route>
         
         {/* 悬浮窗口路由 */}

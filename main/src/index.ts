@@ -3,7 +3,7 @@ import * as path from 'path';
 import { existsSync } from 'fs';
 import { setupDatabase } from './services/database';
 import { setupTaskHandlers } from './ipc-handlers/task-handlers';
-import { setupProjectHandlers } from './ipc-handlers/project-handlers';
+import { setupTagHandlers } from './ipc-handlers/tag-handlers';
 import { setupWindowHandlers } from './ipc-handlers/window-handlers';
 import { setupNotificationHandlers } from './ipc-handlers/notification-handlers';
 import { setupScheduleHandlers } from './ipc-handlers/schedule-handlers';
@@ -510,7 +510,7 @@ app.whenReady().then(async () => {
     console.log('[App] Database setup complete');
 
     await setupTaskHandlers();
-    await setupProjectHandlers();
+    await setupTagHandlers();
     setupWindowHandlers();
     setupNotificationHandlers();
     await setupScheduleHandlers();

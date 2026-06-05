@@ -1,6 +1,5 @@
 export interface Task {
   id: string;
-  projectId: string;
   moduleId?: string;
   module?: string;
   functionModule?: string;
@@ -19,11 +18,9 @@ export interface Task {
 
 export type TaskStatus = 'todo' | 'in-progress' | 'review' | 'done' | 'blocked';
 
-export interface Project {
+export interface Tag {
   id: string;
   name: string;
-  type: 'personal' | 'company';
-  description?: string;
   color: string;
   createdAt: string;
   updatedAt: string;
@@ -62,13 +59,13 @@ export interface TaskTag {
 }
 
 export interface TaskFilters {
-  projectId?: string;
+  tagId?: string;
   status?: string;
   assignee?: string;
   search?: string;
 }
 
-export interface ProjectStats {
+export interface TagStats {
   totalTasks: number;
   byStatus: Array<{ status: string; count: number }>;
   byAssignee: Array<{ assignee: string; count: number }>;

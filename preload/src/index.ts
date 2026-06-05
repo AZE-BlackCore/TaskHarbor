@@ -3,7 +3,6 @@ import { contextBridge, ipcRenderer } from 'electron';
 // 定义类型
 export interface Task {
   id: string;
-  projectId: string;
   moduleId?: string;
   module?: string;
   functionModule?: string;
@@ -20,11 +19,9 @@ export interface Task {
   updatedAt: string;
 }
 
-export interface Project {
+export interface Tag {
   id: string;
   name: string;
-  type: 'personal' | 'company';
-  description?: string;
   color: string;
   createdAt: string;
   updatedAt: string;
@@ -48,7 +45,7 @@ export interface TimeLog {
 }
 
 export interface TaskFilters {
-  projectId?: string;
+  tagId?: string;
   status?: string;
   assignee?: string;
 }
@@ -146,32 +143,34 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   // ========== 标签管理 ==========
   getTags: (taskId: string) => 
-    ipcRenderer.invoke('tags:getByTaskId', taskId),
+    ipcRenderer.invoke('tags:getForTask', taskId),
   
-  addTag: (taskId: string, tagName: string, tagColor?: string) => 
-    ipcRenderer.invoke('tags:add', taskId, tagName, tagColor),
+  getAllTags: () => 
+    ipcRenderer.invoke('tags:getAll'),
+  
+  getTagById: (id: string) => 
+    ipcRenderer.invoke('tags:getById', id),
+  
+  createTag: (tagData: { name: string; color?: string }) => 
+    ipcRenderer.invoke('tags:create', tagData),
+  
+  updateTag: (id: string, updates: Partial<Tag>) => 
+    ipcRenderer.invoke('tags:update', id, updates),
   
   deleteTag: (id: string) => 
     ipcRenderer.invoke('tags:delete', id),
   
-  // ========== 项目管理 ==========
-  getProjects: () => 
-    ipcRenderer.invoke('projects:getAll'),
+  getTagStats: (tagId: string) =>
+    ipcRenderer.invoke('tags:getStats', tagId),
   
-  getProjectById: (id: string) => 
-    ipcRenderer.invoke('projects:getById', id),
+  addTagToTask: (taskId: string, tagId: string) => 
+    ipcRenderer.invoke('tags:addToTask', taskId, tagId),
   
-  createProject: (projectData: { name: string; type: 'personal' | 'company'; description?: string; color?: string }) => 
-    ipcRenderer.invoke('projects:create', projectData),
+  removeTagFromTask: (taskId: string, tagId: string) => 
+    ipcRenderer.invoke('tags:removeFromTask', taskId, tagId),
   
-  updateProject: (id: string, updates: Partial<Project>) => 
-    ipcRenderer.invoke('projects:update', id, updates),
-  
-  deleteProject: (id: string) => 
-    ipcRenderer.invoke('projects:delete', id),
-  
-  getProjectStats: (projectId: string) =>
-    ipcRenderer.invoke('projects:getStats', projectId),
+  getTasksByTag: (tagId: string) => 
+    ipcRenderer.invoke('tags:getTasks', tagId),
 
   // ========== 日程管理 ==========
   getSchedules: (filters?: { dateRange?: { start: string; end: string }; priority?: 'low' | 'medium' | 'high'; search?: string }) =>

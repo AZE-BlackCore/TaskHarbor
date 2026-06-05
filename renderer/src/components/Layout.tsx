@@ -10,7 +10,7 @@ import { useAgent } from '../hooks/useAgent';
 import { 
   Sun, 
   Moon, 
-  FolderOpen,
+  Tag,
   Calendar as CalendarIcon,
   ChevronLeft,
   ChevronRight,
@@ -37,7 +37,7 @@ export function Layout({ darkMode, toggleDarkMode }: LayoutProps) {
 
   // 路由变化时自动更新 Agent 上下文（上下文感知）
   useEffect(() => {
-    const path = location.pathname.replace('/', '') || 'projects';
+    const path = location.pathname.replace('/', '') || 'tags';
     agent.setContext({ page: path });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname]);
@@ -58,7 +58,7 @@ export function Layout({ darkMode, toggleDarkMode }: LayoutProps) {
         {/* 顶部 Logo + 名称 */}
         <div className={`flex items-center gap-3 mb-6 ${collapsed ? 'justify-center' : 'px-3'}`}>
           <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-            <FolderOpen className="w-5 h-5 text-primary" />
+            <Tag className="w-5 h-5 text-primary" />
           </div>
           {!collapsed && (
             <span className="text-sm font-bold text-gray-900 dark:text-white whitespace-nowrap overflow-hidden">
@@ -70,7 +70,7 @@ export function Layout({ darkMode, toggleDarkMode }: LayoutProps) {
         {/* 视图切换 */}
         <div className="flex flex-col gap-1 w-full px-2">
           {views.filter(v => v.enabled).map((view) => {
-            const isActive = location.pathname === view.path || (view.id === 'projects' && location.pathname === '/');
+            const isActive = location.pathname === view.path || (view.id === 'tags' && location.pathname === '/');
             return (
               <button
                 key={view.id}
@@ -85,8 +85,8 @@ export function Layout({ darkMode, toggleDarkMode }: LayoutProps) {
                 title={collapsed ? view.name : undefined}
               >
                 <span className="flex-shrink-0">
-                  {view.id === 'projects' ? (
-                    <FolderOpen className="w-5 h-5" />
+                  {view.id === 'tags' ? (
+                    <Tag className="w-5 h-5" />
                   ) : (
                     <CalendarIcon className="w-5 h-5" />
                   )}

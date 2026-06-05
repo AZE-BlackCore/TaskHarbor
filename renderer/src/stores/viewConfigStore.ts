@@ -19,7 +19,7 @@ interface ViewState {
 }
 
 const DEFAULT_VIEWS: ViewItem[] = [
-  { id: 'projects', name: '项目管理', icon: 'Grid3X3', iconLabel: '📁', path: '/projects', enabled: true },
+  { id: 'tags', name: '标签管理', icon: 'Tag', iconLabel: '🏷️', path: '/tags', enabled: true },
   { id: 'schedule', name: '日程管理', icon: 'Clock', iconLabel: '🕐', path: '/schedule', enabled: true },
 ];
 
