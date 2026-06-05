@@ -13,7 +13,7 @@ interface ProjectState {
   setProjects: (projects: Project[]) => void;
   setCurrentProject: (projectId: string | null) => void;
   addProject: (project: Project) => void;
-  updateProject: (id: string, updates: Partial<Project>) => void;
+  updateProject: (id: string, updates: Partial<Project>) => Promise<void>;
   deleteProject: (id: string) => void;
   fetchProjects: () => Promise<void>;
   createProject: (projectData: { name: string; type: 'personal' | 'company'; description?: string; color?: string }) => Promise<Project | null>;
@@ -35,14 +35,50 @@ export const useProjectStore = create<ProjectState>()(
       state.projects.push(project);
     }),
 
-    updateProject: (id, updates) => set((state) => {
-      const project = state.projects.find(p => p.id === id);
-      if (project) {
-        Object.assign(project, updates, { 
-          updatedAt: new Date().toISOString() 
-        });
+    updateProject: async (id, updates) => {
+      if (!window.electronAPI) {
+        useErrorStore.getState().addError('Electron API not available', 'error');
+        return;
       }
-    }),
+
+      // 先找到旧数据（用于回滚）
+      const oldProject = get().projects.find(p => p.id === id);
+      if (!oldProject) return;
+
+      // 乐观更新本地 store
+      set((state) => {
+        const project = state.projects.find(p => p.id === id);
+        if (project) {
+          Object.assign(project, updates, {
+            updatedAt: new Date().toISOString(),
+          });
+        }
+      });
+
+      try {
+        const result = await window.electronAPI.updateProject(id, updates);
+        if (result.success) {
+          useErrorStore.getState().addError('项目已更新', 'success');
+        } else {
+          // 回滚本地 store
+          set((state) => {
+            const project = state.projects.find(p => p.id === id);
+            if (project) Object.assign(project, oldProject);
+          });
+          useErrorStore.getState().addError(result.error || '更新失败', 'error');
+        }
+      } catch (error: unknown) {
+        // 回滚本地 store
+        set((state) => {
+          const project = state.projects.find(p => p.id === id);
+          if (project) Object.assign(project, oldProject);
+        });
+        useErrorStore.getState().addError(
+          error instanceof Error ? error.message : '未知错误',
+          'error'
+        );
+      }
+    },
 
     deleteProject: async (id) => {
       if (!window.electronAPI) {

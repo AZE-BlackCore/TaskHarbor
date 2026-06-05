@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogFooter } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { Input, TextArea, Select } from '../ui/input';
@@ -34,6 +34,7 @@ export function ProjectEditDialog({ open, project, onClose, onSave }: ProjectEdi
     description: '',
     color: '#3B82F6',
   });
+  const nameInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (project) {
@@ -48,13 +49,22 @@ export function ProjectEditDialog({ open, project, onClose, onSave }: ProjectEdi
     }
   }, [project, open]);
 
-  const handleSave = () => {
-    if (!formData.name) {
-      alert('请填写项目名称');
+  // 每次 Dialog 打开时，延迟聚焦到名称输入框，确保 DOM 已完全渲染
+  useEffect(() => {
+    if (open) {
+      const timer = setTimeout(() => {
+        nameInputRef.current?.focus();
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [open]);
+
+  const handleSave = async () => {
+    if (!formData.name?.trim()) {
+      nameInputRef.current?.focus();
       return;
     }
-    onSave(formData);
-    onClose();
+    await onSave(formData);
   };
 
   const handleChange = (field: keyof Project, value: Project[keyof Project]) => {
@@ -71,11 +81,11 @@ export function ProjectEditDialog({ open, project, onClose, onSave }: ProjectEdi
       <div className="space-y-4">
         {/* 项目名称 */}
         <Input
+          ref={nameInputRef}
           label="项目名称 *"
           value={formData.name}
           onChange={(e) => handleChange('name', e.target.value)}
           placeholder="例如：电商平台重构"
-          autoFocus
         />
 
         {/* 项目类型 */}

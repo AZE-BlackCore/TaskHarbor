@@ -3,7 +3,6 @@ import { contextBridge, ipcRenderer } from 'electron';
 // 定义类型
 export interface Task {
   id: string;
-  projectId: string;
   moduleId?: string;
   module?: string;
   functionModule?: string;
@@ -20,11 +19,9 @@ export interface Task {
   updatedAt: string;
 }
 
-export interface Project {
+export interface Tag {
   id: string;
   name: string;
-  type: 'personal' | 'company';
-  description?: string;
   color: string;
   createdAt: string;
   updatedAt: string;
@@ -48,7 +45,7 @@ export interface TimeLog {
 }
 
 export interface TaskFilters {
-  projectId?: string;
+  tagId?: string;
   status?: string;
   assignee?: string;
 }
@@ -65,7 +62,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   minimizeToTray: () => 
     ipcRenderer.invoke('window:minimizeToTray'),
   
-  createFloatingWindow: (options?: { opacity?: number; clickThrough?: boolean; x?: number; y?: number }) => 
+  createFloatingWindow: (options?: { opacity?: number; clickThrough?: boolean; x?: number; y?: number; page?: 'floating' | 'desktop-card' }) => 
     ipcRenderer.invoke('window:createFloating', options),
   
   closeFloatingWindow: (windowId: number) => 
@@ -73,6 +70,24 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   toggleAlwaysOnTop: () => 
     ipcRenderer.invoke('window:toggleAlwaysOnTop'),
+
+  setAlwaysOnTop: (alwaysOnTop: boolean) => 
+    ipcRenderer.invoke('window:setAlwaysOnTop', alwaysOnTop),
+
+  isAlwaysOnTop: () => 
+    ipcRenderer.invoke('window:isAlwaysOnTop'),
+
+  setWindowPosition: (x: number, y: number) => 
+    ipcRenderer.invoke('window:setPosition', x, y),
+
+  // 监听关闭偏好设置
+  onClosePreference: (callback: (action: 'minimize' | 'exit') => void) => {
+    ipcRenderer.on('close-preference', (_event, action) => callback(action));
+  },
+
+  removeClosePreferenceListener: () => {
+    ipcRenderer.removeAllListeners('close-preference');
+  },
   
   // ========== 任务 CRUD ==========
   getTasks: (filters?: TaskFilters) => 
@@ -128,14 +143,35 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   // ========== 标签管理 ==========
   getTags: (taskId: string) => 
-    ipcRenderer.invoke('tags:getByTaskId', taskId),
+    ipcRenderer.invoke('tags:getForTask', taskId),
   
-  addTag: (taskId: string, tagName: string, tagColor?: string) => 
-    ipcRenderer.invoke('tags:add', taskId, tagName, tagColor),
+  getAllTags: () => 
+    ipcRenderer.invoke('tags:getAll'),
+  
+  getTagById: (id: string) => 
+    ipcRenderer.invoke('tags:getById', id),
+  
+  createTag: (tagData: { name: string; color?: string }) => 
+    ipcRenderer.invoke('tags:create', tagData),
+  
+  updateTag: (id: string, updates: Partial<Tag>) => 
+    ipcRenderer.invoke('tags:update', id, updates),
   
   deleteTag: (id: string) => 
     ipcRenderer.invoke('tags:delete', id),
   
+  getTagStats: (tagId: string) =>
+    ipcRenderer.invoke('tags:getStats', tagId),
+  
+  addTagToTask: (taskId: string, tagId: string) => 
+    ipcRenderer.invoke('tags:addToTask', taskId, tagId),
+  
+  removeTagFromTask: (taskId: string, tagId: string) => 
+    ipcRenderer.invoke('tags:removeFromTask', taskId, tagId),
+  
+  getTasksByTag: (tagId: string) => 
+    ipcRenderer.invoke('tags:getTasks', tagId),
+
   // ========== 项目管理 ==========
   getProjects: () => 
     ipcRenderer.invoke('projects:getAll'),
@@ -143,16 +179,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getProjectById: (id: string) => 
     ipcRenderer.invoke('projects:getById', id),
   
-  createProject: (projectData: { name: string; type: 'personal' | 'company'; description?: string; color?: string }) => 
+  createProject: (projectData: any) => 
     ipcRenderer.invoke('projects:create', projectData),
   
-  updateProject: (id: string, updates: Partial<Project>) => 
+  updateProject: (id: string, updates: any) => 
     ipcRenderer.invoke('projects:update', id, updates),
   
   deleteProject: (id: string) => 
     ipcRenderer.invoke('projects:delete', id),
   
-  getProjectStats: (projectId: string) =>
+  getProjectStats: (projectId: string) => 
     ipcRenderer.invoke('projects:getStats', projectId),
 
   // ========== 日程管理 ==========
@@ -193,6 +229,48 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // ========== 菜单栏控制 ==========
   setMenuBarVisibility: (visible: boolean) =>
     ipcRenderer.invoke('set-menu-bar-visibility', visible),
+
+  // ========== 任务提醒 ==========
+  getRemindersByTask: (taskId: string) =>
+    ipcRenderer.invoke('reminders:getByTask', taskId),
+
+  createReminder: (input: {
+    taskId: string;
+    reminderTime: string;
+    cycle: 'once' | 'daily' | 'weekly' | 'monthly' | 'custom';
+    intervalDays?: number;
+    intervalHours?: number;
+    customTimes?: string;
+  }) =>
+    ipcRenderer.invoke('reminders:create', input),
+
+  updateReminder: (id: string, updates: {
+    reminderTime?: string;
+    cycle?: 'once' | 'daily' | 'weekly' | 'monthly' | 'custom';
+    intervalDays?: number;
+    intervalHours?: number;
+    customTimes?: string;
+  }) =>
+    ipcRenderer.invoke('reminders:update', id, updates),
+
+  deleteReminder: (id: string) =>
+    ipcRenderer.invoke('reminders:delete', id),
+
+  deleteRemindersByTask: (taskId: string) =>
+    ipcRenderer.invoke('reminders:deleteByTask', taskId),
+
+  calcNextReminderTime: (
+    reminderTime: string,
+    cycle: string,
+    intervalDays: number,
+    intervalHours: number,
+    customTimes: string
+  ) =>
+    ipcRenderer.invoke('reminders:calcNext', reminderTime, cycle, intervalDays, intervalHours, customTimes),
+
+  // ========== 应用信息 ==========
+  getAppInfo: () =>
+    ipcRenderer.invoke('get-app-info'),
 });
 
 console.log('Preload script loaded successfully');

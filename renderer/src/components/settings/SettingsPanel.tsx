@@ -13,12 +13,15 @@ import {
   CheckCircle,
   AlertCircle,
   LayoutGrid,
-  Maximize2
+  Maximize2,
+  Pin,
+  Info,
 } from 'lucide-react';
 import { useTaskStore } from '../../stores/taskStore';
 import { useProjectStore } from '../../stores/projectStore';
 import { exportToExcel, exportToCSV, exportToMarkdown } from '../../utils/export';
 import { ViewOrderSettings } from './ViewOrderSettings';
+import { ReminderSettings } from './ReminderSettings';
 
 interface SettingsPanelProps {
   open: boolean;
@@ -33,6 +36,37 @@ export function SettingsPanel({ open, onClose, darkMode, toggleDarkMode }: Setti
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [showMenuBar, setShowMenuBar] = useState(false);
+  const [alwaysOnTop, setAlwaysOnTop] = useState(false);
+  const [closeBehavior, setCloseBehavior] = useState<'minimize' | 'exit'>('minimize');
+  const [appInfo, setAppInfo] = useState<{
+    version: string;
+    buildDate: string;
+    author: string;
+    productName: string;
+    description: string;
+  } | null>(null);
+
+  // 加载应用信息
+  useEffect(() => {
+    const loadAppInfo = async () => {
+      // @ts-ignore
+      const result = await window.electronAPI?.getAppInfo?.();
+      if (result?.success) {
+        setAppInfo(result);
+      }
+    };
+    loadAppInfo();
+  }, []);
+
+  // 格式化日期
+  const formatDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' });
+    } catch {
+      return dateString;
+    }
+  };
 
   // 加载菜单栏设置
   useEffect(() => {
@@ -43,12 +77,54 @@ export function SettingsPanel({ open, onClose, darkMode, toggleDarkMode }: Setti
     }
   }, []);
 
+  // 加载窗口置顶设置
+  useEffect(() => {
+    const saved = localStorage.getItem('alwaysOnTop');
+    if (saved !== null) {
+      const value = JSON.parse(saved);
+      setAlwaysOnTop(value);
+      // @ts-ignore - electronAPI 由 preload 注入
+      window.electronAPI?.setAlwaysOnTop(value);
+    }
+  }, []);
+
+  // 加载关闭行为设置
+  useEffect(() => {
+    const saved = localStorage.getItem('closeBehavior');
+    if (saved !== null) {
+      setCloseBehavior(JSON.parse(saved));
+    }
+
+    // 监听关闭偏好设置
+    // @ts-ignore
+    const handler = (action: 'minimize' | 'exit') => {
+      setCloseBehavior(action);
+      localStorage.setItem('closeBehavior', JSON.stringify(action));
+    };
+    // @ts-ignore
+    window.electronAPI?.onClosePreference(handler);
+
+    return () => {
+      // @ts-ignore
+      window.electronAPI?.removeClosePreferenceListener();
+    };
+  }, []);
+
   // 切换菜单栏可见性
   const handleToggleMenuBar = (visible: boolean) => {
     setShowMenuBar(visible);
     localStorage.setItem('showMenuBar', JSON.stringify(visible));
     // @ts-ignore - electronAPI 由 preload 注入
     window.electronAPI?.setMenuBarVisibility(visible);
+  };
+
+  // 切换窗口置顶
+  const handleToggleAlwaysOnTop = () => {
+    const newValue = !alwaysOnTop;
+    setAlwaysOnTop(newValue);
+    localStorage.setItem('alwaysOnTop', JSON.stringify(newValue));
+    // @ts-ignore - electronAPI 由 preload 注入
+    window.electronAPI?.setAlwaysOnTop(newValue);
   };
 
   const handleExport = async (format: 'excel' | 'csv' | 'markdown') => {
@@ -99,6 +175,7 @@ export function SettingsPanel({ open, onClose, darkMode, toggleDarkMode }: Setti
 
   return (
     <Dialog open={open} onClose={onClose} title="设置" className="max-w-2xl">
+      {/* 通用设置 */}
       <div className="space-y-6">
         {/* 界面设置 */}
         <section>
@@ -129,6 +206,83 @@ export function SettingsPanel({ open, onClose, darkMode, toggleDarkMode }: Setti
                   }`}
                 />
               </button>
+            </div>
+
+            <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+              <div className="flex items-center gap-3">
+                <Pin className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                <div>
+                  <p className="font-medium text-gray-900 dark:text-white">窗口置顶</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    {alwaysOnTop ? 'TaskHarbor 将显示在所有窗口最上层' : '窗口正常显示'}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={handleToggleAlwaysOnTop}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  alwaysOnTop ? 'bg-primary' : 'bg-gray-200'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    alwaysOnTop ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+              <div className="flex items-center gap-3">
+                <Settings className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                <div>
+                  <p className="font-medium text-gray-900 dark:text-white">关闭行为</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    {closeBehavior === 'minimize' ? '点击关闭时最小化到托盘' : '点击关闭时直接退出'}
+                  </p>
+                </div>
+              </div>
+              <select
+                value={closeBehavior}
+                onChange={(e) => {
+                  const value = e.target.value as 'minimize' | 'exit';
+                  setCloseBehavior(value);
+                  localStorage.setItem('closeBehavior', JSON.stringify(value));
+                }}
+                className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-dark-bg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                <option value="minimize">最小化到托盘</option>
+                <option value="exit">退出程序</option>
+              </select>
+            </div>
+
+            <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+              <div className="flex items-center gap-3 mb-3">
+                <LayoutGrid className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                <div>
+                  <p className="font-medium text-gray-900 dark:text-white">桌面悬浮卡片</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    在桌面显示任务/日程卡片
+                  </p>
+                </div>
+              </div>
+              <Button
+                onClick={async () => {
+                  // @ts-ignore - electronAPI 注入的 API
+                  const result = await (window as any).electronAPI?.createFloatingWindow?.({
+                    opacity: 0.95,
+                    x: 200,
+                    y: 200,
+                    page: 'desktop-card',
+                  });
+                  if (result?.success) {
+                    alert('桌面卡片已启动！您可以拖动卡片查看任务和日程。');
+                  }
+                }}
+                size="sm"
+              >
+                启动桌面卡片
+              </Button>
             </div>
           </div>
         </section>
@@ -215,6 +369,9 @@ export function SettingsPanel({ open, onClose, darkMode, toggleDarkMode }: Setti
                 />
               </button>
             </div>
+
+            {/* 自动到期提醒设置 */}
+            <ReminderSettings />
           </div>
         </section>
 
@@ -325,6 +482,48 @@ export function SettingsPanel({ open, onClose, darkMode, toggleDarkMode }: Setti
                 {tasks.length > 0 
                   ? Math.round(tasks.reduce((sum, t) => sum + t.progress, 0) / tasks.length)
                   : 0}%
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* 关于软件 */}
+        <section>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+            <Info className="w-5 h-5" />
+            关于软件
+          </h3>
+          <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg space-y-3">
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-gray-500 dark:text-gray-400">软件名称</span>
+              <span className="text-sm font-medium text-gray-900 dark:text-white">
+                {appInfo?.productName || 'TaskHarbor'}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-gray-500 dark:text-gray-400">版本号</span>
+              <span className="text-sm font-medium text-primary">
+                v{appInfo?.version || '1.0.3'}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-gray-500 dark:text-gray-400">打包日期</span>
+              <span className="text-sm font-medium text-gray-900 dark:text-white">
+                {appInfo?.buildDate ? formatDate(appInfo.buildDate) : '未知'}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-gray-500 dark:text-gray-400">作者</span>
+              <span className="text-sm font-medium text-gray-900 dark:text-white">
+                {appInfo?.author || '沈成泽'}
+              </span>
+            </div>
+            <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
+              <p className="text-xs text-center text-gray-500 dark:text-gray-400">
+                {appInfo?.description || '桌面端任务管理软件 - 让任务安全停靠、高效启航'}
+              </p>
+              <p className="text-xs text-center text-gray-400 dark:text-gray-500 mt-1">
+                © 2026 TaskHarbor. All rights reserved.
               </p>
             </div>
           </div>

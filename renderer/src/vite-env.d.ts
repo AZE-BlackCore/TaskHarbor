@@ -35,8 +35,16 @@ interface ElectronAPI {
   
   // 标签
   getTags: (taskId: string) => Promise<{ success: boolean; data: Record<string, unknown>[]; error?: string }>;
-  addTag: (taskId: string, tagName: string, tagColor?: string) => Promise<{ success: boolean; error?: string }>;
+  getAllTags: () => Promise<{ success: boolean; data: Record<string, unknown>[]; error?: string }>;
+  getTagById: (id: string) => Promise<{ success: boolean; data: Record<string, unknown>; error?: string }>;
+  createTag: (tagData: { name: string; color?: string }) => Promise<{ success: boolean; data: Record<string, unknown>; error?: string }>;
+  updateTag: (id: string, updates: Record<string, unknown>) => Promise<{ success: boolean; error?: string }>;
   deleteTag: (id: string) => Promise<{ success: boolean; error?: string }>;
+  getTagStats: (tagId: string) => Promise<{ success: boolean; data: Record<string, unknown>; error?: string }>;
+  addTagToTask: (taskId: string, tagId: string) => Promise<{ success: boolean; error?: string }>;
+  removeTagFromTask: (taskId: string, tagId: string) => Promise<{ success: boolean; error?: string }>;
+  getTasksByTag: (tagId: string) => Promise<{ success: boolean; data: Record<string, unknown>[]; error?: string }>;
+  addTag: (taskId: string, tagName: string, tagColor?: string) => Promise<{ success: boolean; error?: string }>;
   
   // 项目
   getProjects: () => Promise<{ success: boolean; data: Record<string, unknown>[]; error?: string }>;
@@ -56,6 +64,51 @@ interface ElectronAPI {
 
   // 通知
   sendNotification: (title: string, body: string) => Promise<{ success: boolean }>;
+
+  // 任务提醒
+  getRemindersByTask: (taskId: string) => Promise<{ success: boolean; data: TaskReminderInfo[]; error?: string }>;
+  createReminder: (input: {
+    taskId: string;
+    reminderTime: string;
+    cycle: 'once' | 'daily' | 'weekly' | 'monthly' | 'custom';
+    intervalDays?: number;
+    intervalHours?: number;
+    customTimes?: string;
+  }) => Promise<{ success: boolean; data: TaskReminderInfo; error?: string }>;
+  updateReminder: (id: string, updates: Record<string, unknown>) => Promise<{ success: boolean; data: TaskReminderInfo; error?: string }>;
+  deleteReminder: (id: string) => Promise<{ success: boolean; error?: string }>;
+  deleteRemindersByTask: (taskId: string) => Promise<{ success: boolean; error?: string }>;
+  calcNextReminderTime: (
+    reminderTime: string,
+    cycle: string,
+    intervalDays: number,
+    intervalHours: number,
+    customTimes: string
+  ) => Promise<{ success: boolean; data: string; error?: string }>;
+
+  // 应用信息
+  getAppInfo: () => Promise<{ success: boolean; version: string; buildDate: string; author: string; productName: string; description: string }>;
+  setMenuBarVisibility: (visible: boolean) => Promise<{ success: boolean }>;
+  setAlwaysOnTop: (alwaysOnTop: boolean) => Promise<{ success: boolean }>;
+  isAlwaysOnTop: () => Promise<{ success: boolean; alwaysOnTop: boolean }>;
+  setWindowPosition: (x: number, y: number) => Promise<{ success: boolean }>;
+  onClosePreference: (callback: (action: 'minimize' | 'exit') => void) => void;
+  removeClosePreferenceListener: () => void;
+}
+
+interface TaskReminderInfo {
+  id: string;
+  taskId: string;
+  reminderTime: string;
+  cycle: 'once' | 'daily' | 'weekly' | 'monthly' | 'custom';
+  intervalDays: number;
+  intervalHours: number;
+  customTimes?: string;
+  lastFiredAt?: string;
+  nextFireAt?: string;
+  enabled: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface Window {

@@ -120,13 +120,11 @@ export async function setupDatabase() {
     db!.run('PRAGMA foreign_keys = ON');
     console.log('[Database] Foreign keys enabled');
 
-    // 创建项目表
+    // 创建标签表
     db!.run(`
-      CREATE TABLE IF NOT EXISTS projects (
+      CREATE TABLE IF NOT EXISTS tags (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
-        type TEXT NOT NULL CHECK(type IN ('personal', 'company')),
-        description TEXT,
         color TEXT DEFAULT '#3B82F6',
         createdAt TEXT DEFAULT (datetime('now')),
         updatedAt TEXT DEFAULT (datetime('now'))
@@ -137,7 +135,6 @@ export async function setupDatabase() {
     db!.run(`
       CREATE TABLE IF NOT EXISTS tasks (
         id TEXT PRIMARY KEY,
-        projectId TEXT NOT NULL,
         moduleId TEXT,
         module TEXT,
         functionModule TEXT,
@@ -151,8 +148,20 @@ export async function setupDatabase() {
         issues TEXT,
         notes TEXT,
         createdAt TEXT DEFAULT (datetime('now')),
-        updatedAt TEXT DEFAULT (datetime('now')),
-        FOREIGN KEY (projectId) REFERENCES projects(id) ON DELETE CASCADE
+        updatedAt TEXT DEFAULT (datetime('now'))
+      )
+    `);
+
+    // 创建任务-标签关联表
+    db!.run(`
+      CREATE TABLE IF NOT EXISTS task_tag_relations (
+        id TEXT PRIMARY KEY,
+        taskId TEXT NOT NULL,
+        tagId TEXT NOT NULL,
+        createdAt TEXT DEFAULT (datetime('now')),
+        FOREIGN KEY (taskId) REFERENCES tasks(id) ON DELETE CASCADE,
+        FOREIGN KEY (tagId) REFERENCES tags(id) ON DELETE CASCADE,
+        UNIQUE(taskId, tagId)
       )
     `);
 
@@ -196,18 +205,6 @@ export async function setupDatabase() {
       )
     `);
 
-    // 创建任务标签关联表
-    db!.run(`
-      CREATE TABLE IF NOT EXISTS task_tags (
-        id TEXT PRIMARY KEY,
-        taskId TEXT NOT NULL,
-        tagName TEXT NOT NULL,
-        tagColor TEXT DEFAULT '#3B82F6',
-        createdAt TEXT DEFAULT (datetime('now')),
-        FOREIGN KEY (taskId) REFERENCES tasks(id) ON DELETE CASCADE
-      )
-    `);
-
     // 创建日程表
     db!.run(`
       CREATE TABLE IF NOT EXISTS schedules (
@@ -231,37 +228,145 @@ export async function setupDatabase() {
       )
     `);
 
+    // ===== 任务提醒配置表 =====
+    // 存储每个任务的提醒规则（可与 tasks 表分离，支持多条提醒规则）
+    db!.run(`
+      CREATE TABLE IF NOT EXISTS task_reminders (
+        id            TEXT PRIMARY KEY,
+        taskId        TEXT NOT NULL,
+        reminderTime  TEXT NOT NULL,          -- 首次/基准提醒时间 (ISO)
+        cycle         TEXT NOT NULL DEFAULT 'once'
+                      CHECK(cycle IN ('once', 'daily', 'weekly', 'monthly', 'custom')),
+        intervalDays  INTEGER DEFAULT 0,      -- 自定义周期：间隔天数（cycle='custom' 时有效）
+        intervalHours INTEGER DEFAULT 0,      -- 自定义周期：间隔小时（cycle='custom' 时有效）
+        customTimes   TEXT,                   -- 每日固定提醒时间列表，逗号分隔 "09:00,14:00"
+        lastFiredAt   TEXT,                   -- 上次触发时间 (ISO)
+        nextFireAt    TEXT,                   -- 下次触发时间 (ISO, 预计算，用于调度)
+        enabled       INTEGER NOT NULL DEFAULT 1, -- 是否启用
+        createdAt     TEXT DEFAULT (datetime('now')),
+        updatedAt     TEXT DEFAULT (datetime('now')),
+        FOREIGN KEY (taskId) REFERENCES tasks(id) ON DELETE CASCADE
+      )
+    `);
+
+    // ===== Agent 对话历史表 =====
+    // 存储 AI 助手的对话会话
+    db!.run(`
+      CREATE TABLE IF NOT EXISTS agent_conversations (
+        id          TEXT PRIMARY KEY,
+        title       TEXT NOT NULL DEFAULT '新对话',
+        created_at  TEXT DEFAULT (datetime('now')),
+        updated_at  TEXT DEFAULT (datetime('now')),
+        provider    TEXT,
+        model       TEXT
+      )
+    `);
+
+    // 存储对话中的每条消息记录
+    db!.run(`
+      CREATE TABLE IF NOT EXISTS agent_messages (
+        id              TEXT PRIMARY KEY,
+        conversation_id TEXT NOT NULL,
+        role            TEXT NOT NULL CHECK(role IN ('system', 'user', 'assistant', 'tool')),
+        content         TEXT NOT NULL,
+        toolCalls       TEXT,   -- JSON 序列化的 ToolCall[] 数组
+        toolCallId      TEXT,   -- 工具调用 ID（role='tool' 时使用）
+        created_at      TEXT DEFAULT (datetime('now')),
+        FOREIGN KEY (conversation_id) REFERENCES agent_conversations(id) ON DELETE CASCADE
+      )
+    `);
+
+    // Agent 相关索引
+    db!.run(`CREATE INDEX IF NOT EXISTS idx_agent_messages_conv ON agent_messages(conversationId)`);
+    db!.run(`CREATE INDEX IF NOT EXISTS idx_agent_messages_role ON agent_messages(role)`);
+    db!.run(`CREATE INDEX IF NOT EXISTS idx_agent_conv_updated ON agent_conversations(updated_at)`);
+
+    // ===== 数据库在线迁移（为现有表添加缺失字段）=====
+    // 若字段已存在，ALTER TABLE 会抛异常，catch 掉即可（sqlite 无 IF NOT EXISTS 语法）
+    const migrateColumn = (sql: string) => { try { db!.run(sql); } catch (_) {} };
+    
+    // Agent 表迁移：添加 provider/model 字段
+    migrateColumn(`ALTER TABLE agent_conversations ADD COLUMN provider TEXT`);
+    migrateColumn(`ALTER TABLE agent_conversations ADD COLUMN model TEXT`);
+    
+    // tasks 表迁移：添加提醒字段
+    migrateColumn(`ALTER TABLE tasks ADD COLUMN reminderEnabled INTEGER DEFAULT 0`);
+    migrateColumn(`ALTER TABLE tasks ADD COLUMN reminderTime TEXT`);
+    migrateColumn(`ALTER TABLE tasks ADD COLUMN reminderCycle TEXT DEFAULT 'once'`);
+    migrateColumn(`ALTER TABLE tasks ADD COLUMN reminderInterval INTEGER DEFAULT 1`);
+    migrateColumn(`ALTER TABLE tasks ADD COLUMN reminderIntervalUnit TEXT DEFAULT 'day'`);
+    migrateColumn(`ALTER TABLE tasks ADD COLUMN customReminderTimes TEXT`);
+    migrateColumn(`ALTER TABLE tasks ADD COLUMN reminderLastFired TEXT`);
+
     // 创建索引
-    db!.run(`CREATE INDEX IF NOT EXISTS idx_tasks_project ON tasks(projectId)`);
     db!.run(`CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status)`);
     db!.run(`CREATE INDEX IF NOT EXISTS idx_tasks_assignee ON tasks(assignee)`);
     db!.run(`CREATE INDEX IF NOT EXISTS idx_tasks_startDate ON tasks(startDate)`);
     db!.run(`CREATE INDEX IF NOT EXISTS idx_subtasks_task ON subtasks(taskId)`);
     db!.run(`CREATE INDEX IF NOT EXISTS idx_timelogs_task ON timelogs(taskId)`);
     db!.run(`CREATE INDEX IF NOT EXISTS idx_dependencies_task ON task_dependencies(taskId)`);
-    db!.run(`CREATE INDEX IF NOT EXISTS idx_tags_task ON task_tags(taskId)`);
+    db!.run(`CREATE INDEX IF NOT EXISTS idx_task_tag_relations_task ON task_tag_relations(taskId)`);
+    db!.run(`CREATE INDEX IF NOT EXISTS idx_task_tag_relations_tag ON task_tag_relations(tagId)`);
     db!.run(`CREATE INDEX IF NOT EXISTS idx_schedules_startTime ON schedules(startTime)`);
     db!.run(`CREATE INDEX IF NOT EXISTS idx_schedules_endTime ON schedules(endTime)`);
     db!.run(`CREATE INDEX IF NOT EXISTS idx_schedules_priority ON schedules(priority)`);
+    db!.run(`CREATE INDEX IF NOT EXISTS idx_task_reminders_task ON task_reminders(taskId)`);
+    db!.run(`CREATE INDEX IF NOT EXISTS idx_task_reminders_nextFire ON task_reminders(nextFireAt)`);
+    db!.run(`CREATE INDEX IF NOT EXISTS idx_task_reminders_enabled ON task_reminders(enabled)`);
 
-    // 创建数据验证触发器
-    // 注意：sql.js 不支持 IF EXISTS 语法，直接创建，如果已存在会报错忽略
+    // 数据迁移：将现有的 projects 表迁移为 tags 表
     try {
-      db!.run(`
-        CREATE TRIGGER validate_task_project
-        BEFORE INSERT ON tasks
-        FOR EACH ROW
-        BEGIN
-          SELECT CASE
-            WHEN (SELECT COUNT(*) FROM projects WHERE id = NEW.projectId) = 0
-            THEN RAISE(ABORT, 'Project not found')
-          END;
-        END;
-      `);
+      // 检查 projects 表是否存在且有数据
+      const checkProjectsStmt = db!.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='projects'");
+      let hasProjectsTable = false;
+      if (checkProjectsStmt.step()) {
+        hasProjectsTable = true;
+      }
+      checkProjectsStmt.free();
+
+      if (hasProjectsTable) {
+        // 迁移项目到标签
+        const migrateProjectsStmt = db!.prepare(`
+          INSERT OR IGNORE INTO tags (id, name, color, createdAt, updatedAt)
+          SELECT id, name, color, createdAt, updatedAt FROM projects
+        `);
+        migrateProjectsStmt.run();
+        migrateProjectsStmt.free();
+
+        // 迁移任务与项目的关联到任务-标签关联
+        const checkTasksHasProjectId = db!.prepare("PRAGMA table_info(tasks)");
+        let hasProjectIdColumn = false;
+        while (checkTasksHasProjectId.step()) {
+          const col = checkTasksHasProjectId.getAsObject() as any;
+          if (col.name === 'projectId') {
+            hasProjectIdColumn = true;
+            break;
+          }
+        }
+        checkTasksHasProjectId.free();
+
+        if (hasProjectIdColumn) {
+          const migrateTaskRelationsStmt = db!.prepare(`
+            INSERT OR IGNORE INTO task_tag_relations (id, taskId, tagId, createdAt)
+            SELECT 
+              hex(randomblob(16)) || lower(hex(randomblob(4))) || lower(hex(randomblob(4))) || lower(hex(randomblob(4))) || lower(hex(randomblob(12))),
+              id, 
+              projectId, 
+              datetime('now')
+            FROM tasks 
+            WHERE projectId IS NOT NULL
+          `);
+          migrateTaskRelationsStmt.run();
+          migrateTaskRelationsStmt.free();
+        }
+
+        console.log('[Database] Projects migrated to tags successfully');
+      }
     } catch (e) {
-      console.log('Trigger validate_task_project already exists');
+      console.log('[Database] Migration skipped or failed:', e);
     }
 
+    // 创建数据验证触发器
     try {
       db!.run(`
         CREATE TRIGGER validate_task_progress
@@ -293,15 +398,15 @@ export async function setupDatabase() {
 
     try {
       db!.run(`
-        CREATE TRIGGER update_project_timestamp
-        AFTER UPDATE ON projects
+        CREATE TRIGGER update_tag_timestamp
+        AFTER UPDATE ON tags
         FOR EACH ROW
         BEGIN
-          UPDATE projects SET updatedAt = datetime('now') WHERE id = NEW.id;
+          UPDATE tags SET updatedAt = datetime('now') WHERE id = NEW.id;
         END;
       `);
     } catch (e) {
-      console.log('Trigger update_project_timestamp already exists');
+      console.log('Trigger update_tag_timestamp already exists');
     }
 
     // 保存数据库
