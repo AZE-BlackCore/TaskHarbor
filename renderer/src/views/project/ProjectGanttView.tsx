@@ -217,7 +217,7 @@ export function ProjectGanttView() {
                             style={{
                               left: position.left,
                               width: position.width,
-                              backgroundColor: getProjectColor(task.projectId),
+                              backgroundColor: getProjectColor(task.projectId || ''),
                             }}
                             title={`${task.description} - ${task.progress}%`}
                           >

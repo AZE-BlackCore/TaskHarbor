@@ -37,6 +37,8 @@
     "cross-env": "^7.0.3",
     "electron": "^28.1.0",
     "electron-builder": "^24.9.1",
+    "png-to-ico": "^3.0.1",
+    "sharp": "^0.34.5",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3",
     "vite": "^5.0.11",
@@ -64,22 +66,23 @@
       {
         "from": "preload/dist",
         "to": "preload/dist",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*"
+        ]
       },
       {
         "from": "renderer/dist",
         "to": "renderer/dist",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*"
+        ]
       },
       {
         "from": "renderer/public",
         "to": "renderer/public",
-        "filter": ["**/*"]
-      },
-      {
-        "from": "build",
-        "to": "build",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*"
+        ]
       }
     ],
     "asarUnpack": [
@@ -88,15 +91,9 @@
     ],
     "win": {
       "target": [
-        {
-          "target": "portable",
-          "arch": ["x64"]
-        }
+        "portable"
       ],
       "icon": "build/icon.ico"
-    },
-    "portable": {
-      "artifactName": "TaskHarbor-${version}-portable.exe"
     }
   }
 }

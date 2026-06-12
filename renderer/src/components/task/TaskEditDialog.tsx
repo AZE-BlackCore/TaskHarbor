@@ -87,7 +87,7 @@ export function TaskEditDialog({ open, task, onClose, onSave }: TaskEditDialogPr
     watch,
     reset,
   } = useForm<TaskFormData>({
-    resolver: zodResolver(taskSchema),
+    resolver: zodResolver(taskSchema) as any,
     defaultValues: {
       description: '',
       priority: 'medium',
@@ -232,7 +232,7 @@ export function TaskEditDialog({ open, task, onClose, onSave }: TaskEditDialogPr
       title={task ? '编辑任务' : '新建任务'}
       className="max-w-3xl"
     >
-      <form onSubmit={handleSubmit(onSubmit, onError)} className="space-y-5">
+      <form onSubmit={handleSubmit(onSubmit as any, onError)} className="space-y-5">
         {/* 任务描述 - 优先显示 */}
         <div>
           <TextArea

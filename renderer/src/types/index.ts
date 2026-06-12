@@ -1,11 +1,13 @@
 export interface Task {
   id: string;
+  projectId?: string;
   moduleId?: string;
   module?: string;
   functionModule?: string;
   description: string;
   progress: number;
   status: TaskStatus;
+  priority: 'low' | 'medium' | 'high';
   assignee?: string;
   startDate?: string;
   estimatedEndDate?: string;
@@ -17,6 +19,23 @@ export interface Task {
 }
 
 export type TaskStatus = 'todo' | 'in-progress' | 'review' | 'done' | 'blocked';
+
+export interface Project {
+  id: string;
+  name: string;
+  type: 'personal' | 'company';
+  description?: string;
+  color?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProjectStats {
+  totalTasks: number;
+  byStatus: Array<{ status: string; count: number }>;
+  byAssignee: Array<{ assignee: string; count: number }>;
+  averageProgress: number;
+}
 
 export interface Tag {
   id: string;
@@ -60,6 +79,7 @@ export interface TaskTag {
 
 export interface TaskFilters {
   tagId?: string;
+  projectId?: string;
   status?: string;
   assignee?: string;
   search?: string;

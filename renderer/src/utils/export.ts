@@ -186,9 +186,10 @@ export function exportToMarkdown(tasks: Task[], projects: Project[], filename: s
     // 按项目分组
     const tasksByProject = new Map<string, Task[]>();
     tasks.forEach(task => {
-      const projectTasks = tasksByProject.get(task.projectId) || [];
+      const projectId = task.projectId || 'no-project';
+      const projectTasks = tasksByProject.get(projectId) || [];
       projectTasks.push(task);
-      tasksByProject.set(task.projectId, projectTasks);
+      tasksByProject.set(projectId, projectTasks);
     });
 
     tasksByProject.forEach((projectTasks, projectId) => {
