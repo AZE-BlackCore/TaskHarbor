@@ -94,6 +94,15 @@ interface ElectronAPI {
   setWindowPosition: (x: number, y: number) => Promise<{ success: boolean }>;
   onClosePreference: (callback: (action: 'minimize' | 'exit') => void) => void;
   removeClosePreferenceListener: () => void;
+
+  // 数据导出
+  exportToMarkdown: (options?: {
+    includeTasks?: boolean;
+    includeProjects?: boolean;
+    includeSchedules?: boolean;
+    outputPath?: string;
+    filename?: string;
+  }) => Promise<{ success: boolean; message: string; filePath?: string }>;
 }
 
 interface TaskReminderInfo {

@@ -36,7 +36,8 @@
     "concurrently": "^8.2.2",
     "cross-env": "^7.0.3",
     "electron": "^28.1.0",
-    "electron-builder": "^24.9.1",
+    "electron-builder": "^24.13.3",
+    "electron-packager": "^17.1.2",
     "png-to-ico": "^3.0.1",
     "sharp": "^0.34.5",
     "ts-node": "^10.9.2",
@@ -91,9 +92,20 @@
     ],
     "win": {
       "target": [
-        "portable"
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
       ],
-      "icon": "build/icon.ico"
+      "icon": null
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": null,
+      "uninstallerIcon": null,
+      "installerHeaderIcon": null
     }
   }
 }

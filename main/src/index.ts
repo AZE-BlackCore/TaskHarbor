@@ -9,6 +9,7 @@ import { setupWindowHandlers } from './ipc-handlers/window-handlers';
 import { setupNotificationHandlers } from './ipc-handlers/notification-handlers';
 import { setupScheduleHandlers } from './ipc-handlers/schedule-handlers';
 import { setupReminderHandlers } from './ipc-handlers/reminder-handlers';
+import { setupExportHandlers } from './ipc-handlers/export-handlers';
 import { startReminderScheduler, stopReminderScheduler } from './services/reminderService';
 
 let tray: Tray | null = null;
@@ -512,6 +513,7 @@ app.whenReady().then(async () => {
     setupNotificationHandlers();
     await setupScheduleHandlers();
     setupReminderHandlers();
+    setupExportHandlers();
     console.log('[App] IPC handlers setup complete');
 
     // 启动提醒调度器（每 60 秒扫描一次到期提醒）

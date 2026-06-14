@@ -268,6 +268,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
   ) =>
     ipcRenderer.invoke('reminders:calcNext', reminderTime, cycle, intervalDays, intervalHours, customTimes),
 
+  // ========== 数据导出 ==========
+  exportToMarkdown: (options?: {
+    includeTasks?: boolean;
+    includeProjects?: boolean;
+    includeSchedules?: boolean;
+    outputPath?: string;
+    filename?: string;
+  }) =>
+    ipcRenderer.invoke('export:toMarkdown', options),
+
   // ========== 应用信息 ==========
   getAppInfo: () =>
     ipcRenderer.invoke('get-app-info'),

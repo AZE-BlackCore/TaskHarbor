@@ -234,3 +234,24 @@ export function exportToMarkdown(tasks: Task[], projects: Project[], filename: s
     return { success: false, error: error instanceof Error ? error.message : '未知错误' };
   }
 }
+
+export interface FullExportOptions {
+  includeTasks?: boolean;
+  includeProjects?: boolean;
+  includeSchedules?: boolean;
+  outputPath?: string;
+  filename?: string;
+}
+
+export async function exportAllDataToMarkdown(options?: FullExportOptions): Promise<{ success: boolean; message: string; filePath?: string }> {
+  try {
+    const result = await window.electronAPI.exportToMarkdown(options);
+    return result;
+  } catch (error: unknown) {
+    console.error('全量导出 Markdown 失败:', error);
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : '未知错误'
+    };
+  }
+}
