@@ -71,9 +71,9 @@ export function TaskDetailPanel({
               <span className="text-gray-900 dark:text-white capitalize">
                 {task.status === 'todo' && '待办'}
                 {task.status === 'in-progress' && '进行中'}
-                {task.status === 'review' && '审查中'}
+                {task.status === 'review' && '等待确认'}
                 {task.status === 'done' && '已完成'}
-                {task.status === 'blocked' && '已阻塞'}
+                {task.status === 'blocked' && '已暂停'}
               </span>
             </div>
             <div className="flex justify-between">
@@ -82,19 +82,19 @@ export function TaskDetailPanel({
             </div>
             {task.assignee && (
               <div className="flex justify-between">
-                <span className="text-gray-500 dark:text-gray-400">责任人:</span>
+                <span className="text-gray-500 dark:text-gray-400">负责人:</span>
                 <span className="text-gray-900 dark:text-white">{task.assignee}</span>
               </div>
             )}
             {task.module && (
               <div className="flex justify-between">
-                <span className="text-gray-500 dark:text-gray-400">模块:</span>
+                <span className="text-gray-500 dark:text-gray-400">分类:</span>
                 <span className="text-gray-900 dark:text-white">{task.module}</span>
               </div>
             )}
             {task.functionModule && (
               <div className="flex justify-between">
-                <span className="text-gray-500 dark:text-gray-400">功能模块:</span>
+                <span className="text-gray-500 dark:text-gray-400">子分类:</span>
                 <span className="text-gray-900 dark:text-white">{task.functionModule}</span>
               </div>
             )}
@@ -109,7 +109,7 @@ export function TaskDetailPanel({
           <div className="space-y-1 text-sm">
             {task.startDate && (
               <div className="flex justify-between">
-                <span className="text-gray-500 dark:text-gray-400">开始时间:</span>
+                <span className="text-gray-500 dark:text-gray-400">开始日期:</span>
                 <span className="text-gray-900 dark:text-white">
                   {new Date(task.startDate).toLocaleDateString('zh-CN')}
                 </span>
@@ -117,7 +117,7 @@ export function TaskDetailPanel({
             )}
             {task.estimatedEndDate && (
               <div className="flex justify-between">
-                <span className="text-gray-500 dark:text-gray-400">预计完成:</span>
+                <span className="text-gray-500 dark:text-gray-400">截止日期:</span>
                 <span className="text-gray-900 dark:text-white">
                   {new Date(task.estimatedEndDate).toLocaleDateString('zh-CN')}
                 </span>
@@ -172,7 +172,7 @@ export function TaskDetailPanel({
             {task.issues && (
               <div>
                 <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                  存在的问题
+                  遇到的问题
                 </h3>
                 <p className="text-sm text-gray-900 dark:text-white">{task.issues}</p>
               </div>
@@ -180,7 +180,7 @@ export function TaskDetailPanel({
             {task.notes && (
               <div>
                 <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                  备注
+                  补充说明
                 </h3>
                 <p className="text-sm text-gray-900 dark:text-white">{task.notes}</p>
               </div>

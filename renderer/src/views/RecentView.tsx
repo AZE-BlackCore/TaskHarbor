@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import dayjs from 'dayjs';
 import { useTaskStore } from '../stores/taskStore';
 import { useTagStore } from '../stores/tagStore';
-import { Clock, Search, ChevronLeft, ChevronRight, AlertCircle, CheckCircle2, Loader, Circle } from 'lucide-react';
+import { Clock, Search, Plus, Pencil, Trash2, AlertCircle, CheckCircle2, Loader, Circle } from 'lucide-react';
+import { TaskEditDialog } from '../components/task/TaskEditDialog';
 import type { Task, TaskStatus } from '../types';
 
 type TimeRange = 'today' | 'week' | 'month';
@@ -16,17 +17,19 @@ const RANGE_LABELS: Record<TimeRange, string> = {
 const STATUS_META: Record<TaskStatus, { label: string; icon: typeof Circle; color: string }> = {
   todo: { label: '待处理', icon: Circle, color: 'text-gray-400' },
   'in-progress': { label: '进行中', icon: Loader, color: 'text-blue-500' },
-  review: { label: '审核中', icon: AlertCircle, color: 'text-yellow-500' },
+  review: { label: '等待确认', icon: AlertCircle, color: 'text-yellow-500' },
   done: { label: '已完成', icon: CheckCircle2, color: 'text-green-500' },
-  blocked: { label: '已阻塞', icon: AlertCircle, color: 'text-red-500' },
+  blocked: { label: '已暂停', icon: AlertCircle, color: 'text-red-500' },
 };
 
 export function RecentView() {
-  const { tasks, fetchTasks, updateTaskStatus, loading } = useTaskStore();
+  const { tasks, fetchTasks, createTask, updateTask, updateTaskStatus, deleteTask, loading } = useTaskStore();
   const { tags, fetchTags } = useTagStore();
   const [range, setRange] = useState<TimeRange>('week');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<TaskStatus | 'all'>('all');
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
 
   useEffect(() => {
     fetchTags();
@@ -67,6 +70,42 @@ export function RecentView() {
     updateTaskStatus(task.id, nextStatus);
   };
 
+  const handleEditTask = (task: Task) => {
+    setEditingTask(task);
+    setDialogOpen(true);
+  };
+
+  const handleCreateTask = () => {
+    setEditingTask(null);
+    setDialogOpen(true);
+  };
+
+  const handleSaveTask = async (taskData: Partial<Task>) => {
+    if (editingTask) {
+      await updateTask(editingTask.id, taskData);
+    } else {
+      await createTask(taskData);
+    }
+    setDialogOpen(false);
+    setEditingTask(null);
+    // Refresh tasks
+    fetchTasks({
+      dateRange: {
+        start: dayjs().startOf(range === 'today' ? 'day' : range === 'week' ? 'week' : 'month').toISOString(),
+        end: dayjs().endOf('day').toISOString(),
+      },
+      dateField: 'createdAt',
+      search: searchTerm || undefined,
+      status: statusFilter === 'all' ? undefined : statusFilter,
+    });
+  };
+
+  const handleDeleteTask = async (id: string) => {
+    if (confirm('确定要删除这个任务吗？')) {
+      await deleteTask(id);
+    }
+  };
+
   return (
     <div className="h-full flex flex-col bg-light-bg dark:bg-dark-bg">
       {/* Header */}
@@ -78,6 +117,15 @@ export function RecentView() {
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Create button */}
+            <button
+              onClick={handleCreateTask}
+              className="flex items-center gap-1.5 px-3 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition-colors text-sm font-medium"
+            >
+              <Plus className="w-4 h-4" />
+              新建任务
+            </button>
+
             {/* Time range tabs */}
             <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
               {(Object.keys(RANGE_LABELS) as TimeRange[]).map(r => (
@@ -104,9 +152,9 @@ export function RecentView() {
               <option value="all">全部状态</option>
               <option value="todo">待处理</option>
               <option value="in-progress">进行中</option>
-              <option value="review">审核中</option>
+              <option value="review">等待确认</option>
               <option value="done">已完成</option>
-              <option value="blocked">已阻塞</option>
+              <option value="blocked">已暂停</option>
             </select>
 
             {/* Search */}
@@ -171,6 +219,8 @@ export function RecentView() {
                         key={task.id}
                         task={task}
                         onToggle={handleToggleStatus}
+                        onEdit={handleEditTask}
+                        onDelete={handleDeleteTask}
                       />
                     ))}
                   </div>
@@ -180,16 +230,29 @@ export function RecentView() {
           </div>
         )}
       </div>
+
+      {/* Task Edit Dialog */}
+      <TaskEditDialog
+        open={dialogOpen}
+        task={editingTask}
+        onClose={() => { setDialogOpen(false); setEditingTask(null); }}
+        onSave={handleSaveTask}
+      />
     </div>
   );
 }
 
-function RecentTaskItem({ task, onToggle }: { task: Task; onToggle: (task: Task) => void }) {
+function RecentTaskItem({ task, onToggle, onEdit, onDelete }: {
+  task: Task;
+  onToggle: (task: Task) => void;
+  onEdit: (task: Task) => void;
+  onDelete: (id: string) => void;
+}) {
   const meta = STATUS_META[task.status] || STATUS_META.todo;
   const StatusIcon = meta.icon;
 
   return (
-    <div className="flex items-center gap-3 p-3 bg-white dark:bg-dark-card rounded-lg border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
+    <div className="flex items-center gap-3 p-3 bg-white dark:bg-dark-card rounded-lg border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow group">
       <button
         onClick={() => onToggle(task)}
         className="flex-shrink-0"
@@ -215,10 +278,40 @@ function RecentTaskItem({ task, onToggle }: { task: Task; onToggle: (task: Task)
               {task.priority === 'high' ? '高' : task.priority === 'medium' ? '中' : '低'}
             </span>
           )}
-          <span className="text-xs text-gray-400">
-            {dayjs(task.createdAt).format('HH:mm')}
-          </span>
+          {task.startDate && (
+            <span className="text-xs text-gray-400">
+              {dayjs(task.startDate).format('HH:mm')}
+            </span>
+          )}
+          {task.estimatedEndDate && (
+            <span className="text-xs text-gray-400">
+              → {dayjs(task.estimatedEndDate).format('HH:mm')}
+            </span>
+          )}
+          {!task.startDate && !task.estimatedEndDate && (
+            <span className="text-xs text-gray-400">
+              {dayjs(task.createdAt).format('HH:mm')}
+            </span>
+          )}
         </div>
+      </div>
+
+      {/* Action buttons */}
+      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <button
+          onClick={() => onEdit(task)}
+          className="p-1 rounded hover:bg-teal-50 dark:hover:bg-teal-900/20 text-gray-400 hover:text-teal-500 transition-colors"
+          title="编辑任务"
+        >
+          <Pencil className="w-4 h-4" />
+        </button>
+        <button
+          onClick={() => onDelete(task.id)}
+          className="p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-400 hover:text-red-500 transition-colors"
+          title="删除任务"
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
       </div>
 
       {/* Progress bar */}

@@ -1,16 +1,17 @@
 import { useState, useEffect } from 'react';
 import dayjs, { Dayjs } from 'dayjs';
 import { useScheduleStore } from '../stores/scheduleStore';
-import { Calendar, Clock, MapPin, Plus, ChevronLeft, ChevronRight, MoreVertical, Search, Filter } from 'lucide-react';
+import { Calendar, Clock, MapPin, Plus, ChevronLeft, ChevronRight, MoreVertical, Search, Filter, Pencil, Trash2 } from 'lucide-react';
 import type { Schedule } from '../types';
 
 export function ScheduleView() {
-  const { schedules, fetchSchedules, createSchedule, deleteSchedule } = useScheduleStore();
+  const { schedules, fetchSchedules, createSchedule, deleteSchedule, updateSchedule } = useScheduleStore();
   const [currentMonth, setCurrentMonth] = useState<Dayjs>(dayjs());
   const [selectedDate, setSelectedDate] = useState<Dayjs>(dayjs());
   const [showMonthView, setShowMonthView] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null);
 
   useEffect(() => {
     fetchSchedules();
@@ -225,7 +226,12 @@ export function ScheduleView() {
             ) : (
               <div className="space-y-3">
                 {filteredSchedules.map((schedule) => (
-                  <ScheduleItem key={schedule.id} schedule={schedule} onDelete={handleDelete} />
+                  <ScheduleItem
+                    key={schedule.id}
+                    schedule={schedule}
+                    onDelete={handleDelete}
+                    onEdit={(s) => setEditingSchedule(s)}
+                  />
                 ))}
               </div>
             )}
@@ -233,15 +239,28 @@ export function ScheduleView() {
         )}
       </div>
 
-      {/* Create Schedule Dialog */}
+      {/* Create/Edit Schedule Dialog */}
       {showCreateDialog && (
-        <CreateScheduleDialog onClose={() => setShowCreateDialog(false)} onCreate={createSchedule} defaultDate={selectedDate} />
+        <ScheduleDialog
+          onClose={() => setShowCreateDialog(false)}
+          onCreate={createSchedule}
+          defaultDate={selectedDate}
+        />
+      )}
+      {editingSchedule && (
+        <ScheduleDialog
+          onClose={() => setEditingSchedule(null)}
+          onCreate={createSchedule}
+          onUpdate={updateSchedule}
+          defaultDate={selectedDate}
+          schedule={editingSchedule}
+        />
       )}
     </div>
   );
 }
 
-function ScheduleItem({ schedule, onDelete }: { schedule: Schedule; onDelete: (id: string) => void }) {
+function ScheduleItem({ schedule, onDelete, onEdit }: { schedule: Schedule; onDelete: (id: string) => void; onEdit: (s: Schedule) => void }) {
   return (
     <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dark-card hover:shadow-md transition-shadow">
       <div className="flex items-start gap-3">
@@ -254,12 +273,20 @@ function ScheduleItem({ schedule, onDelete }: { schedule: Schedule; onDelete: (i
             <h3 className="text-base font-semibold text-gray-900 dark:text-white truncate">
               {schedule.title}
             </h3>
-            <button
-              onClick={() => onDelete(schedule.id)}
-              className="p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 transition-colors"
-            >
-              <Plus className="w-4 h-4 rotate-45" />
-            </button>
+            <div className="flex items-center gap-1 flex-shrink-0">
+              <button
+                onClick={() => onEdit(schedule)}
+                className="p-1 rounded hover:bg-teal-50 dark:hover:bg-teal-900/20 text-gray-400 hover:text-teal-500 transition-colors"
+              >
+                <Pencil className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => onDelete(schedule.id)}
+                className="p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 transition-colors"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
           </div>
           <div className="flex items-center gap-2 mt-1 text-sm text-gray-500 dark:text-gray-400">
             <span className="flex items-center gap-1">
@@ -296,15 +323,26 @@ function ScheduleItem({ schedule, onDelete }: { schedule: Schedule; onDelete: (i
   );
 }
 
-function CreateScheduleDialog({ onClose, onCreate, defaultDate }: { onClose: () => void; onCreate: (data: Partial<Schedule>) => Promise<Schedule | null>; defaultDate: Dayjs }) {
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [location, setLocation] = useState('');
-  const [startTime, setStartTime] = useState(defaultDate.hour(9).minute(0).format('YYYY-MM-DDTHH:mm'));
-  const [endTime, setEndTime] = useState(defaultDate.hour(10).minute(0).format('YYYY-MM-DDTHH:mm'));
-  const [allDay, setAllDay] = useState(false);
-  const [priority, setPriority] = useState<'low' | 'medium' | 'high'>('medium');
-  const [color, setColor] = useState('#3B82F6');
+function ScheduleDialog({ onClose, onCreate, onUpdate, defaultDate, schedule }: {
+  onClose: () => void;
+  onCreate: (data: Partial<Schedule>) => Promise<Schedule | null>;
+  onUpdate?: (id: string, updates: Partial<Schedule>) => void;
+  defaultDate: Dayjs;
+  schedule?: Schedule | null;
+}) {
+  const isEdit = !!schedule;
+  const [title, setTitle] = useState(schedule?.title || '');
+  const [description, setDescription] = useState(schedule?.description || '');
+  const [location, setLocation] = useState(schedule?.location || '');
+  const [startTime, setStartTime] = useState(
+    schedule ? dayjs(schedule.startTime).format('YYYY-MM-DDTHH:mm') : defaultDate.hour(9).minute(0).format('YYYY-MM-DDTHH:mm')
+  );
+  const [endTime, setEndTime] = useState(
+    schedule ? dayjs(schedule.endTime).format('YYYY-MM-DDTHH:mm') : defaultDate.hour(10).minute(0).format('YYYY-MM-DDTHH:mm')
+  );
+  const [allDay, setAllDay] = useState(schedule?.allDay ?? false);
+  const [priority, setPriority] = useState<'low' | 'medium' | 'high'>(schedule?.priority || 'medium');
+  const [color, setColor] = useState(schedule?.color || '#3B82F6');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
@@ -312,7 +350,7 @@ function CreateScheduleDialog({ onClose, onCreate, defaultDate }: { onClose: () 
 
     setLoading(true);
     try {
-      await onCreate({
+      const data = {
         title: title.trim(),
         description,
         location,
@@ -321,10 +359,16 @@ function CreateScheduleDialog({ onClose, onCreate, defaultDate }: { onClose: () 
         allDay,
         priority,
         color,
-      });
+      };
+
+      if (isEdit && schedule && onUpdate) {
+        await onUpdate(schedule.id, data);
+      } else {
+        await onCreate(data);
+      }
       onClose();
     } catch (error) {
-      console.error('Failed to create schedule:', error);
+      console.error('Failed to save schedule:', error);
     } finally {
       setLoading(false);
     }
@@ -333,7 +377,7 @@ function CreateScheduleDialog({ onClose, onCreate, defaultDate }: { onClose: () 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className="bg-white dark:bg-dark-card rounded-xl p-6 w-[500px] max-h-[90vh] overflow-y-auto shadow-xl">
-        <h2 className="text-lg font-bold mb-4 text-gray-900 dark:text-white">新建日程</h2>
+        <h2 className="text-lg font-bold mb-4 text-gray-900 dark:text-white">{isEdit ? '编辑日程' : '新建日程'}</h2>
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">标题 *</label>
@@ -432,7 +476,7 @@ function CreateScheduleDialog({ onClose, onCreate, defaultDate }: { onClose: () 
             disabled={loading || !title.trim()}
             className="flex-1 px-4 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            {loading ? '创建中...' : '创建'}
+            {loading ? (isEdit ? '保存中...' : '创建中...') : (isEdit ? '保存' : '创建')}
           </button>
         </div>
       </div>

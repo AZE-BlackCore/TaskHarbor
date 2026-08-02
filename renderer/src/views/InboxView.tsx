@@ -2,17 +2,17 @@ import { useState, useEffect } from 'react';
 import dayjs from 'dayjs';
 import { useTaskStore } from '../stores/taskStore';
 import { useTagStore } from '../stores/tagStore';
-import { Inbox, Search, Plus, Play, Trash2, AlertCircle } from 'lucide-react';
+import { Inbox, Search, Plus, Play, Trash2, Pencil } from 'lucide-react';
+import { TaskEditDialog } from '../components/task/TaskEditDialog';
 import type { Task } from '../types';
 
 export function InboxView() {
-  const { tasks, fetchTasks, createTask, updateTaskStatus, deleteTask, loading } = useTaskStore();
+  const { tasks, fetchTasks, createTask, updateTask, updateTaskStatus, deleteTask, loading } = useTaskStore();
   const { tags, fetchTags } = useTagStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
-  const [showCreate, setShowCreate] = useState(false);
-  const [newDesc, setNewDesc] = useState('');
-  const [newPriority, setNewPriority] = useState<'low' | 'medium' | 'high'>('medium');
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
 
   useEffect(() => {
     fetchTags();
@@ -26,18 +26,30 @@ export function InboxView() {
     });
   }, [searchTerm, priorityFilter, fetchTasks]);
 
-  const handleQuickCreate = async () => {
-    if (!newDesc.trim()) return;
-    await createTask({
-      description: newDesc.trim(),
-      status: 'todo',
-      priority: newPriority,
-      progress: 0,
-    });
-    setNewDesc('');
-    setShowCreate(false);
+  const handleCreateTask = () => {
+    setEditingTask(null);
+    setDialogOpen(true);
+  };
+
+  const handleEditTask = (task: Task) => {
+    setEditingTask(task);
+    setDialogOpen(true);
+  };
+
+  const handleSaveTask = async (taskData: Partial<Task>) => {
+    if (editingTask) {
+      await updateTask(editingTask.id, taskData);
+    } else {
+      await createTask({ ...taskData, status: 'todo' });
+    }
+    setDialogOpen(false);
+    setEditingTask(null);
     // Refresh inbox
-    fetchTasks({ status: 'todo' });
+    fetchTasks({
+      status: 'todo',
+      search: searchTerm || undefined,
+      priority: priorityFilter === 'all' ? undefined : priorityFilter,
+    });
   };
 
   const handleStart = (task: Task) => {
@@ -72,6 +84,15 @@ export function InboxView() {
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Create button */}
+            <button
+              onClick={handleCreateTask}
+              className="flex items-center gap-1.5 px-4 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition-colors text-sm font-medium"
+            >
+              <Plus className="w-4 h-4" />
+              新建任务
+            </button>
+
             {/* Priority filter */}
             <select
               value={priorityFilter}
@@ -95,55 +116,8 @@ export function InboxView() {
                 className="pl-10 pr-4 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-dark-card text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500 w-48"
               />
             </div>
-
-            <button
-              onClick={() => setShowCreate(!showCreate)}
-              className="flex items-center gap-1.5 px-4 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition-colors text-sm font-medium"
-            >
-              <Plus className="w-4 h-4" />
-              快速添加
-            </button>
           </div>
         </div>
-
-        {/* Quick create form */}
-        {showCreate && (
-          <div className="flex items-center gap-2 p-3 bg-white dark:bg-dark-card rounded-lg border border-gray-200 dark:border-gray-700 mb-3 animate-slide-in">
-            <input
-              type="text"
-              value={newDesc}
-              onChange={(e) => setNewDesc(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleQuickCreate();
-                if (e.key === 'Escape') { setShowCreate(false); setNewDesc(''); }
-              }}
-              placeholder="输入任务描述，回车创建..."
-              className="flex-1 px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-dark-bg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
-              autoFocus
-            />
-            <select
-              value={newPriority}
-              onChange={(e) => setNewPriority(e.target.value as 'low' | 'medium' | 'high')}
-              className="px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-dark-card text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
-            >
-              <option value="low">低</option>
-              <option value="medium">中</option>
-              <option value="high">高</option>
-            </select>
-            <button
-              onClick={handleQuickCreate}
-              className="px-4 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition-colors text-sm"
-            >
-              创建
-            </button>
-            <button
-              onClick={() => { setShowCreate(false); setNewDesc(''); }}
-              className="px-3 py-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors text-sm"
-            >
-              取消
-            </button>
-          </div>
-        )}
       </div>
 
       {/* Content */}
@@ -157,7 +131,7 @@ export function InboxView() {
             <Inbox className="w-16 h-16 text-gray-300 dark:text-gray-600 mb-4" />
             <p className="text-lg font-medium text-gray-500 dark:text-gray-400">待办箱已清空</p>
             <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
-              所有任务已处理完毕，点击「快速添加」创建新任务
+              所有任务已处理完毕，点击「新建任务」创建新任务
             </p>
           </div>
         ) : (
@@ -183,14 +157,33 @@ export function InboxView() {
                         {task.priority === 'high' ? '高' : task.priority === 'medium' ? '中' : '低'}
                       </span>
                     )}
-                    <span className="text-xs text-gray-400">
-                      创建于 {dayjs(task.createdAt).format('MM-DD HH:mm')}
-                    </span>
+                    {task.startDate && (
+                      <span className="text-xs text-gray-400">
+                        {dayjs(task.startDate).format('HH:mm')}
+                      </span>
+                    )}
+                    {task.estimatedEndDate && (
+                      <span className="text-xs text-gray-400">
+                        → {dayjs(task.estimatedEndDate).format('HH:mm')}
+                      </span>
+                    )}
+                    {!task.startDate && !task.estimatedEndDate && (
+                      <span className="text-xs text-gray-400">
+                        创建于 {dayjs(task.createdAt).format('MM-DD HH:mm')}
+                      </span>
+                    )}
                   </div>
                 </div>
 
                 {/* Actions */}
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button
+                    onClick={() => handleEditTask(task)}
+                    className="p-2 rounded-lg text-gray-400 hover:bg-teal-50 dark:hover:bg-teal-900/20 hover:text-teal-500 transition-colors"
+                    title="编辑任务"
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </button>
                   <button
                     onClick={() => handleStart(task)}
                     className="p-2 rounded-lg text-teal-500 hover:bg-teal-50 dark:hover:bg-teal-900/20 transition-colors"
@@ -211,6 +204,14 @@ export function InboxView() {
           </div>
         )}
       </div>
+
+      {/* Task Edit Dialog */}
+      <TaskEditDialog
+        open={dialogOpen}
+        task={editingTask}
+        onClose={() => { setDialogOpen(false); setEditingTask(null); }}
+        onSave={handleSaveTask}
+      />
     </div>
   );
 }

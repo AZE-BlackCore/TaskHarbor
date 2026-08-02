@@ -56,9 +56,9 @@ interface TaskEditDialogProps {
 const STATUS_OPTIONS: Array<{ value: string; label: string; color: string }> = [
   { value: 'todo', label: '待办', color: 'bg-gray-400' },
   { value: 'in-progress', label: '进行中', color: 'bg-blue-500' },
-  { value: 'review', label: '审查中', color: 'bg-yellow-500' },
+  { value: 'review', label: '等待确认', color: 'bg-yellow-500' },
   { value: 'done', label: '已完成', color: 'bg-green-500' },
-  { value: 'blocked', label: '已阻塞', color: 'bg-red-500' },
+  { value: 'blocked', label: '已暂停', color: 'bg-red-500' },
 ];
 
 const PRIORITY_OPTIONS: Array<{ value: string; label: string; color: string; bgColor: string }> = [
@@ -304,38 +304,38 @@ export function TaskEditDialog({ open, task, onClose, onSave }: TaskEditDialogPr
           />
         </div>
 
-        {/* 模块和责任人 */}
+        {/* 分类和位置 */}
         <div className="grid grid-cols-2 gap-4">
           <Input
-            label="模块"
+            label="分类"
             value={watch('module') || ''}
             onChange={(e) => setValue('module', e.target.value)}
-            placeholder="例如：用户管理"
+            placeholder="例如：工作、生活、学习"
           />
           <Input
-            label="功能模块"
+            label="子分类"
             value={watch('functionModule') || ''}
             onChange={(e) => setValue('functionModule', e.target.value)}
-            placeholder="例如：登录注册"
+            placeholder="例如：项目A、健身、阅读"
           />
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <Input
-            label="责任人"
+            label="负责人"
             value={watch('assignee') || ''}
             onChange={(e) => setValue('assignee', e.target.value)}
-            placeholder="负责人姓名"
+            placeholder="负责人姓名或自己"
           />
           <div className="grid grid-cols-2 gap-2">
             <Input
-              label="开始时间"
+              label="开始日期"
               type="date"
               value={watch('startDate') || ''}
               onChange={(e) => setValue('startDate', e.target.value)}
             />
             <Input
-              label="预计完成"
+              label="截止日期"
               type="date"
               value={watch('estimatedEndDate') || ''}
               onChange={(e) => setValue('estimatedEndDate', e.target.value)}
@@ -507,22 +507,22 @@ export function TaskEditDialog({ open, task, onClose, onSave }: TaskEditDialogPr
           )}
         </div>
 
-        {/* 存在的问题 */}
+        {/* 遇到的问题 */}
         <TextArea
-          label="存在的问题"
+          label="遇到的问题"
           value={watch('issues') || ''}
           onChange={(e) => setValue('issues', e.target.value)}
           rows={2}
-          placeholder="当前遇到的问题和困难..."
+          placeholder="记录执行中遇到的困难或障碍..."
         />
 
         {/* 备注 */}
         <TextArea
-          label="备注"
+          label="补充说明"
           value={watch('notes') || ''}
           onChange={(e) => setValue('notes', e.target.value)}
           rows={2}
-          placeholder="其他备注信息..."
+          placeholder="附加信息、参考资料、想法备注等..."
         />
 
         <DialogFooter>

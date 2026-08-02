@@ -12,7 +12,6 @@ import {
   Trash2,
   CheckCircle,
   AlertCircle,
-  LayoutGrid,
   Maximize2,
   Pin,
   Info,
@@ -26,7 +25,6 @@ import { useTaskStore } from '../../stores/taskStore';
 import { useProjectStore } from '../../stores/projectStore';
 import { useUserProfileStore } from '../../stores/userProfileStore';
 import { exportToExcel, exportToCSV, exportToMarkdown } from '../../utils/export';
-import { ViewOrderSettings } from './ViewOrderSettings';
 import { ReminderSettings } from './ReminderSettings';
 
 interface SettingsPanelProps {
@@ -430,15 +428,6 @@ export function SettingsPanel({ open, onClose, darkMode, toggleDarkMode }: Setti
             </div>
 
             </div>
-        </section>
-
-        {/* 视图设置 */}
-        <section>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <LayoutGrid className="w-5 h-5" />
-            视图设置
-          </h3>
-          <ViewOrderSettings />
         </section>
 
         {/* 外观设置 */}

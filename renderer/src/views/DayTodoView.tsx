@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import dayjs, { Dayjs } from 'dayjs';
 import { useScheduleStore } from '../stores/scheduleStore';
-import { ChevronLeft, ChevronRight, MoreVertical, Sun, Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, MoreVertical, Sun, Plus, Pencil, Trash2 } from 'lucide-react';
 import type { Schedule } from '../types';
 
 interface DayTodoViewProps {
@@ -9,11 +9,12 @@ interface DayTodoViewProps {
 }
 
 export function DayTodoView({ darkMode }: DayTodoViewProps) {
-  const { schedules, fetchSchedules, createSchedule } = useScheduleStore();
+  const { schedules, fetchSchedules, createSchedule, deleteSchedule, updateSchedule } = useScheduleStore();
   const [selectedDate, setSelectedDate] = useState<Dayjs>(dayjs());
   const [weekDates, setWeekDates] = useState<Dayjs[]>([]);
   const [newTitle, setNewTitle] = useState('');
   const [loading, setLoading] = useState(false);
+  const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -90,6 +91,12 @@ export function DayTodoView({ darkMode }: DayTodoViewProps) {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleCreateQuick();
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (confirm('确定要删除这个日程吗？')) {
+      await deleteSchedule(id);
     }
   };
 
@@ -193,7 +200,12 @@ export function DayTodoView({ darkMode }: DayTodoViewProps) {
         {todaySchedules.length > 0 ? (
           <div className="space-y-3">
             {todaySchedules.map((schedule) => (
-              <ScheduleCard key={schedule.id} schedule={schedule} />
+              <ScheduleCard
+                key={schedule.id}
+                schedule={schedule}
+                onEdit={(s) => setEditingSchedule(s)}
+                onDelete={handleDelete}
+              />
             ))}
           </div>
         ) : (
@@ -247,22 +259,47 @@ export function DayTodoView({ darkMode }: DayTodoViewProps) {
           </div>
         )}
       </div>
+
+      {/* Edit Schedule Dialog */}
+      {editingSchedule && (
+        <EditScheduleDialog
+          schedule={editingSchedule}
+          onClose={() => setEditingSchedule(null)}
+          onUpdate={updateSchedule}
+        />
+      )}
     </div>
   );
 }
 
-function ScheduleCard({ schedule }: { schedule: Schedule }) {
+function ScheduleCard({ schedule, onEdit, onDelete }: { schedule: Schedule; onEdit: (s: Schedule) => void; onDelete: (id: string) => void }) {
   return (
-    <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dark-card hover:shadow-md transition-shadow">
+    <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dark-card hover:shadow-md transition-shadow group">
       <div className="flex items-start gap-3">
         <div
           className="w-1 h-12 rounded-full flex-shrink-0 mt-1"
           style={{ backgroundColor: schedule.color }}
         />
         <div className="flex-1 min-w-0">
-          <h3 className="text-base font-semibold text-gray-900 dark:text-white truncate">
-            {schedule.title}
-          </h3>
+          <div className="flex items-center justify-between">
+            <h3 className="text-base font-semibold text-gray-900 dark:text-white truncate">
+              {schedule.title}
+            </h3>
+            <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button
+                onClick={() => onEdit(schedule)}
+                className="p-1 rounded hover:bg-teal-50 dark:hover:bg-teal-900/20 text-gray-400 hover:text-teal-500 transition-colors"
+              >
+                <Pencil className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => onDelete(schedule.id)}
+                className="p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 transition-colors"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
           <div className="flex items-center gap-2 mt-1 text-sm text-gray-500 dark:text-gray-400">
             <span>
               {dayjs(schedule.startTime).format('HH:mm')} - {dayjs(schedule.endTime).format('HH:mm')}
@@ -272,12 +309,166 @@ function ScheduleCard({ schedule }: { schedule: Schedule }) {
                 全天
               </span>
             )}
+            {schedule.priority && (
+              <span className={`px-2 py-0.5 text-xs rounded-full ${
+                schedule.priority === 'high' ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400' :
+                schedule.priority === 'medium' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400' :
+                'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+              }`}>
+                {schedule.priority === 'high' ? '高' : schedule.priority === 'medium' ? '中' : '低'}
+              </span>
+            )}
           </div>
           {schedule.description && (
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 line-clamp-2">
               {schedule.description}
             </p>
           )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EditScheduleDialog({ schedule, onClose, onUpdate }: {
+  schedule: Schedule;
+  onClose: () => void;
+  onUpdate: (id: string, updates: Partial<Schedule>) => void;
+}) {
+  const [title, setTitle] = useState(schedule.title);
+  const [description, setDescription] = useState(schedule.description || '');
+  const [location, setLocation] = useState(schedule.location || '');
+  const [startTime, setStartTime] = useState(dayjs(schedule.startTime).format('YYYY-MM-DDTHH:mm'));
+  const [endTime, setEndTime] = useState(dayjs(schedule.endTime).format('YYYY-MM-DDTHH:mm'));
+  const [allDay, setAllDay] = useState(schedule.allDay ?? false);
+  const [priority, setPriority] = useState<'low' | 'medium' | 'high'>(schedule.priority || 'medium');
+  const [color, setColor] = useState(schedule.color || '#3B82F6');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async () => {
+    if (!title.trim()) return;
+    setLoading(true);
+    try {
+      await onUpdate(schedule.id, {
+        title: title.trim(),
+        description,
+        location,
+        startTime: new Date(startTime).toISOString(),
+        endTime: new Date(endTime).toISOString(),
+        allDay,
+        priority,
+        color,
+      });
+      onClose();
+    } catch (error) {
+      console.error('Failed to update schedule:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-white dark:bg-dark-card rounded-xl p-6 w-[500px] max-h-[90vh] overflow-y-auto shadow-xl">
+        <h2 className="text-lg font-bold mb-4 text-gray-900 dark:text-white">编辑日程</h2>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">标题 *</label>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-dark-bg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+              autoFocus
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">描述</label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-dark-bg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+              rows={3}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">开始时间</label>
+              <input
+                type="datetime-local"
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-dark-bg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">结束时间</label>
+              <input
+                type="datetime-local"
+                value={endTime}
+                onChange={(e) => setEndTime(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-dark-bg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">地点</label>
+            <input
+              type="text"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-dark-bg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+              placeholder="会议地点、地址等"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">优先级</label>
+              <select
+                value={priority}
+                onChange={(e) => setPriority(e.target.value as 'low' | 'medium' | 'high')}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-dark-bg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+              >
+                <option value="low">低</option>
+                <option value="medium">中</option>
+                <option value="high">高</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">颜色</label>
+              <input
+                type="color"
+                value={color}
+                onChange={(e) => setColor(e.target.value)}
+                className="w-full h-10 px-1 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-dark-bg cursor-pointer"
+              />
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="editAllDay"
+              checked={allDay}
+              onChange={(e) => setAllDay(e.target.checked)}
+              className="rounded border-gray-300 dark:border-gray-600 text-teal-500 focus:ring-teal-500"
+            />
+            <label htmlFor="editAllDay" className="text-sm text-gray-700 dark:text-gray-300">全天事件</label>
+          </div>
+        </div>
+        <div className="flex gap-3 mt-6">
+          <button
+            onClick={onClose}
+            className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+          >
+            取消
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={loading || !title.trim()}
+            className="flex-1 px-4 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {loading ? '保存中...' : '保存'}
+          </button>
         </div>
       </div>
     </div>
