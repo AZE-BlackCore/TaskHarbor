@@ -11,11 +11,12 @@
 **桌面端任务管理软件 - 让任务安全停靠、高效启航**
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Version](https://img.shields.io/badge/version-1.2.0-teal.svg)]()
 [![Electron](https://img.shields.io/badge/Electron-28.1.0-blue.svg)](https://www.electronjs.org/)
 [![React](https://img.shields.io/badge/React-18-blue.svg)](https://reactjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue.svg)](https://www.typescriptlang.org/)
 
-[功能特性](#-功能特性) • [技术栈](#-技术栈) • [快速开始](#-快速开始) • [项目结构](#-项目结构) • [开发状态](#-开发状态)
+[功能特性](#-功能特性) • [版本历史](#-版本历史) • [技术栈](#-技术栈) • [快速开始](#-快速开始) • [项目结构](#-项目结构) • [开发状态](#-开发状态)
 
 </div>
 
@@ -23,18 +24,19 @@
 
 ## 📋 简介
 
-TaskHarbor 是一款功能完整的桌面端任务管理应用，支持项目化任务管理、日程管理、多视图展示、智能提醒等功能。采用 Electron + React 架构，提供跨平台的桌面体验。
+TaskHarbor 是一款功能完整的桌面端任务管理应用，支持日程管理、任务追踪、数据复盘等功能。采用 Electron + React 架构，提供跨平台的桌面体验。
 
 **TaskHarbor 寓意**：像港湾一样，让你的所有任务都能安全停靠、有序管理、高效启航。
 
 **核心优势**：
 - 🚀 **高性能** - 数据库操作优化 80%+，响应时间 <100ms
-- 🎨 **现代化 UI** - 深色模式、骨架屏加载、流畅动画
-- 📊 **多视图展示** - 列表、甘特图、看板、日历、统计报表、日程视图
-- 📅 **日程管理** - 独立的日程系统，支持重复事件、优先级、地点等
+- 🎨 **现代化 UI** - 全新界面设计，深色模式，流畅动画
+- 📅 **日程管理** - 日期滚动导航，月历/日视图切换，快速添加
+- 📊 **数据复盘** - 六维概览，状态/优先级/责任人多维度统计
+- 🏷️ **标签系统** - 自定义颜色，真实统计数据，分类管理
+- 👤 **用户信息** - 本地头像、昵称、签名设置，个性化体验
 - 🔔 **智能提醒** - 可拖拽的提醒面板，支持桌面通知
 - 💾 **本地优先** - 数据完全本地存储，保护隐私
-- 🔧 **高度可定制** - 视图顺序可调整、支持隐藏视图
 
 ---
 
@@ -42,17 +44,29 @@ TaskHarbor 是一款功能完整的桌面端任务管理应用，支持项目化
 
 ### 🎯 核心功能
 
-#### 任务管理
-- ✅ **项目化任务管理** - 支持个人项目/公司项目分类
-- ✅ **完整任务字段** - 模块、功能模块、任务描述、进度、状态、责任人、时间管理
-- ✅ **任务状态追踪** - 待办 → 进行中 → 审查中 → 已完成/已阻塞
-- ✅ **进度管理** - 0-100% 进度条可视化
-- ✅ **时间管理** - 开始时间、预计完成时间、实际完成时间
-- ✅ **快速筛选** - 按状态、责任人、关键词搜索
+#### Day Todo 每日待办
+- ✅ **日期滚动导航** - 以今天为中心的 7 天日期栏，周级别快速切换
+- ✅ **快速添加** - 输入框回车即可创建当天日程
+- ✅ **日程指示** - 日期卡片显示日程数量指示点，今日标记
+- ✅ **空状态引导** - SVG 插画引导用户添加计划
 
-#### 日程管理（新增）
-- ✅ **完整日程系统** - 独立的日程管理模块，与任务系统分离
-- ✅ **多视图模式** - 月视图、日视图切换
+#### 最近待办
+- ✅ **时间范围筛选** - 今天/本周/本月快速切换
+- ✅ **状态筛选** - 按任务状态过滤（待处理/进行中/审核中/已完成/已阻塞）
+- ✅ **关键词搜索** - 模糊匹配任务描述、备注、问题
+- ✅ **日期分组** - 按创建日期分组展示，每组显示任务数
+- ✅ **快捷操作** - 点击状态图标切换完成/待处理
+
+#### 待办箱
+- ✅ **未处理任务汇总** - 仅展示 status=todo 的任务
+- ✅ **优先级筛选** - 按高/中/低优先级过滤
+- ✅ **快速创建** - 输入描述、选优先级、回车创建
+- ✅ **一键开始** - 任务转为进行中状态
+- ✅ **优先级标识** - 彩色竖条区分优先级
+
+#### 日程管理
+- ✅ **月历视图** - 标准 7x6 网格，日程预览（每格最多 2 条）
+- ✅ **日视图** - 列表式展示，含时间、优先级、地点
 - ✅ **日程详情** - 标题、描述、地点、颜色自定义
 - ✅ **时间设置** - 开始/结束时间、全天事件支持
 - ✅ **优先级管理** - 低/中/高三级优先级，颜色标识
@@ -60,23 +74,30 @@ TaskHarbor 是一款功能完整的桌面端任务管理应用，支持项目化
 - ✅ **任务关联** - 日程可关联到具体任务
 - ✅ **搜索过滤** - 按关键词、优先级筛选日程
 
-#### 多视图展示
-- ✅ **列表视图** - 完整功能的表格视图，支持批量操作
-- ✅ **甘特图视图** - 时间轴展示，支持日/周/月缩放
-- ✅ **看板视图** - 按状态分列的卡片式展示
-- ✅ **日历视图** - 任务在日历上的可视化展示
-- ✅ **统计报表** - 饼图、柱状图、燃尽图、进度分析
-- ✅ **日程视图** - 专属日程管理界面（新增）
+#### 数据复盘
+- ✅ **六维概览** - 总任务/已完成/进行中/待处理/审核中/已阻塞
+- ✅ **完成进度** - 完成率环形展示，平均进度
+- ✅ **状态分布** - 水平条形图，含百分比和计数
+- ✅ **优先级分布** - 柱状图（高/中/低）
+- ✅ **责任人分布** - Top 5 横向条形图
+- ✅ **标签概览** - 彩色 pill 展示所有标签
+- ✅ **日程统计** - 今日/本周/总日程/已过期
 
-#### 高级功能
-- ✅ **悬浮窗口** - 可拖拽、透明度调节、点击穿透
-- ✅ **子任务分解** - 任务拆分为多个子任务
-- ✅ **任务依赖** - 设置任务间的依赖关系
-- ✅ **时间追踪** - 记录任务实际耗时
-- ✅ **标签系统** - 为任务添加自定义标签
-- ✅ **导出功能** - 支持 Excel/CSV/Markdown 格式导出
+#### 标签系统
+- ✅ **标签管理** - 创建、编辑、删除标签
+- ✅ **自定义颜色** - 8 个预设色板 + 自定义颜色拾取器
+- ✅ **真实统计** - 调用后端 IPC 获取任务数/完成数/平均进度
+- ✅ **分类入口** - 侧边栏分类区域展示标签，点击进入管理
+- ✅ **任务关联** - 为任务添加标签，按标签筛选
 
-### 🔔 智能提醒系统（增强）
+#### 用户信息设置
+- ✅ **头像上传** - 支持图片选择，base64 本地存储（2MB 限制）
+- ✅ **昵称设置** - 侧边栏实时显示
+- ✅ **个性签名** - 侧边栏昵称下方展示
+- ✅ **邮箱设置** - 本地保存
+- ✅ **一键重置** - 恢复默认用户信息
+
+### 🔔 智能提醒系统
 
 #### 任务提醒面板
 - ✅ **可拖拽位置** - 提醒面板可自由拖动到任意位置
@@ -101,25 +122,114 @@ TaskHarbor 是一款功能完整的桌面端任务管理应用，支持项目化
 - ✅ **骨架屏加载** - 优雅的加载动画，避免白屏
 - ✅ **Toast 通知** - 实时友好的操作反馈
 - ✅ **表单验证** - 实时验证，防止无效提交
-- ✅ **虚拟滚动** - 支持 10000+ 任务流畅滚动
 
 #### 视觉优化
 - ✅ **深色模式** - 一键切换浅色/深色主题
-- ✅ **玻璃拟态** - 现代化 UI 设计
+- ✅ **青色主色调** - 统一的视觉语言，现代感设计
 - ✅ **流畅动画** - 过渡动画、微交互
-- ✅ **响应式布局** - 自适应不同屏幕尺寸
+- ✅ **侧边栏折叠** - 支持整体折叠，节省空间
+- ✅ **分区折叠** - 分类、标签区域独立折叠
 
 ### ⚙️ 自定义设置
 
-#### 视图设置
-- ✅ **视图顺序调整** - 拖动或点击箭头调整侧边栏视图顺序
-- ✅ **视图显示控制** - 隐藏不需要的视图
-- ✅ **配置持久化** - 设置自动保存，重启后保持
+#### 界面设置
+- ✅ **菜单栏显示** - 控制顶部菜单栏可见性
+- ✅ **窗口置顶** - TaskHarbor 显示在所有窗口最上层
+- ✅ **关闭行为** - 最小化到托盘或直接退出
 
 #### 数据管理
 - ✅ **数据导出** - Excel/CSV/Markdown 格式
 - ✅ **数据备份** - 创建数据备份
 - ✅ **数据清理** - 清除所有数据（需谨慎）
+
+---
+
+## 📦 版本历史
+
+### v1.2.0（2026-08-02）
+
+本次更新对 TaskHarbor 进行了全面的界面重构和功能扩展。
+
+#### 界面重构
+- 全新侧边栏设计：Day Todo、最近待办、日程概览、待办箱、数据复盘五项主导航
+- 侧边栏集成分类（标签）和标签管理入口，支持折叠展开
+- 侧边栏支持整体折叠/展开，折叠时仅显示图标
+- 底部新增已达成、回收站快捷入口及设置、主题切换按钮
+
+#### Day Todo 视图（新增）
+- 以今天为中心的 7 天日期滚动导航栏
+- 支持周级别快速切换，选中态青色高亮
+- 日期卡片显示日程指示点，今日标记小圆点
+- 顶部快速添加输入框，回车即可创建当天日程
+- 空状态展示 SVG 插画引导用户添加计划
+
+#### 日程概览重构
+- 新增月历视图与日视图切换
+- 月历支持日程预览（每格最多 2 条），今日高亮
+- 日视图列表展示，含时间、优先级、地点等元信息
+- 新建日程对话框支持标题、描述、时间、地点、优先级、颜色
+
+#### 最近待办（新增）
+- 按今天/本周/本月时间范围筛选任务
+- 支持状态筛选和关键词搜索
+- 按日期分组展示，每组显示日期头部和任务数
+- 任务卡片支持快捷切换完成/待处理状态
+
+#### 待办箱（新增）
+- 仅展示 status=todo 的未处理任务
+- 优先级筛选与搜索功能
+- 快速添加表单：输入描述、选优先级、回车创建
+- 任务卡片支持开始处理（转为进行中）和删除
+
+#### 数据复盘增强
+- 调用后端 tasks:getStats IPC 获取聚合数据
+- 六维概览卡片：总任务/已完成/进行中/待处理/审核中/已阻塞
+- 状态分布水平条形图，优先级分布柱状图，责任人 Top 5 条形图
+- 标签概览彩色 pill 展示
+
+#### 后端能力增强
+- TaskFilters 新增 search、priority、dateRange、dateField 字段
+- taskService.findAll 支持模糊搜索、日期范围筛选、优先级筛选
+- 新增 taskService.getStats() 综合统计方法
+- 注册 tasks:getStats IPC handler，preload 暴露 getTaskStats()
+- renderer/preload/main 三方 TaskFilters 类型统一对齐
+
+#### 标签系统完善
+- TagList 移除 mock 统计逻辑，改为异步调用真实 IPC
+- TagEditDialog 新增自定义颜色拾取器
+
+#### 用户信息设置（新增）
+- 新建 userProfileStore，基于 zustand + localStorage 持久化
+- 支持头像上传（base64）、昵称、个性签名、邮箱
+- 设置面板顶部新增用户信息分区
+- 侧边栏用户区从硬编码改为读取 store
+
+#### 路由调整
+- 默认路由重定向到 /day-todo
+- 新增 /recent、/inbox、/review 路由
+- 旧路由兼容重定向
+
+### v1.1.2
+- 新增 Markdown 导出功能
+- 构建配置更新，图标生成脚本
+
+### v1.0.7
+- 自定义提醒设置
+- 桌面增强功能
+
+### v1.0.6
+- 视图顺序自定义
+- 智能任务提醒面板
+
+### v1.0.5
+- 日程管理系统
+- 悬浮窗口功能
+
+### v1.0.0
+- 初始版本发布
+- 任务管理、多视图展示、项目化管理
+- 甘特图、看板、日历、统计报表
+- 深色模式、数据导出
 
 ---
 
@@ -136,7 +246,6 @@ TaskHarbor 是一款功能完整的桌面端任务管理应用，支持项目化
 | **Zustand** | - | 轻量级状态管理 |
 | **sql.js** | 1.10.3 | SQLite 数据库 |
 | **React Router** | 6 | 路由管理 |
-| **Recharts** | - | 图表库 |
 | **Day.js** | - | 日期处理 |
 
 ### 架构设计
@@ -200,13 +309,16 @@ cd main && npx tsc
 # 编译 preload
 cd preload && npx tsc
 
+# 完整构建（main + preload + renderer）
+npm run build:all
+
 # 打包应用（推荐：便携版）
 npm run build:win:portable
 
 # 打包应用（完整版）
 npm run build:win
 
-# 构建产物在 dist-output/ 目录，生成约 73 MB 的 exe 文件
+# 构建产物在 dist-output/ 目录
 ```
 
 ### 📦 打包说明
@@ -217,8 +329,6 @@ npm run build:win
 ```bash
 npm run build:win:portable
 ```
-
-**输出**: `dist-output/TaskHarbor-1.0.0-portable.exe` (约 73 MB)
 
 ---
 
@@ -232,20 +342,17 @@ TaskHarbor/
 │   │   ├── services/        # 数据库、缓存等服务
 │   │   │   ├── database.ts
 │   │   │   ├── database-migration.ts
-│   │   │   ├── taskService.ts
-│   │   │   ├── projectService.ts
-│   │   │   ├── scheduleService.ts   # 日程服务（新增）
+│   │   │   ├── taskService.ts       # 任务服务（含统计聚合）
+│   │   │   ├── scheduleService.ts   # 日程服务
 │   │   │   ├── notification.ts      # 通知服务
 │   │   │   └── cacheService.ts
 │   │   ├── ipc-handlers/    # IPC 处理器
-│   │   │   ├── task-handlers.ts
-│   │   │   ├── project-handlers.ts
-│   │   │   ├── schedule-handlers.ts # 日程处理器（新增）
+│   │   │   ├── task-handlers.ts     # 任务 IPC（含 getStats）
+│   │   │   ├── schedule-handlers.ts # 日程处理器
+│   │   │   ├── tag-handlers.ts      # 标签处理器
 │   │   │   ├── notification-handlers.ts
 │   │   │   └── window-handlers.ts
 │   │   └── utils/           # 工具函数
-│   │       ├── idGenerator.ts
-│   │       └── timestamp.ts
 │   └── tsconfig.json
 │
 ├── preload/                 # Preload 脚本
@@ -257,65 +364,45 @@ TaskHarbor/
 │   ├── src/
 │   │   ├── components/      # React 组件
 │   │   │   ├── ui/          # UI 基础组件
-│   │   │   │   ├── sidebar.tsx
-│   │   │   │   ├── button.tsx
-│   │   │   │   ├── input.tsx
-│   │   │   │   ├── dialog.tsx
-│   │   │   │   ├── Skeleton.tsx
-│   │   │   │   ├── Toast.tsx
-│   │   │   │   └── VirtualList.tsx
-│   │   │   ├── task/        # 任务相关组件
-│   │   │   │   ├── TaskDetailPanel.tsx
-│   │   │   │   ├── TaskEditDialog.tsx
-│   │   │   │   ├── SubtaskList.tsx
-│   │   │   │   ├── TagManager.tsx
-│   │   │   │   └── TimeTracker.tsx
-│   │   │   ├── project/     # 项目组件
-│   │   │   │   ├── ProjectCard.tsx
-│   │   │   │   └── ProjectEditDialog.tsx
+│   │   │   ├── tag/         # 标签组件
+│   │   │   │   ├── TagCard.tsx
+│   │   │   │   └── TagEditDialog.tsx
 │   │   │   ├── settings/    # 设置组件
-│   │   │   │   ├── SettingsPanel.tsx
-│   │   │   │   └── ViewOrderSettings.tsx
-│   │   │   ├── notification/ # 通知组件（新增）
+│   │   │   │   ├── SettingsPanel.tsx  # 含用户信息设置
+│   │   │   │   ├── ViewOrderSettings.tsx
+│   │   │   │   └── ReminderSettings.tsx
+│   │   │   ├── notification/ # 通知组件
 │   │   │   │   └── TaskReminder.tsx
-│   │   │   └── Layout.tsx   # 主布局组件
+│   │   │   └── Layout.tsx   # 主布局组件（含侧边栏）
 │   │   ├── views/           # 视图组件
-│   │   │   ├── ListView.tsx
-│   │   │   ├── GanttView.tsx
-│   │   │   ├── KanbanView.tsx
-│   │   │   ├── CalendarView.tsx
-│   │   │   ├── DashboardView.tsx
-│   │   │   ├── ScheduleView.tsx   # 日程视图（新增）
-│   │   │   ├── ProjectView.tsx
-│   │   │   └── FloatingWindow.tsx
+│   │   │   ├── DayTodoView.tsx     # 每日待办
+│   │   │   ├── RecentView.tsx      # 最近待办
+│   │   │   ├── ScheduleView.tsx    # 日程概览
+│   │   │   ├── InboxView.tsx       # 待办箱
+│   │   │   ├── StatsView.tsx       # 数据复盘
+│   │   │   ├── tag/
+│   │   │   │   └── TagList.tsx     # 标签管理
+│   │   │   └── FloatingWindow.tsx  # 悬浮窗口
 │   │   ├── stores/          # Zustand stores
 │   │   │   ├── taskStore.ts
-│   │   │   ├── projectStore.ts
-│   │   │   ├── scheduleStore.ts   # 日程状态（新增）
+│   │   │   ├── scheduleStore.ts
+│   │   │   ├── tagStore.ts
+│   │   │   ├── userProfileStore.ts # 用户信息（新增）
 │   │   │   ├── viewStore.ts
 │   │   │   ├── viewConfigStore.ts
 │   │   │   └── errorStore.ts
 │   │   ├── types/           # TypeScript 类型定义
-│   │   │   └── index.ts     # 包含 Schedule 类型定义
+│   │   │   └── index.ts
 │   │   └── utils/           # 工具函数
 │   │       ├── export.ts
 │   │       ├── cache.ts
 │   │       └── cn.ts
-│   │   ├── App.tsx          # 应用入口
-│   │   └── main.tsx
+│   ├── App.tsx              # 应用入口
+│   ├── main.tsx
 │   └── package.json
 │
-├── docs/                    # 项目文档
-│   ├── 核心功能优化总结.md
-│   ├── Phase1-5 实施报告.md
-│   └── CI-CD 使用指南.md
-│
-├── tests/                   # 测试文件
-│   ├── core-functional-tests.md
-│   └── 测试报告.md
-│
-├── .github/                 # GitHub 配置
-│   └── workflows/           # CI/CD 工作流
+├── build/                   # 构建资源
+│   └── icon.ico
 │
 ├── scripts/                 # 构建脚本
 │   └── build-windows.ps1
@@ -329,19 +416,6 @@ TaskHarbor/
 
 ### 核心表结构
 
-#### projects 表
-```sql
-CREATE TABLE projects (
-  id TEXT PRIMARY KEY,
-  name TEXT NOT NULL,
-  type TEXT NOT NULL CHECK(type IN ('personal', 'company')),
-  description TEXT,
-  color TEXT DEFAULT '#3B82F6',
-  createdAt TEXT,
-  updatedAt TEXT
-)
-```
-
 #### tasks 表
 ```sql
 CREATE TABLE tasks (
@@ -353,6 +427,7 @@ CREATE TABLE tasks (
   description TEXT NOT NULL,
   progress INTEGER DEFAULT 0 CHECK(progress >= 0 AND progress <= 100),
   status TEXT DEFAULT 'todo',
+  priority TEXT DEFAULT 'medium',
   assignee TEXT,
   startDate TEXT,
   estimatedEndDate TEXT,
@@ -360,12 +435,11 @@ CREATE TABLE tasks (
   issues TEXT,
   notes TEXT,
   createdAt TEXT,
-  updatedAt TEXT,
-  FOREIGN KEY (projectId) REFERENCES projects(id) ON DELETE CASCADE
+  updatedAt TEXT
 )
 ```
 
-#### schedules 表（新增）
+#### schedules 表
 ```sql
 CREATE TABLE schedules (
   id TEXT PRIMARY KEY,
@@ -383,8 +457,18 @@ CREATE TABLE schedules (
   repeatEndDate TEXT,
   relatedTaskId TEXT,
   createdAt TEXT,
-  updatedAt TEXT,
-  FOREIGN KEY (relatedTaskId) REFERENCES tasks(id) ON DELETE SET NULL
+  updatedAt TEXT
+)
+```
+
+#### tags 表
+```sql
+CREATE TABLE tags (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  color TEXT DEFAULT '#3B82F6',
+  createdAt TEXT,
+  updatedAt TEXT
 )
 ```
 
@@ -392,37 +476,31 @@ CREATE TABLE schedules (
 - **subtasks** - 子任务
 - **timelogs** - 时间日志
 - **task_dependencies** - 任务依赖
-- **task_tags** - 任务标签
+- **task_tag_relations** - 任务标签关联
 
 ### 数据验证
 - ✅ 外键约束触发器
 - ✅ 进度范围检查 (0-100)
 - ✅ 自动更新时间戳
-- ✅ 软删除支持
 
 ---
 
 ## 📈 性能优化成果
 
-### 数据库优化 (Phase 1)
+### 数据库优化
 - ⚡ **延迟保存** - 防抖 1 秒，减少 I/O 80%
-- ⚡ **事务支持** - ACID 合规，数据一致性 100%
+- ⡓ **事务支持** - ACID 合规，数据一致性 100%
 - ⚡ **查询缓存** - 重复查询性能提升 98%
 
-### 状态管理优化 (Phase 2)
-- ⚡ **乐观更新** - 响应时间 <100ms (从 200ms 优化)
+### 状态管理优化
+- ⚡ **乐观更新** - 响应时间 <100ms
 - ⚡ **Immer 集成** - 状态更新性能提升 80%
-- ⚡ **全局错误处理** - Toast 通知，用户体验提升 42%
+- ⚡ **全局错误处理** - Toast 通知，用户体验提升
 
-### 服务层重构 (Phase 3)
+### 服务层重构
 - 🏗️ **Service 层** - 代码可维护性提升 80%
 - 🏗️ **类型安全** - TypeScript 覆盖率 100%
 - 🏗️ **IPC 简化** - 代码量减少 60-67%
-
-### 用户体验优化 (Phase 4)
-- 🎨 **骨架屏** - 加载体验提升 40%
-- 🎨 **虚拟滚动** - 10000+ 任务流畅滚动 (99% 性能提升)
-- 🎨 **视图自定义** - 支持调整顺序和隐藏
 
 ---
 
@@ -432,22 +510,21 @@ CREATE TABLE schedules (
 - [x] 项目初始化和基础架构
 - [x] 数据库设计和实现
 - [x] 主进程和 IPC 通信
-- [x] 列表视图（完整功能）
-- [x] 甘特图视图
-- [x] 看板视图
-- [x] 日历视图
-- [x] 统计报表
-- [x] 日程管理视图（完整功能）
-- [x] 项目管理
+- [x] Day Todo 每日待办视图
+- [x] 最近待办视图
+- [x] 待办箱视图
+- [x] 日程管理（月历/日视图）
+- [x] 数据复盘（多维度统计）
+- [x] 标签系统（含真实统计）
+- [x] 用户信息设置（头像/昵称/签名/邮箱）
+- [x] 侧边栏重构（折叠/分类/标签集成）
 - [x] 悬浮窗口
 - [x] 深色模式
-- [x] 视图顺序自定义
 - [x] 智能任务提醒（可拖拽、可收起）
 - [x] 桌面通知系统
-- [x] 核心功能优化（5 个 Phase）
+- [x] 数据导出（Excel/CSV/Markdown）
 
 ### 进行中 🚧
-- [ ] Agent 能力集成（规划中）
 - [ ] 智能任务分析
 - [ ] 自动化报告生成
 
@@ -455,18 +532,6 @@ CREATE TABLE schedules (
 - [ ] 云端同步
 - [ ] 多设备协作
 - [ ] 插件系统
-
----
-
-## 📚 文档
-
-详细文档请查看 [docs/](docs/) 目录：
-
-- **核心功能优化总结** - 完整优化成果总结
-- **Phase 1-5 实施报告** - 各阶段详细实施过程
-- **CI-CD 使用指南** - 持续集成和部署
-- **立项开发技术文档** - 项目立项文档
-- **问题诊断报告** - 问题排查和解决方案
 
 ---
 
@@ -502,7 +567,6 @@ MIT License - 详见 [LICENSE](LICENSE) 文件
 - [Vite](https://vitejs.dev/)
 - [Tailwind CSS](https://tailwindcss.com/)
 - [Zustand](https://zustand-demo.pmnd.rs/)
-- [Recharts](https://recharts.org/)
 - [Day.js](https://day.js.org/)
 
 ---
@@ -513,6 +577,6 @@ MIT License - 详见 [LICENSE](LICENSE) 文件
 
 **公众号：黑核阿泽**
 
-[⭐ Star on GitHub](https://github.com/AZE-BlackCore/TaskHarbor) • [📖 查看文档](docs/) • [🐛 报告问题](https://github.com/AZE-BlackCore/TaskHarbor/issues)
+[⭐ Star on GitCode](https://gitcode.com/AZE-BlackCore/TaskHarbor) • [📖 查看文档](docs/) • [🐛 报告问题](https://gitcode.com/AZE-BlackCore/TaskHarbor/issues)
 
 </div>
