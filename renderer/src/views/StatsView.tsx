@@ -3,10 +3,14 @@ import dayjs from 'dayjs';
 import { useTaskStore } from '../stores/taskStore';
 import { useScheduleStore } from '../stores/scheduleStore';
 import { useTagStore } from '../stores/tagStore';
+import { SmartAnalysis } from '../components/stats/SmartAnalysis';
+import { ReportGenerator } from '../components/stats/ReportGenerator';
 import {
   CheckCircle2, Clock, AlertCircle, Calendar, TrendingUp, TrendingDown,
-  BarChart3, Users, Flag, Tag as TagIcon, Loader,
+  BarChart3, Users, Flag, Tag as TagIcon, Loader, Brain, FileText,
 } from 'lucide-react';
+
+type StatsTab = 'overview' | 'analysis' | 'report';
 
 interface BackendStats {
   total: number;
@@ -36,6 +40,7 @@ export function StatsView() {
   const { tags, fetchTags } = useTagStore();
   const [stats, setStats] = useState<BackendStats | null>(null);
   const [scheduleStats, setScheduleStats] = useState({ total: 0, today: 0, thisWeek: 0, overdue: 0 });
+  const [activeTab, setActiveTab] = useState<StatsTab>('overview');
 
   useEffect(() => {
     fetchTasks();
@@ -128,6 +133,19 @@ export function StatsView() {
         <p className="text-gray-500 dark:text-gray-400 mt-2">任务与日程的全维度数据分析</p>
       </div>
 
+      {/* Tab navigation */}
+      <div className="flex items-center gap-1 mb-6 border-b border-gray-200 dark:border-gray-700">
+        <TabButton active={activeTab === 'overview'} onClick={() => setActiveTab('overview')} icon={BarChart3} label="统计概览" />
+        <TabButton active={activeTab === 'analysis'} onClick={() => setActiveTab('analysis')} icon={Brain} label="智能分析" />
+        <TabButton active={activeTab === 'report'} onClick={() => setActiveTab('report')} icon={FileText} label="报告生成" />
+      </div>
+
+      {activeTab === 'analysis' && <SmartAnalysis tasks={tasks} />}
+
+      {activeTab === 'report' && <ReportGenerator tasks={tasks} tags={tags} schedules={schedules} />}
+
+      {activeTab === 'overview' && (
+        <>
       {/* Overview cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
         <OverviewCard title="总任务" value={total} color="text-gray-900 dark:text-white" />
@@ -275,7 +293,25 @@ export function StatsView() {
           <ScheduleCard title="已过期" value={scheduleStats.overdue} icon={AlertCircle} color="bg-red-500" />
         </div>
       </div>
+        </>
+      )}
     </div>
+  );
+}
+
+function TabButton({ active, onClick, icon: Icon, label }: { active: boolean; onClick: () => void; icon: any; label: string }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors -mb-px ${
+        active
+          ? 'border-teal-500 text-teal-500'
+          : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+      }`}
+    >
+      <Icon className="w-4 h-4" />
+      {label}
+    </button>
   );
 }
 
