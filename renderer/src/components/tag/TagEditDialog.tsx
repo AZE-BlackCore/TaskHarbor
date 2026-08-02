@@ -66,7 +66,7 @@ export function TagEditDialog({ open, tag, onClose, onSave }: TagEditDialogProps
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             标签颜色
           </label>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap items-center">
             {COLORS.map((c) => (
               <button
                 key={c}
@@ -77,7 +77,28 @@ export function TagEditDialog({ open, tag, onClose, onSave }: TagEditDialogProps
                 style={{ backgroundColor: c }}
               />
             ))}
+            {/* Custom color picker */}
+            <div className="relative w-10 h-10">
+              <input
+                type="color"
+                value={color}
+                onChange={(e) => setColor(e.target.value)}
+                className="absolute inset-0 w-full h-full rounded-full border-2 border-dashed border-gray-300 dark:border-gray-600 cursor-pointer opacity-0"
+                title="自定义颜色"
+              />
+              <div
+                className="w-10 h-10 rounded-full border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center"
+                style={{ backgroundColor: color && !COLORS.includes(color) ? color : 'transparent' }}
+              >
+                {!COLORS.includes(color) && (
+                  <span className="text-xs text-gray-400">+</span>
+                )}
+              </div>
+            </div>
           </div>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+            当前: <span className="font-mono">{color}</span>
+          </p>
         </div>
       </div>
 

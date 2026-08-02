@@ -83,6 +83,9 @@ export interface TaskFilters {
   status?: string;
   assignee?: string;
   search?: string;
+  priority?: string;
+  dateRange?: { start: string; end: string };
+  dateField?: 'createdAt' | 'startDate' | 'estimatedEndDate';
 }
 
 export interface TagStats {

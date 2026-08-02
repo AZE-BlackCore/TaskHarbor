@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react'
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Layout } from './components/Layout'
-import { TagMain } from './views/tag/TagMain'
+import { DayTodoView } from './views/DayTodoView'
+import { RecentView } from './views/RecentView'
 import { ScheduleView } from './views/ScheduleView'
+import { InboxView } from './views/InboxView'
 import { StatsView } from './views/StatsView'
+import { TagList } from './views/tag/TagList'
 import { FloatingWindow } from './views/FloatingWindow'
-import { DesktopCard } from './views/DesktopCard'
 import { TaskReminder } from './components/notification/TaskReminder'
 
 function App() {
@@ -28,29 +30,30 @@ function App() {
   return (
     <HashRouter>
       <Routes>
-        {/* 主窗口路由 */}
+        {/* Main window routes */}
         <Route path="/" element={<Layout darkMode={darkMode} toggleDarkMode={toggleDarkMode} />}>
-          <Route index element={<Navigate to="/stats" replace />} />
-          <Route path="stats" element={<StatsView />} />
-          <Route path="tags" element={<TagMain />} />
+          <Route index element={<Navigate to="/day-todo" replace />} />
+          <Route path="day-todo" element={<DayTodoView darkMode={darkMode} />} />
+          <Route path="recent" element={<RecentView />} />
           <Route path="schedule" element={<ScheduleView />} />
-          {/* 旧路由兼容重定向 */}
-          <Route path="list" element={<Navigate to="/tags" replace />} />
-          <Route path="gantt" element={<Navigate to="/tags" replace />} />
-          <Route path="kanban" element={<Navigate to="/tags" replace />} />
-          <Route path="calendar" element={<Navigate to="/tags" replace />} />
-          <Route path="dashboard" element={<Navigate to="/stats" replace />} />
-          <Route path="projects" element={<Navigate to="/tags" replace />} />
+          <Route path="inbox" element={<InboxView />} />
+          <Route path="review" element={<StatsView />} />
+          <Route path="tags" element={<TagList />} />
+          {/* Old route compatibility redirects */}
+          <Route path="list" element={<Navigate to="/recent" replace />} />
+          <Route path="gantt" element={<Navigate to="/day-todo" replace />} />
+          <Route path="kanban" element={<Navigate to="/day-todo" replace />} />
+          <Route path="calendar" element={<Navigate to="/day-todo" replace />} />
+          <Route path="dashboard" element={<Navigate to="/review" replace />} />
+          <Route path="projects" element={<Navigate to="/day-todo" replace />} />
+          <Route path="stats" element={<Navigate to="/review" replace />} />
         </Route>
-        
-        {/* 悬浮窗口路由 */}
+
+        {/* Floating window route */}
         <Route path="/floating" element={<FloatingWindow />} />
-        
-        {/* 桌面卡片路由 */}
-        <Route path="/desktop-card" element={<DesktopCard />} />
       </Routes>
-      
-      {/* 任务提醒 */}
+
+      {/* Task reminder */}
       <TaskReminder />
     </HashRouter>
   )

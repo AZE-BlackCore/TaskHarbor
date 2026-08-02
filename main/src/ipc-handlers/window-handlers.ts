@@ -1,5 +1,6 @@
 import { ipcMain, BrowserWindow } from 'electron';
 import { createFloatingWindow } from '../index';
+import { DatabaseManager } from '../services/database';
 
 export function setupWindowHandlers() {
   // 设置窗口透明度
@@ -150,6 +151,18 @@ export function setupWindowHandlers() {
       return { success: false, error: 'No active window' };
     } catch (error: any) {
       console.error('Error getting always on top status:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // 获取数据库路径
+  ipcMain.handle('window:getDatabasePath', () => {
+    try {
+      const dbManager = DatabaseManager.getInstance();
+      const dbPath = dbManager.getDbPath();
+      return { success: true, dbPath };
+    } catch (error: any) {
+      console.error('Error getting database path:', error);
       return { success: false, error: error.message };
     }
   });

@@ -1,14 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Dialog } from '../ui/dialog';
 import { Button } from '../ui/button';
-import { 
-  Settings, 
-  Moon, 
-  Sun, 
-  Bell, 
-  BellOff, 
-  Database, 
-  Download, 
+import {
+  Settings,
+  Moon,
+  Sun,
+  Bell,
+  BellOff,
+  Database,
+  Download,
   Trash2,
   CheckCircle,
   AlertCircle,
@@ -16,9 +16,15 @@ import {
   Maximize2,
   Pin,
   Info,
+  User,
+  Camera,
+  Mail,
+  PencilLine,
+  RotateCcw,
 } from 'lucide-react';
 import { useTaskStore } from '../../stores/taskStore';
 import { useProjectStore } from '../../stores/projectStore';
+import { useUserProfileStore } from '../../stores/userProfileStore';
 import { exportToExcel, exportToCSV, exportToMarkdown } from '../../utils/export';
 import { ViewOrderSettings } from './ViewOrderSettings';
 import { ReminderSettings } from './ReminderSettings';
@@ -33,6 +39,8 @@ interface SettingsPanelProps {
 export function SettingsPanel({ open, onClose, darkMode, toggleDarkMode }: SettingsPanelProps) {
   const { tasks } = useTaskStore();
   const { projects } = useProjectStore();
+  const { profile, updateProfile, resetProfile } = useUserProfileStore();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [showMenuBar, setShowMenuBar] = useState(false);
@@ -45,6 +53,7 @@ export function SettingsPanel({ open, onClose, darkMode, toggleDarkMode }: Setti
     productName: string;
     description: string;
   } | null>(null);
+  const [dbPath, setDbPath] = useState<string>('');
 
   // 加载应用信息
   useEffect(() => {
@@ -56,6 +65,18 @@ export function SettingsPanel({ open, onClose, darkMode, toggleDarkMode }: Setti
       }
     };
     loadAppInfo();
+  }, []);
+
+  // 加载数据库路径
+  useEffect(() => {
+    const loadDbPath = async () => {
+      // @ts-ignore
+      const result = await window.electronAPI?.getDatabasePath?.();
+      if (result?.success) {
+        setDbPath(result.dbPath);
+      }
+    };
+    loadDbPath();
   }, []);
 
   // 格式化日期
@@ -155,6 +176,45 @@ export function SettingsPanel({ open, onClose, darkMode, toggleDarkMode }: Setti
     }
   };
 
+  // Avatar upload: read file as base64 and update profile
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      alert('请选择图片文件');
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      alert('图片大小不能超过 2MB');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      updateProfile({ avatar: dataUrl });
+    };
+    reader.onerror = () => {
+      alert('读取图片失败');
+    };
+    reader.readAsDataURL(file);
+    // Reset input so selecting the same file works next time
+    e.target.value = '';
+  };
+
+  const handleClearAvatar = () => {
+    updateProfile({ avatar: '' });
+  };
+
+  const handleResetProfile = () => {
+    if (confirm('确定要重置用户信息吗？')) {
+      resetProfile();
+    }
+  };
+
   const handleClearData = async () => {
     if (confirm('⚠️ 警告：此操作将删除所有数据且无法恢复！确定要继续吗？')) {
       if (confirm('再次确认：所有项目和任务都将被永久删除！')) {
@@ -175,8 +235,121 @@ export function SettingsPanel({ open, onClose, darkMode, toggleDarkMode }: Setti
 
   return (
     <Dialog open={open} onClose={onClose} title="设置" className="max-w-2xl">
+      {/* Hidden file input for avatar upload */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleAvatarChange}
+        className="hidden"
+      />
       {/* 通用设置 */}
       <div className="space-y-6">
+        {/* 用户信息 */}
+        <section>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+            <User className="w-5 h-5" />
+            用户信息
+          </h3>
+
+          <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg space-y-4">
+            {/* Avatar */}
+            <div className="flex items-start gap-4">
+              <div className="relative group">
+                {profile.avatar ? (
+                  <img
+                    src={profile.avatar}
+                    alt="avatar"
+                    className="w-20 h-20 rounded-full object-cover border-2 border-gray-200 dark:border-gray-700"
+                  />
+                ) : (
+                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center text-white font-bold text-2xl border-2 border-gray-200 dark:border-gray-700">
+                    {profile.nickname?.charAt(0)?.toUpperCase() || 'U'}
+                  </div>
+                )}
+                <button
+                  onClick={handleAvatarClick}
+                  className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-teal-500 hover:bg-teal-600 text-white flex items-center justify-center shadow-md transition-colors"
+                  title="更换头像"
+                >
+                  <Camera className="w-3.5 h-3.5" />
+                </button>
+              </div>
+              <div className="flex-1 space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    昵称
+                  </label>
+                  <div className="relative">
+                    <User className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="text"
+                      value={profile.nickname}
+                      onChange={(e) => updateProfile({ nickname: e.target.value })}
+                      placeholder="请输入昵称"
+                      className="w-full pl-10 pr-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-dark-bg text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    个性签名
+                  </label>
+                  <div className="relative">
+                    <PencilLine className="w-4 h-4 absolute left-3 top-3 text-gray-400" />
+                    <input
+                      type="text"
+                      value={profile.signature}
+                      onChange={(e) => updateProfile({ signature: e.target.value })}
+                      placeholder="说点什么吧..."
+                      className="w-full pl-10 pr-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-dark-bg text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Email */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                邮箱
+              </label>
+              <div className="relative">
+                <Mail className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="email"
+                  value={profile.email}
+                  onChange={(e) => updateProfile({ email: e.target.value })}
+                  placeholder="you@example.com"
+                  className="w-full pl-10 pr-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-dark-bg text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                />
+              </div>
+            </div>
+
+            {/* Action row */}
+            <div className="flex items-center justify-between pt-2 border-t border-gray-200 dark:border-gray-700">
+              <div className="flex gap-2">
+                <Button size="sm" variant="secondary" onClick={handleAvatarClick}>
+                  <Camera className="w-4 h-4 mr-1.5" />
+                  更换头像
+                </Button>
+                {profile.avatar && (
+                  <Button size="sm" variant="ghost" onClick={handleClearAvatar}>
+                    移除头像
+                  </Button>
+                )}
+              </div>
+              <button
+                onClick={handleResetProfile}
+                className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                重置
+              </button>
+            </div>
+          </div>
+        </section>
+
         {/* 界面设置 */}
         <section>
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
@@ -256,35 +429,7 @@ export function SettingsPanel({ open, onClose, darkMode, toggleDarkMode }: Setti
               </select>
             </div>
 
-            <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-              <div className="flex items-center gap-3 mb-3">
-                <LayoutGrid className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                <div>
-                  <p className="font-medium text-gray-900 dark:text-white">桌面悬浮卡片</p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    在桌面显示任务/日程卡片
-                  </p>
-                </div>
-              </div>
-              <Button
-                onClick={async () => {
-                  // @ts-ignore - electronAPI 注入的 API
-                  const result = await (window as any).electronAPI?.createFloatingWindow?.({
-                    opacity: 0.95,
-                    x: 200,
-                    y: 200,
-                    page: 'desktop-card',
-                  });
-                  if (result?.success) {
-                    alert('桌面卡片已启动！您可以拖动卡片查看任务和日程。');
-                  }
-                }}
-                size="sm"
-              >
-                启动桌面卡片
-              </Button>
             </div>
-          </div>
         </section>
 
         {/* 视图设置 */}
@@ -503,7 +648,7 @@ export function SettingsPanel({ open, onClose, darkMode, toggleDarkMode }: Setti
             <div className="flex justify-between items-center">
               <span className="text-sm text-gray-500 dark:text-gray-400">版本号</span>
               <span className="text-sm font-medium text-primary">
-                v{appInfo?.version || '1.0.3'}
+                v{appInfo?.version || '1.2.0'}
               </span>
             </div>
             <div className="flex justify-between items-center">
@@ -518,7 +663,15 @@ export function SettingsPanel({ open, onClose, darkMode, toggleDarkMode }: Setti
                 {appInfo?.author || '沈成泽'}
               </span>
             </div>
-            <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
+            <div className="pt-3 border-t border-gray-200 dark:border-gray-700 mt-3">
+              <div className="flex items-start gap-2 mb-2">
+                <span className="text-sm text-gray-500 dark:text-gray-400">数据库路径</span>
+              </div>
+              <div className="p-2 bg-gray-100 dark:bg-gray-700 rounded-md break-all mb-3">
+                <span className="text-xs text-gray-600 dark:text-gray-300 font-mono">
+                  {dbPath || '加载中...'}
+                </span>
+              </div>
               <p className="text-xs text-center text-gray-500 dark:text-gray-400">
                 {appInfo?.description || '桌面端任务管理软件 - 让任务安全停靠、高效启航'}
               </p>

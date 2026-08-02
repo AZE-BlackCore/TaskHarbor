@@ -48,6 +48,10 @@ export interface TaskFilters {
   tagId?: string;
   status?: string;
   assignee?: string;
+  search?: string;
+  priority?: string;
+  dateRange?: { start: string; end: string };
+  dateField?: 'createdAt' | 'startDate' | 'estimatedEndDate';
 }
 
 // 暴露 API 给渲染进程
@@ -105,8 +109,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   deleteTask: (id: string) => 
     ipcRenderer.invoke('tasks:delete', id),
   
-  deleteTasksBatch: (ids: string[]) => 
+  deleteTasksBatch: (ids: string[]) =>
     ipcRenderer.invoke('tasks:deleteBatch', ids),
+
+  getTaskStats: () =>
+    ipcRenderer.invoke('tasks:getStats'),
   
   // ========== 子任务管理 ==========
   getSubtasks: (taskId: string) => 
@@ -281,6 +288,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // ========== 应用信息 ==========
   getAppInfo: () =>
     ipcRenderer.invoke('get-app-info'),
+
+  // ========== 数据库信息 ==========
+  getDatabasePath: () =>
+    ipcRenderer.invoke('window:getDatabasePath'),
 });
 
 console.log('Preload script loaded successfully');

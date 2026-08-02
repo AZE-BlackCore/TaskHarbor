@@ -16,6 +16,7 @@ interface ElectronAPI {
   updateTask: (id: string, updates: Record<string, unknown>) => Promise<{ success: boolean; error?: string }>;
   deleteTask: (id: string) => Promise<{ success: boolean; error?: string }>;
   deleteTasksBatch: (ids: string[]) => Promise<{ success: boolean; error?: string }>;
+  getTaskStats: () => Promise<{ success: boolean; data: Record<string, unknown>; error?: string }>;
   
   // 子任务
   getSubtasks: (taskId: string) => Promise<{ success: boolean; data: Record<string, unknown>[]; error?: string }>;

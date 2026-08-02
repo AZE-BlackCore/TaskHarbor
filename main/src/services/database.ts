@@ -13,7 +13,7 @@ const SAVE_DELAY = 1000; // 1 秒防抖延迟
 /**
  * 数据库管理器 - 单例模式
  */
-class DatabaseManager {
+export class DatabaseManager {
   private static instance: DatabaseManager | null = null;
   private db: Database | null = null;
   private dbPath: string = '';

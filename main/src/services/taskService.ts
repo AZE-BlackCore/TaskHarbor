@@ -36,6 +36,10 @@ export interface TaskFilters {
   tagId?: string;
   status?: string;
   assignee?: string;
+  search?: string;
+  priority?: string;
+  dateRange?: { start: string; end: string };
+  dateField?: 'createdAt' | 'startDate' | 'estimatedEndDate';
 }
 
 /**
@@ -248,6 +252,22 @@ export class TaskService {
       params.push(filters.assignee);
     }
 
+    if (filters?.priority) {
+      query += ' AND priority = ?';
+      params.push(filters.priority);
+    }
+
+    if (filters?.search) {
+      query += ' AND (description LIKE ? OR notes LIKE ? OR issues LIKE ?)';
+      const kw = `%${filters.search}%`;
+      params.push(kw, kw, kw);
+    }
+
+    if (filters?.dateRange && filters?.dateField) {
+      query += ` AND ${filters.dateField} >= ? AND ${filters.dateField} <= ?`;
+      params.push(filters.dateRange.start, filters.dateRange.end);
+    }
+
     query += ' ORDER BY createdAt DESC';
 
     const stmt = this.db.prepare(query);
@@ -418,6 +438,33 @@ export class TaskService {
       return Math.round(row.avgProgress || 0);
     }
     return 0;
+  }
+
+  /**
+   * 综合统计：总数、按状态/优先级分组、平均进度
+   * @returns 统计聚合对象
+   */
+  async getStats() {
+    const total = await this.count();
+    const byStatus = await this.countByStatus();
+    const byAssignee = await this.countByAssignee();
+    const avgProgress = await this.averageProgress();
+
+    // Count by priority
+    const priorityQuery = `
+      SELECT priority, COUNT(*) as count 
+      FROM tasks 
+      WHERE priority IS NOT NULL
+      GROUP BY priority
+    `;
+    const stmt = this.db.prepare(priorityQuery);
+    const byPriority: Record<string, number> = {};
+    while (stmt.step()) {
+      const row = stmt.getAsObject() as any;
+      byPriority[row.priority] = row.count;
+    }
+
+    return { total, byStatus, byAssignee, byPriority, averageProgress: avgProgress };
   }
 }
 

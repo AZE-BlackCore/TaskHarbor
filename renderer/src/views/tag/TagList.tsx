@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useTagStore } from '../../stores/tagStore';
 import { useTaskStore } from '../../stores/taskStore';
 import { TagCard } from '../../components/tag/TagCard';
@@ -7,20 +7,48 @@ import { ProjectSkeleton } from '../../components/ui/Skeleton';
 import { Plus, Grid, List, PieChart } from 'lucide-react';
 import type { Tag } from '../../types';
 
+interface TagStatsMap {
+  [tagId: string]: { taskCount: number; completedCount: number; averageProgress: number };
+}
+
 interface TagListProps {
   onSelectTag?: (tag: Tag) => void;
 }
 
 export function TagList({ onSelectTag }: TagListProps) {
-  const { tags, fetchTags, createTag, updateTag, deleteTag, loading, setCurrentTag } = useTagStore();
-  const { tasks } = useTaskStore();
+  const { tags, fetchTags, createTag, updateTag, deleteTag, getTagStats, loading, setCurrentTag } = useTagStore();
+  const { tasks, fetchTasks } = useTaskStore();
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editingTag, setEditingTag] = useState<Tag | null>(null);
+  const [statsMap, setStatsMap] = useState<TagStatsMap>({});
 
   useEffect(() => {
     fetchTags();
-  }, [fetchTags]);
+    fetchTasks();
+  }, [fetchTags, fetchTasks]);
+
+  // Fetch real stats for each tag from backend
+  useEffect(() => {
+    if (tags.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      const map: TagStatsMap = {};
+      for (const tag of tags) {
+        const stats = await getTagStats(tag.id);
+        if (stats) {
+          const byStatus = stats.byStatus || [];
+          const taskCount = stats.totalTasks;
+          const completedCount = byStatus.find((s: any) => s.status === 'done')?.count || 0;
+          map[tag.id] = { taskCount, completedCount, averageProgress: stats.averageProgress };
+        } else {
+          map[tag.id] = { taskCount: 0, completedCount: 0, averageProgress: 0 };
+        }
+      }
+      if (!cancelled) setStatsMap(map);
+    })();
+    return () => { cancelled = true; };
+  }, [tags, getTagStats]);
 
   const handleEdit = (tag: Tag) => {
     setEditingTag(tag);
@@ -43,21 +71,9 @@ export function TagList({ onSelectTag }: TagListProps) {
     setEditingTag(null);
   };
 
-  // 计算标签统计
-  const getTagStats = useMemo(() => {
-    return (tagId: string): { taskCount: number; completedCount: number; averageProgress: number } => {
-      // 在任务-标签关联关系的逻辑需要补充，这里暂时返回示例值
-      // 实际应用中需要获取标签关联的任务
-      const mockTasks = tasks.slice(0, Math.min(5, tasks.length)); // 临时示例
-      
-      const completed = mockTasks.filter(t => t.status === 'done').length;
-      const avgProgress = mockTasks.length > 0
-        ? Math.round(mockTasks.reduce((sum, t) => sum + t.progress, 0) / mockTasks.length)
-        : 0;
-
-      return { taskCount: mockTasks.length, completedCount: completed, averageProgress: avgProgress };
-    };
-  }, [tasks]);
+  const getStats = (tagId: string) => {
+    return statsMap[tagId] || { taskCount: 0, completedCount: 0, averageProgress: 0 };
+  };
 
   return (
     <div className="h-full flex flex-col bg-gray-100 dark:bg-dark-bg">
@@ -104,7 +120,7 @@ export function TagList({ onSelectTag }: TagListProps) {
         ) : (
           <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4' : 'space-y-4'}>
             {tags.map((tag) => {
-              const stats = getTagStats(tag.id);
+              const stats = getStats(tag.id);
               return viewMode === 'grid' ? (
                 <TagCard
                   key={tag.id}

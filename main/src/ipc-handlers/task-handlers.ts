@@ -87,6 +87,17 @@ export async function setupTaskHandlers() {
     }
   });
 
+  // 获取任务综合统计
+  ipcMain.handle('tasks:getStats', async () => {
+    try {
+      const stats = await taskService.getStats();
+      return { success: true, data: stats };
+    } catch (error: any) {
+      console.error('Error getting task stats:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
   // 获取子任务
   ipcMain.handle('subtasks:getByTaskId', async (_, taskId) => {
     try {

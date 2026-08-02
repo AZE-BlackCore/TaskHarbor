@@ -346,13 +346,6 @@ function updateTrayMenu() {
         updateTrayMenu();
       },
     },
-    {
-      label: '桌面悬浮卡片',
-      click: () => {
-        console.log('[updateTrayMenu] Creating desktop card');
-        createFloatingWindow({ page: 'desktop-card', x: 200, y: 200 });
-      },
-    },
     { type: 'separator' },
     {
       label: '关于 TaskHarbor',
@@ -453,28 +446,18 @@ export function createFloatingWindow(options?: {
   clickThrough?: boolean;
   x?: number;
   y?: number;
-  page?: 'floating' | 'desktop-card';
 }) {
-  const page = options?.page || 'floating';
-  const width = page === 'desktop-card' ? 400 : 400;
-  const height = page === 'desktop-card' ? 700 : 600;
-
   const floatingWin = new BrowserWindow({
-    width,
-    height,
+    width: 400,
+    height: 600,
     x: options?.x || 100,
     y: options?.y || 100,
-    // 桌面卡片使用普通窗口，悬浮窗口使用无边框透明
-    frame: page === 'desktop-card' ? true : false,
-    transparent: page === 'floating',
-    // 桌面卡片不设置 alwaysOnTop 避免屏闪
-    alwaysOnTop: page === 'floating',
-    // 桌面卡片显示在任务栏
-    skipTaskbar: page === 'floating',
+    frame: false,
+    transparent: true,
+    alwaysOnTop: true,
+    skipTaskbar: true,
     resizable: false,
     movable: true,
-    // 桌面卡片添加阴影提高视觉效果
-    hasShadow: page === 'desktop-card' ? true : false,
     opacity: options?.opacity || 0.95,
     webPreferences: {
       nodeIntegration: false,
@@ -488,10 +471,10 @@ export function createFloatingWindow(options?: {
   }
 
   if (process.env.NODE_ENV === 'development') {
-    floatingWin.loadURL(`http://localhost:5173/${page}`);
+    floatingWin.loadURL(`http://localhost:5173/floating`);
   } else {
     const htmlPath = getResourcePath('renderer/dist/index.html');
-    floatingWin.loadURL(`file:///${htmlPath.replace(/\\/g, '/')}#/${page}`);
+    floatingWin.loadURL(`file:///${htmlPath.replace(/\\/g, '/')}#/floating`);
   }
 
   return floatingWin;
