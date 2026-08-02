@@ -11,7 +11,7 @@
 **桌面端任务管理软件 - 让任务安全停靠、高效启航**
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.2.0-teal.svg)]()
+[![Version](https://img.shields.io/badge/version-1.2.1-teal.svg)]()
 [![Electron](https://img.shields.io/badge/Electron-28.1.0-blue.svg)](https://www.electronjs.org/)
 [![React](https://img.shields.io/badge/React-18-blue.svg)](https://reactjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue.svg)](https://www.typescriptlang.org/)
@@ -145,6 +145,35 @@ TaskHarbor 是一款功能完整的桌面端任务管理应用，支持日程管
 ---
 
 ## 📦 版本历史
+
+### v1.2.1（2026-08-02）
+
+本次更新聚焦于任务管理流程的完整性、字段通用化以及数据复盘能力增强。
+
+#### 任务编辑功能完善
+- Day Todo 日程卡片新增 hover 编辑/删除按钮，日程事件创建后可编辑
+- 日程概览创建对话框重构为支持创建/编辑双模式
+- 最近待办新增任务创建和编辑功能，复用 TaskEditDialog 组件
+- 待办箱新增完整任务创建和编辑功能，替换原快速添加表单
+
+#### 任务时间显示优化
+- 最近待办和待办箱任务卡片新增开始时间和结束时间显示
+- 优先显示 startDate 和 estimatedEndDate，无时间时回退显示创建时间
+
+#### 任务字段通用化改造
+- 将软件开发专用术语改为通用任务描述
+- 模块 → 分类，功能模块 → 子分类
+- 开始时间 → 开始日期，预计完成 → 截止日期
+- 责任人 → 负责人，存在的问题 → 遇到的问题，备注 → 补充说明
+- 状态标签通用化：审查中 → 等待确认，已阻塞 → 已暂停
+
+#### 数据复盘增强
+- 新增智能任务分析：生产力评分、完成趋势、优先级分布等多维度分析
+- 新增自动化报告生成：支持 Markdown 格式报告导出，HTML 渲染预览
+- 报告预览支持 react-markdown + remark-gfm 渲染，表格/列表/代码块正常展示
+
+#### 设置面板优化
+- 移除视图设置排序功能，精简设置项
 
 ### v1.2.0（2026-08-02）
 
@@ -523,10 +552,13 @@ CREATE TABLE tags (
 - [x] 智能任务提醒（可拖拽、可收起）
 - [x] 桌面通知系统
 - [x] 数据导出（Excel/CSV/Markdown）
+- [x] 智能任务分析
+- [x] 自动化报告生成
+- [x] 任务编辑功能完善（创建后可编辑）
+- [x] 任务字段通用化改造
 
 ### 进行中 🚧
-- [ ] 智能任务分析
-- [ ] 自动化报告生成
+- [ ] 云端同步（规划中）
 
 ### 计划中 📋
 - [ ] 云端同步
