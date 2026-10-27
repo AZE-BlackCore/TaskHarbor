@@ -7,6 +7,7 @@ import { ScheduleView } from './views/ScheduleView'
 import { InboxView } from './views/InboxView'
 import { StatsView } from './views/StatsView'
 import { TagList } from './views/tag/TagList'
+import { AgentHub } from './views/AgentHub'
 import { FloatingWindow } from './views/FloatingWindow'
 import { TaskReminder } from './components/notification/TaskReminder'
 
@@ -39,6 +40,7 @@ function App() {
           <Route path="inbox" element={<InboxView />} />
           <Route path="review" element={<StatsView />} />
           <Route path="tags" element={<TagList />} />
+          <Route path="agent" element={<AgentHub />} />
           {/* Old route compatibility redirects */}
           <Route path="list" element={<Navigate to="/recent" replace />} />
           <Route path="gantt" element={<Navigate to="/day-todo" replace />} />

@@ -89,6 +89,7 @@ Thumbs.db
 
 # Build outputs (explicit)
 dist-output/
+dist-output-*/
 *.exe
 *.blockmap
 *.yml
@@ -97,6 +98,8 @@ dist-output/
 .claude/
 .qwen/
 .workbuddy/memory/
+.workbuddy/artifacts/
+.clangd
 
 # Scripts
 scripts/

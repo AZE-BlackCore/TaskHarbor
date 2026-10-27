@@ -1,7 +1,8 @@
 import { app, BrowserWindow, ipcMain, session, globalShortcut, Tray, Menu, dialog } from 'electron';
 import * as path from 'path';
 import { existsSync } from 'fs';
-import { setupDatabase } from './services/database';
+import { setupDatabase, closeDatabase, forceSaveDatabase } from './services/database';
+
 import { setupTaskHandlers } from './ipc-handlers/task-handlers';
 import { setupTagHandlers } from './ipc-handlers/tag-handlers';
 import { setupProjectHandlers } from './ipc-handlers/project-handlers';
@@ -11,6 +12,8 @@ import { setupScheduleHandlers } from './ipc-handlers/schedule-handlers';
 import { setupReminderHandlers } from './ipc-handlers/reminder-handlers';
 import { setupExportHandlers } from './ipc-handlers/export-handlers';
 import { startReminderScheduler, stopReminderScheduler } from './services/reminderService';
+import { setupApiServer, closeApiServer } from './server/apiServer';
+import { taskService } from './services/taskService';
 
 let tray: Tray | null = null;
 let mainWindow: BrowserWindow | null = null;
@@ -32,7 +35,8 @@ function setupCSP() {
         "style-src 'self' 'unsafe-inline' http://localhost:5173; ",
         "font-src 'self' data:; ",
         "img-src 'self' data: blob: http://localhost:5173; ",
-        "connect-src 'self' http://localhost:5173 ws://localhost:5173; ",
+        // 放行本机回环：Agent 接入面板需 fetch 本地 HTTP API（端口可在面板调整）
+        "connect-src 'self' http://localhost:5173 ws://localhost:5173 http://127.0.0.1:* http://localhost:*; ",
       ].join('')
     : [
         "default-src 'self'; ",
@@ -40,7 +44,8 @@ function setupCSP() {
         "style-src 'self' 'unsafe-inline' data:; ",
         "font-src 'self' data:; ",
         "img-src 'self' data: blob:; ",
-        "connect-src 'self'; ",
+        // 放行本机回环：Agent 接入面板需 fetch 本地 HTTP API（端口可在面板调整）
+        "connect-src 'self' http://127.0.0.1:* http://localhost:*; ",
       ].join('');
 
   console.log('[CSP] Mode:', isDev ? 'Dev' : 'Production');
@@ -487,6 +492,8 @@ app.whenReady().then(async () => {
     setupCSP();
 
     await setupDatabase();
+    // 初始化任务服务单例的数据库连接，供 HTTP API 任务端点使用
+    await taskService.init();
     console.log('[App] Database setup complete');
 
     await setupTaskHandlers();
@@ -498,6 +505,9 @@ app.whenReady().then(async () => {
     setupReminderHandlers();
     setupExportHandlers();
     console.log('[App] IPC handlers setup complete');
+
+    // 启动本地 HTTP API（供 WorkBuddy / MCP / 脚本对接写入日程）
+    setupApiServer();
 
     // 启动提醒调度器（每 60 秒扫描一次到期提醒）
     startReminderScheduler(async (_taskId) => null);
@@ -511,6 +521,10 @@ app.whenReady().then(async () => {
 
     // 获取应用版本信息
     ipcMain.handle('get-app-info', () => {
+      // MCP server 路径：打包后随安装包内置到 resources/mcp-server，开发时指向源码
+      const mcpServerPath = app.isPackaged
+        ? path.join(process.resourcesPath, 'mcp-server', 'server.mjs')
+        : path.join(app.getAppPath(), 'tools', 'mcp-server', 'server.mjs');
       return {
         success: true,
         version: app.getVersion(),
@@ -518,6 +532,10 @@ app.whenReady().then(async () => {
         author: 'AZE-BlackCore',
         productName: app.getName(),
         description: '桌面端任务管理软件 - 让任务安全停靠、高效启航',
+        isPackaged: app.isPackaged,
+        resourcesPath: process.resourcesPath,
+        appPath: app.getAppPath(),
+        mcpServerPath,
       };
     });
 
@@ -530,27 +548,46 @@ app.whenReady().then(async () => {
         createTray();
       }
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('[App] Failed to initialize app:', error);
   }
 });
 
 app.on('window-all-closed', () => {
   console.log('[App] All windows closed');
+  // 窗口全部关闭后先强制刷盘一次，避免数据未持久化（用户常通过升级安装包覆盖旧进程）
+  try { forceSaveDatabase(); } catch (e) { console.error('[App] Save on window-close failed:', e); }
   // 不退出应用，保持托盘运行
   // if (process.platform !== 'darwin') {
   //   app.quit();
   // }
 });
 
-// 所有窗口关闭时退出应用（仅当没有托盘时）
-app.on('before-quit', () => {
-  console.log('[App] Before quit');
+// 应用即将退出：同步关闭数据库（强制刷盘），避免安装新版本覆盖旧进程导致数据丢失
+app.on('before-quit', (event) => {
+  console.log('[App] Before quit, force saving database...');
+  try {
+    closeApiServer();
+  } catch (e) {
+    console.error('[App] Failed to close API server on quit:', e);
+  }
+  try {
+    closeDatabase();
+    console.log('[App] Database closed successfully');
+  } catch (e) {
+    console.error('[App] Failed to close database on quit:', e);
+  }
   stopReminderScheduler();
   if (tray) {
     tray.destroy();
     tray = null;
   }
+});
+
+// will-quit 作为最终兜底保存，防止 before-quit 未执行完时进程强杀
+app.on('will-quit', (event) => {
+  console.log('[App] Will quit, final save attempt...');
+  try { forceSaveDatabase(); } catch (e) { /* ignore */ }
 });
 
 export { mainWindow };

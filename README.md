@@ -11,12 +11,12 @@
 **桌面端任务管理软件 - 让任务安全停靠、高效启航**
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.2.1-teal.svg)]()
-[![Electron](https://img.shields.io/badge/Electron-28.1.0-blue.svg)](https://www.electronjs.org/)
+[![Version](https://img.shields.io/badge/version-1.5.3-teal.svg)]()
+[![Electron](https://img.shields.io/badge/Electron-28.3.3-blue.svg)](https://www.electronjs.org/)
 [![React](https://img.shields.io/badge/React-18-blue.svg)](https://reactjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue.svg)](https://www.typescriptlang.org/)
 
-[功能特性](#-功能特性) • [版本历史](#-版本历史) • [技术栈](#-技术栈) • [快速开始](#-快速开始) • [项目结构](#-项目结构) • [开发状态](#-开发状态)
+[功能特性](#-功能特性) • [Agent 接入](#-agent-接入与-mcp-本地-api) • [版本历史](#-版本历史) • [技术栈](#-技术栈) • [快速开始](#-快速开始) • [项目结构](#-项目结构) • [开发状态](#-开发状态)
 
 </div>
 
@@ -24,19 +24,31 @@
 
 ## 📋 简介
 
-TaskHarbor 是一款功能完整的桌面端任务管理应用，支持日程管理、任务追踪、数据复盘等功能。采用 Electron + React 架构，提供跨平台的桌面体验。
+**TaskHarbor** 是一款面向个人与小团队的**桌面端任务与日程管理应用**。它以「本地优先、数据自主」为设计原则，把任务、日程、标签、复盘与智能提醒整合进一个清爽的桌面客户端，并在此基础上提供了 **Agent 接入能力**——让 WorkBuddy / Claude / 各类 AI Agent 与自动化脚本能够通过本地 HTTP API 与 MCP 协议，直接读写你的任务与日程。
 
-**TaskHarbor 寓意**：像港湾一样，让你的所有任务都能安全停靠、有序管理、高效启航。
+**名字寓意**：像港湾一样，让你的所有任务都能安全停靠、有序管理、高效启航。
 
-**核心优势**：
-- 🚀 **高性能** - 数据库操作优化 80%+，响应时间 <100ms
-- 🎨 **现代化 UI** - 全新界面设计，深色模式，流畅动画
-- 📅 **日程管理** - 日期滚动导航，月历/日视图切换，快速添加
-- 📊 **数据复盘** - 六维概览，状态/优先级/责任人多维度统计
-- 🏷️ **标签系统** - 自定义颜色，真实统计数据，分类管理
+### 它解决什么问题
+
+| 传统待办工具的痛点 | TaskHarbor 的做法 |
+|---|---|
+| 任务散落在多个 App、清单、便签里 | 任务 / 日程 / 标签 / 复盘统一在一个应用内闭环 |
+| 数据在云端，隐私与可用性存疑 | 数据完全落盘本地 SQLite（`todolist.db`），离线可用 |
+| 只想记录，缺少「复盘」 | 内建六维数据统计、智能任务分析与自动化报告 |
+| AI 想帮你排期却无法落地 | 本地 HTTP API + MCP，Agent 可直接创建/查询/删除任务与日程 |
+| 提醒靠自觉 | 逾期/今日/明日/即将到期分级提醒 + 系统桌面通知 |
+
+### 核心优势
+
+- 🚀 **高性能** - 数据库延迟保存（防抖 200ms）+ 查询缓存，响应时间 <100ms
+- 🎨 **现代化 UI** - 青色主色调，浅色/深色主题，流畅过渡动画
+- 📅 **日程管理** - 日期滚动导航，月历/日视图切换，快速添加、重复事件、任务关联
+- 📊 **数据复盘** - 六维概览，状态/优先级/负责人多维度统计，智能分析与报告导出
+- 🏷️ **标签系统** - 自定义颜色，真实统计数据，分类筛选
 - 👤 **用户信息** - 本地头像、昵称、签名设置，个性化体验
-- 🔔 **智能提醒** - 可拖拽的提醒面板，支持桌面通知
-- 💾 **本地优先** - 数据完全本地存储，保护隐私
+- 🔔 **智能提醒** - 可拖拽的提醒面板，分级提醒，桌面通知
+- 🤖 **Agent 接入** - 内建本地 HTTP API + MCP Server，AI Agent 可直连读写（v1.4.0+）
+- 💾 **本地优先** - 数据完全本地存储，保护隐私；原子写 + 自动备份防损坏
 
 ---
 
@@ -144,7 +156,140 @@ TaskHarbor 是一款功能完整的桌面端任务管理应用，支持日程管
 
 ---
 
+## 🤖 Agent 接入与 MCP（本地 API）
+
+> 自 **v1.4.0** 起提供，v1.5.x 持续完善。让 AI Agent、脚本、自动化流程直接读写 TaskHarbor 的任务与日程。
+
+### 设计目标
+
+让「AI 帮你排期 / 记待办」真正落地：Agent 不再只能"建议"，而是可以把任务与日程**真实写入**你的本地数据库，你在应用界面即时可见。
+
+### 架构
+
+```
+AI Agent / WorkBuddy / curl / 脚本
+        │
+        ├── MCP（stdio JSON-RPC 2.0）── tools/mcp-server/server.mjs
+        │                                   │
+        └── HTTP ──────────────────────────┴──▶ 127.0.0.1:18765（主进程内嵌 API）
+                                                       │
+                                                      ▼
+                                            TaskHarbor SQLite（本地落盘）
+```
+
+- 应用启动时在**主进程内嵌**一个 HTTP Server，默认监听 `127.0.0.1:18765`（仅本机回环，不暴露局域网）。
+- MCP Server 是**零依赖 Node 脚本**，内部转调上述本地 API，供支持 MCP 的 AI 客户端（WorkBuddy / Claude 等）调用。
+- 两条通道复用同一套 `scheduleService` / `taskService`，写入即落盘，界面即时刷新。
+
+### 本地 HTTP API
+
+| 方法 | 端点 | 说明 |
+|---|---|---|
+| GET | `/api/health` | 健康检查，返回版本、运行时长、MCP server 安装路径 |
+| POST | `/api/schedules` | 创建日程（`title` / `startTime` / `endTime` 必填） |
+| GET | `/api/schedules` | 列出日程，支持 `date` / `start`+`end` / `priority` / `search` |
+| GET·PUT·DELETE | `/api/schedules/:id` | 日程详情 / 更新 / 删除 |
+| POST | `/api/tasks` | 创建任务（`description` 必填） |
+| GET | `/api/tasks` | 列出任务，支持 `status` / `assignee` / `search` |
+| GET·PUT·DELETE | `/api/tasks/:id` | 任务详情 / 更新 / 删除 |
+
+**示例**：
+
+```bash
+# 健康检查
+curl http://127.0.0.1:18765/api/health
+
+# 创建一条日程
+curl -X POST http://127.0.0.1:18765/api/schedules \
+  -H "Content-Type: application/json" \
+  -d '{"title":"团队周会","startTime":"2026-10-28T01:00:00.000Z","endTime":"2026-10-28T02:00:00.000Z","location":"线上"}'
+
+# 创建一个任务
+curl -X POST http://127.0.0.1:18765/api/tasks \
+  -H "Content-Type: application/json" \
+  -d '{"description":"完成 Agent 接入面板","status":"in_progress","assignee":"WorkBuddy"}'
+```
+
+**可选安全项**（环境变量）：
+
+| 变量 | 作用 |
+|---|---|
+| `TASKHARBOR_API_PORT` | 自定义监听端口（默认 18765） |
+| `TASKHARBOR_API_TOKEN` | 设置后所有请求需带 `Authorization: Bearer <token>` |
+
+### MCP 工具（6 个）
+
+| 工具 | 功能 |
+|---|---|
+| `taskharbor_add_schedule` | 添加一条日程 |
+| `taskharbor_list_schedules` | 按日期 / 范围 / 关键词列出日程 |
+| `taskharbor_delete_schedule` | 删除一条日程 |
+| `taskharbor_add_task` | 添加一条任务 |
+| `taskharbor_list_tasks` | 按状态 / 负责人 / 关键词列出任务 |
+| `taskharbor_delete_task` | 删除一条任务 |
+
+### 在应用内完成配置（推荐）
+
+安装版启动后，左侧栏进入 **「Agent 接入」** 页面即可看到：
+
+1. **连接状态** — 实时检测本地 API 是否在线（在线/未连接、版本、运行时长），端口可改，每 15s 轮询。
+2. **本地 API 信息** — API 地址（可一键复制）与全部端点说明。
+3. **MCP 配置** — 一键复制 MCP 配置 JSON，其中 `server.mjs` 路径**已自动指向你当前安装目录**（`<安装目录>/resources/mcp-server/server.mjs`），无需手工替换；同时列出 6 个可用工具。
+4. **快速指令** — curl 创建日程 / 任务的示例，可直接复制运行。
+
+把 MCP 配置粘贴到客户端（如 `~/.workbuddy/mcp.json`）后，在连接器管理点 **Trust** 启用即可：
+
+```json
+{
+  "mcpServers": {
+    "taskharbor": {
+      "command": "node",
+      "args": ["<自动指向安装目录>/resources/mcp-server/server.mjs"],
+      "env": { "TASKHARBOR_API_PORT": "18765" }
+    }
+  }
+}
+```
+
+> **说明**：`server.mjs` 为纯 Node 脚本（随安装包内置），运行它的客户端机器需安装 Node.js。
+
+### 安全边界
+
+- API **仅监听 `127.0.0.1`**，不接受外部网络访问。
+- 可选 Bearer Token 鉴权。
+- 写入操作与界面操作走同一套 Service，字段校验、数据库约束一致。
+
 ## 📦 版本历史
+
+### v1.5.3（2026-10-27）
+
+**修复 Agent 接入面板一直显示「未连接」**：生产模式 CSP 的 `connect-src` 此前锁死为 `'self'`，渲染端对本机 `127.0.0.1:18765` 的跨源请求被静默拦截，导致面板即使 API 实际在运行也显示未连接。现放行本机回环 `http://127.0.0.1:* http://localhost:*`（支持面板自定义端口）。
+
+### v1.5.2（2026-10-27）
+
+**安装目录路径稳定自动获取**：MCP 配置路径改由 `get-app-info` IPC 直接读取主进程安装目录，不再仅依赖 HTTP 健康检查轮询。即使本地 API 尚未就绪，面板也能显示真实安装路径，消除占位符残留。
+
+### v1.5.1（2026-10-27）
+
+**安装包内置 MCP Server**：将 `tools/mcp-server` 纳入 `extraResources`，安装后 `server.mjs` 随包落到 `resources/mcp-server/server.mjs`，无需再从源码仓库单独获取；`/api/health` 返回 `mcpServerPath`，面板据此动态生成 MCP 配置。
+
+### v1.5.0（2026-10-27）
+
+**新增「Agent 接入」面板**：新增独立页面 `/agent`（侧边栏入口），在应用内即可查看并配置外部 Agent 对接——连接状态实时检测、本地 API 信息、可复制的 MCP 配置 JSON（端口联动）、6 个可用工具列表、curl 快速指令。
+
+### v1.4.0（2026-10-27）
+
+**新增任务写入通道**：在日程通道之外补齐对「任务」的外部写入能力。
+- `POST /api/tasks`、`GET /api/tasks`（`status`/`assignee`/`search` 过滤）、`GET/PUT/DELETE /api/tasks/:id`
+- MCP 工具 `taskharbor_add_task` / `taskharbor_list_tasks` / `taskharbor_delete_task`
+- 主进程在数据库就绪后显式初始化 `taskService`
+
+### v1.3.0（2026-10-27）
+
+**新增本地 HTTP API 与 MCP 对接通道**：
+- 主进程内嵌 HTTP Server（`127.0.0.1:18765`），提供日程 CRUD
+- 零依赖 MCP Server（`tools/mcp-server/server.mjs`），暴露 `taskharbor_add_schedule` / `list_schedules` / `delete_schedule`
+- 数据库加固：原子写（`.tmp` → rename → `.bak` 备份），延迟保存防抖 1000ms → 200ms
 
 ### v1.2.1（2026-08-02）
 
@@ -267,32 +412,41 @@ TaskHarbor 是一款功能完整的桌面端任务管理应用，支持日程管
 ### 核心技术
 | 技术 | 版本 | 用途 |
 |------|------|------|
-| **Electron** | 28.1.0 | 桌面应用框架 |
-| **React** | 18 | 前端 UI 框架 |
+| **Electron** | 28.3.3 | 桌面应用框架 |
+| **React** | 18.3 | 前端 UI 框架 |
 | **TypeScript** | 5 | 类型安全的 JavaScript |
 | **Vite** | 5 | 快速构建工具 |
 | **Tailwind CSS** | 3.4 | 原子化 CSS 框架 |
-| **Zustand** | - | 轻量级状态管理 |
-| **sql.js** | 1.10.3 | SQLite 数据库 |
-| **React Router** | 6 | 路由管理 |
+| **Zustand** | 5 | 轻量级状态管理 |
+| **sql.js** | 1.10.3 | SQLite 数据库（WASM） |
+| **React Router** | 7 | 路由管理 |
 | **Day.js** | - | 日期处理 |
+| **Node.js HTTP** | 内置 | 本地 Agent 接入 API |
+| **MCP** | JSON-RPC 2.0 | AI Agent 工具协议 |
 
 ### 架构设计
 ```
-┌─────────────────┐
-│  渲染进程 (UI)  │
-│  React + TS     │
-└────────┬────────┘
-         │ IPC
-┌────────┴────────┐
-│   Preload 脚本  │
-│  安全桥接       │
-└────────┬────────┘
-         │ IPC
-┌────────┴────────┐
-│   主进程        │
-│  Node.js + DB   │
-└─────────────────┘
+┌──────────────────────────────┐
+│      渲染进程 (UI)            │
+│      React 18 + TS + Tailwind │
+└──────────────┬───────────────┘
+               │ IPC（contextBridge）
+┌──────────────┴───────────────┐
+│      Preload 脚本（安全桥接）  │
+└──────────────┬───────────────┘
+               │ IPC
+┌──────────────┴───────────────┐        ┌──────────────────────────┐
+│          主进程               │◀──────▶│  外部 Agent / MCP / curl  │
+│  Node.js + sql.js + Services  │  HTTP  │  （仅 127.0.0.1 回环）     │
+│  ├ 任务 / 日程 / 标签 Service  │ 18765  └──────────────────────────┘
+│  ├ 内嵌 HTTP API Server       │
+│  └ 提醒调度 / 系统通知         │
+└──────────────┬───────────────┘
+               │
+       ┌───────┴────────┐
+       │  SQLite (本地)  │
+       │  todolist.db   │
+       └────────────────┘
 ```
 
 ---
@@ -381,6 +535,8 @@ TaskHarbor/
 │   │   │   ├── tag-handlers.ts      # 标签处理器
 │   │   │   ├── notification-handlers.ts
 │   │   │   └── window-handlers.ts
+│   │   ├── server/          # 本地 Agent 接入 API
+│   │   │   └── apiServer.ts # 内嵌 HTTP Server（127.0.0.1:18765）
 │   │   └── utils/           # 工具函数
 │   └── tsconfig.json
 │
@@ -409,6 +565,7 @@ TaskHarbor/
 │   │   │   ├── ScheduleView.tsx    # 日程概览
 │   │   │   ├── InboxView.tsx       # 待办箱
 │   │   │   ├── StatsView.tsx       # 数据复盘
+│   │   │   ├── AgentHub.tsx        # Agent 接入面板（MCP / API 配置）
 │   │   │   ├── tag/
 │   │   │   │   └── TagList.tsx     # 标签管理
 │   │   │   └── FloatingWindow.tsx  # 悬浮窗口
@@ -429,6 +586,13 @@ TaskHarbor/
 │   ├── App.tsx              # 应用入口
 │   ├── main.tsx
 │   └── package.json
+│
+├── tools/                   # Agent 接入配套工具
+│   ├── mcp-server/
+│   │   └── server.mjs       # 零依赖 MCP Server（打包进安装包 resources/）
+│   ├── smoke-test-api.mjs   # API 冒烟测试（日程 + 任务全链路）
+│   ├── verify-agent-write.mjs    # MCP→API→DB 全链路验证
+│   └── verify-taskharbor-api.mjs # 无 GUI 契约验证
 │
 ├── build/                   # 构建资源
 │   └── icon.ico
@@ -556,6 +720,9 @@ CREATE TABLE tags (
 - [x] 自动化报告生成
 - [x] 任务编辑功能完善（创建后可编辑）
 - [x] 任务字段通用化改造
+- [x] 本地 HTTP API（日程 / 任务 CRUD）
+- [x] MCP Server（6 个任务 / 日程工具）
+- [x] Agent 接入面板（应用内配置 MCP / 查看连接状态）
 
 ### 进行中 🚧
 - [ ] 云端同步（规划中）

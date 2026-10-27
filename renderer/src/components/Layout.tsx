@@ -29,6 +29,7 @@ import {
   Trash2,
   CheckCircle2,
   Tag,
+  Bot,
 } from 'lucide-react';
 import type { Tag as TagType } from '../types';
 
@@ -50,6 +51,7 @@ const MAIN_NAV: NavItem[] = [
   { id: 'schedule', label: '日程概览', icon: <CalendarDays className="w-5 h-5" />, path: '/schedule' },
   { id: 'inbox', label: '待办箱', icon: <Inbox className="w-5 h-5" />, path: '/inbox' },
   { id: 'review', label: '数据复盘', icon: <BarChart3 className="w-5 h-5" />, path: '/review' },
+  { id: 'agent', label: 'Agent 接入', icon: <Bot className="w-5 h-5" />, path: '/agent' },
 ];
 
 export function Layout({ darkMode, toggleDarkMode }: LayoutProps) {

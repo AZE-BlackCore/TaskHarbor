@@ -1,7 +1,7 @@
 # Simple packaging script
 Write-Host "Starting TaskHarbor packaging..." -ForegroundColor Green
 
-$projectRoot = "e:\AZE-BlackCore\TaskHarbor"
+$projectRoot = "e:\AZE-BlackCore-Agent\WorkBuddy_应用软件开发工程师_空间\08-Git仓库\03-移动与跨端\TaskHarbor-桌面端"
 $winUnpacked = "$projectRoot\dist-output\win-unpacked"
 
 Write-Host "Cleaning output directory..." -ForegroundColor Yellow

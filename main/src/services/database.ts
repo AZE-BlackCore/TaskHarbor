@@ -7,8 +7,7 @@ import { getUTCNow } from '../utils/timestamp';
 
 let db: Database | null = null;
 let DB_PATH = '';
-let saveTimeout: NodeJS.Timeout | null = null;
-const SAVE_DELAY = 1000; // 1 秒防抖延迟
+const SAVE_DELAY = 200; // 防抖写延迟缩短到 200ms，降低创建任务后立刻关闭的丢数据概率
 
 /**
  * 数据库管理器 - 单例模式
@@ -18,7 +17,7 @@ export class DatabaseManager {
   private db: Database | null = null;
   private dbPath: string = '';
   private saveTimeout: NodeJS.Timeout | null = null;
-  private readonly SAVE_DELAY = 1000;
+  private readonly SAVE_DELAY = 200; // 与常量保持一致，200ms 防抖
 
   private constructor() {}
 
@@ -38,7 +37,120 @@ export class DatabaseManager {
   }
 
   /**
-   * 延迟保存数据库，避免频繁 I/O 操作
+   * 原子性写文件：先写 .tmp 再 rename 为目标文件，避免写入过程中进程被强杀导致 db 文件变空/损坏
+   * 写入成功后同步更新 .bak 备份文件
+   */
+  private atomicWrite(filePath: string, buffer: Buffer) {
+    const tmpPath = `${filePath}.tmp`; // 统一命名：xxx.db.tmp，避免与 db 主名混淆
+    const bakPath = `${filePath}.bak`;
+    let wroteViaTmp = false;
+
+    // 清理残留的旧临时文件（上一次异常退出留下的）
+    try {
+      if (fs.existsSync(tmpPath)) {
+        fs.unlinkSync(tmpPath);
+      }
+    } catch (_) { /* ignore */ }
+
+    // 使用「短延迟+有限次重试」应对 Windows 文件锁/杀软扫描的瞬时 EPERM
+    const retry = <T>(fn: () => T, label: string): T => {
+      const maxRetries = 6;
+      const delays = [50, 80, 120, 180, 260, 400]; // ms，累计约 1s 内的重试窗口
+      let lastErr: any = null;
+      for (let i = 0; i < maxRetries; i++) {
+        try {
+          return fn();
+        } catch (e: any) {
+          lastErr = e;
+          if (e?.code !== 'EPERM' && e?.code !== 'EBUSY' && e?.code !== 'EACCES') {
+            throw e;
+          }
+          // 只针对锁/权限错误重试
+          const delay = delays[i] ?? 400;
+          const start = Date.now();
+          // eslint-disable-next-line no-empty
+          while (Date.now() - start < delay) { /* busy wait（ms 级别，可接受） */ }
+          console.warn(`[Database] Retry ${label}: attempt ${i + 1}/${maxRetries} after ${delay}ms, code=${e?.code}`);
+        }
+      }
+      throw lastErr;
+    };
+
+    // 路径 1：先写 tmp 文件 + fsync + rename（原子、不会出现半写导致的空 db 文件）
+    try {
+      retry(() => fs.writeFileSync(tmpPath, buffer), 'write tmp');
+      try {
+        const fd = fs.openSync(tmpPath, 'r+');
+        try { fs.fsyncSync(fd); } finally { fs.closeSync(fd); }
+      } catch (_fsyncErr) { /* unsupported fs, accept best-effort */ }
+      retry(() => fs.renameSync(tmpPath, filePath), 'rename tmp->db');
+      wroteViaTmp = true;
+    } catch (tmpErr) {
+      // tmp 路径失败（文件锁 / 权限 / 跨盘 rename），fallback 到直接写主文件
+      console.warn('[Database] Atomic write via .tmp failed, fallback to direct write:', tmpErr);
+      try {
+        // 先尝试把已有 db 做个备份（本次写入前），防止直写失败导致完全丢失
+        try {
+          if (fs.existsSync(filePath)) {
+            const preBak = `${filePath}.prewrite`;
+            if (fs.existsSync(preBak)) fs.unlinkSync(preBak);
+            fs.copyFileSync(filePath, preBak);
+          }
+        } catch (_) { /* ignore prewrite backup failure */ }
+        retry(() => fs.writeFileSync(filePath, buffer), 'direct write db');
+        wroteViaTmp = true; // 至少主文件写成功
+      } catch (directErr: any) {
+        console.error('[Database] Direct write also failed after retries:', directErr);
+        // 连直写都失败（EPERM 文件锁）：给出明确日志
+        if (directErr.code === 'EPERM' || directErr.code === 'EBUSY' || directErr.code === 'EACCES') {
+          console.error('[Database] PERMISSION/LOCK ERROR: Another process may still hold a lock on', filePath,
+            '. Please close all TaskHarbor instances (including tray), or restart Windows to release the file lock.');
+        }
+        // 向外抛出，让调用方处理
+        throw directErr;
+      } finally {
+        // 清理残留的 tmp
+        try { if (fs.existsSync(tmpPath)) fs.unlinkSync(tmpPath); } catch (_) { /* ignore */ }
+      }
+    }
+
+    if (wroteViaTmp) {
+      // 更新备份文件（允许失败，不影响主流程）
+      try {
+        fs.copyFileSync(filePath, bakPath);
+      } catch (_bakErr) { /* ignore backup errors */ }
+    }
+  }
+
+  /**
+   * 从备份文件恢复数据库
+   * @returns 恢复成功返回 true
+   */
+  private restoreFromBackup(): boolean {
+    const bakPath = `${this.dbPath}.bak`;
+    try {
+      if (!fs.existsSync(bakPath)) return false;
+      const stat = fs.statSync(bakPath);
+      if (stat.size < 1024) { // 备份过小（<1KB）视为无效，避免恢复空文件
+        console.warn('[Database] Backup file is too small, skip restore');
+        return false;
+      }
+      // 如果主 db 存在，先保留一份故障快照
+      if (fs.existsSync(this.dbPath)) {
+        const corruptSnapshot = `${this.dbPath}.corrupt-${Date.now()}`;
+        try { fs.renameSync(this.dbPath, corruptSnapshot); } catch (_) {}
+      }
+      fs.copyFileSync(bakPath, this.dbPath);
+      console.log('[Database] Restored from backup:', bakPath);
+      return true;
+    } catch (e) {
+      console.error('[Database] Failed to restore from backup:', e);
+      return false;
+    }
+  }
+
+  /**
+   * 延迟保存数据库（200ms 防抖），内部使用原子写避免损坏
    */
   async saveDatabase() {
     if (this.saveTimeout) {
@@ -50,17 +162,19 @@ export class DatabaseManager {
         try {
           const data = this.db!.export();
           const buffer = Buffer.from(data);
-          fs.writeFileSync(this.dbPath, buffer);
-          console.log('[Database] Saved at', getUTCNow());
+          this.atomicWrite(this.dbPath, buffer);
+          console.log('[Database] Saved at', getUTCNow(), 'size=', buffer.length);
         } catch (error) {
           console.error('[Database] Save error:', error);
+        } finally {
+          this.saveTimeout = null;
         }
       }
     }, this.SAVE_DELAY);
   }
 
   /**
-   * 强制立即保存（应用退出时使用）
+   * 强制立即保存（应用退出时使用），同步执行并使用原子写
    */
   async forceSave() {
     if (this.saveTimeout) {
@@ -70,8 +184,8 @@ export class DatabaseManager {
     if (this.db) {
       const data = this.db.export();
       const buffer = Buffer.from(data);
-      fs.writeFileSync(this.dbPath, buffer);
-      console.log('[Database] Force saved at', getUTCNow());
+      this.atomicWrite(this.dbPath, buffer);
+      console.log('[Database] Force saved at', getUTCNow(), 'size=', buffer.length);
     }
   }
 }
@@ -89,32 +203,70 @@ export async function getDatabase(): Promise<Database> {
 export async function setupDatabase() {
   try {
     const SQL = await initSqlJs();
-    
+    const manager = DatabaseManager.getInstance();
+
     // 初始化数据库路径
     DB_PATH = path.join(app.getPath('userData'), 'todolist.db');
-    
+
     // 确保数据库目录存在
     const dbDir = path.dirname(DB_PATH);
     if (!fs.existsSync(dbDir)) {
       fs.mkdirSync(dbDir, { recursive: true });
     }
 
-    // 如果数据库文件存在，加载它
-    if (fs.existsSync(DB_PATH)) {
-      const fileBuffer = fs.readFileSync(DB_PATH);
-      db = new SQL.Database(fileBuffer);
-      console.log('Database loaded from:', DB_PATH);
-    } else {
-      db = new SQL.Database();
-      console.log('Creating new database at:', DB_PATH);
-    }
-
-    // 更新 dbManager 状态
-    const manager = DatabaseManager.getInstance();
-    // @ts-ignore - 访问私有属性进行初始化
-    manager.db = db;
+    // 先把 dbPath 注入到 manager，restoreFromBackup 需要
     // @ts-ignore
     manager.dbPath = DB_PATH;
+
+    // 尝试加载主 db 文件；失败/为空/损坏时自动从 .bak 恢复
+    let loadAttempts = 0;
+    while (loadAttempts < 2) {
+      loadAttempts++;
+      try {
+        if (fs.existsSync(DB_PATH)) {
+          const stat = fs.statSync(DB_PATH);
+          // db 文件为空或过小（< 10KB 且不是首次创建），可能是写入过程中断电/强杀导致，尝试恢复
+          if (stat.size === 0 || (stat.size < 10240 && !fs.existsSync(DB_PATH + '.bak') === false && stat.size < 512)) {
+            console.warn('[Database] Main DB is empty/small (size=', stat.size, '), trying backup...');
+            // @ts-ignore
+            const restored = manager.restoreFromBackup();
+            if (!restored && stat.size === 0) break; // 无备份且文件为空：新建
+            // 有恢复或仍有内容：加载主 db
+          }
+          const fileBuffer = fs.readFileSync(DB_PATH);
+          db = new SQL.Database(fileBuffer);
+          // 做一次最简单的校验：确保 SELECT 1 可执行，否则视为损坏
+          try { db!.exec('SELECT 1'); } catch (_verifyErr) { throw new Error('DB verify failed'); }
+          console.log('[Database] Loaded from:', DB_PATH, 'size=', fs.statSync(DB_PATH).size);
+          break;
+        } else {
+          console.log('[Database] Creating new database at:', DB_PATH);
+          db = new SQL.Database();
+          break;
+        }
+      } catch (loadErr) {
+        console.error('[Database] Failed to load main DB (attempt', loadAttempts, '):', loadErr);
+        if (loadAttempts === 1) {
+          // @ts-ignore
+          const restored = manager.restoreFromBackup();
+          if (!restored) {
+            // 无备份或恢复失败：直接新建数据库（兜底），否则会导致应用启动失败
+            console.error('[Database] Cannot restore from backup, initializing empty new database');
+            db = new SQL.Database();
+            break;
+          }
+          // continue 再尝试加载恢复后的 db
+        } else {
+          console.error('[Database] Even after restore, DB load failed. Starting fresh.');
+          db = new SQL.Database();
+          break;
+        }
+      }
+    }
+
+    // 更新 dbManager 状态（dbPath 已注入）
+    // @ts-ignore
+    manager.db = db;
 
     // 启用外键约束（SQLite 默认关闭，必须每次连接后手动启用）
     db!.run('PRAGMA foreign_keys = ON');
