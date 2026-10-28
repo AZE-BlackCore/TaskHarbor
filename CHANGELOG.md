@@ -2,6 +2,16 @@
 
 本文件记录 TaskHarbor 各版本变更。（对外品牌名：**小湾清单 Cove**；内部技术标识仍沿用 `TaskHarbor`。）**版本号按语义化版本（SemVer）+ Conventional Commits 前缀维护**：`feat` 升 minor，`fix` 升 patch，`docs/test` 不升版但仍重新构建。
 
+## [1.9.4] - 2026-10-29
+
+### Fixed
+- **进度校验触发器从未真正创建过**：`validate_task_progress` 写成 `BEFORE INSERT OR UPDATE ON tasks` —— SQLite 不支持该语法（只支持 `BEFORE INSERT ON` / `BEFORE UPDATE ON`），抛出的语法错误又被 `catch` 统一打印成 "Trigger validate_task_progress already exists"，问题被掩盖至今，全新库和老库都没有这条校验。
+  - 拆成 `validate_task_progress_insert`（BEFORE INSERT）与 `validate_task_progress_update`（BEFORE UPDATE）两条，进度 0–100 校验真正生效。
+  - 触发器创建统一走 `createTrigger()`，失败时**打印真实错误原因**（不再一律谎报"已存在"），避免同类问题再次被吞。
+
+### Notes
+- 纯健壮性修复；版本号 1.9.3 → 1.9.4（patch）。
+
 ## [1.9.3] - 2026-10-29
 
 ### Fixed（P0 · 阻断级）

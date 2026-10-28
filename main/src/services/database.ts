@@ -645,47 +645,56 @@ export async function setupDatabase() {
     }
 
     // 创建数据验证触发器
-    try {
-      db!.run(`
-        CREATE TRIGGER validate_task_progress
-        BEFORE INSERT OR UPDATE ON tasks
-        FOR EACH ROW
-        BEGIN
-          SELECT CASE
-            WHEN NEW.progress < 0 OR NEW.progress > 100
-            THEN RAISE(ABORT, 'Progress must be between 0 and 100')
-          END;
-        END;
-      `);
-    } catch (e) {
-      console.log('Trigger validate_task_progress already exists');
-    }
+    // 注意：SQLite 不支持 `BEFORE INSERT OR UPDATE ON` 这种写法（语法错误），
+    // 必须拆成 INSERT / UPDATE 两条触发器。此前写成一条，异常又被 catch 统一打印成
+    // "already exists"，导致进度校验触发器从来没真正创建过。
+    const createTrigger = (name: string, sql: string) => {
+      try {
+        db!.run(sql);
+      } catch (e) {
+        // 打印真实原因，避免再次把语法错误误报成"已存在"
+        console.log(`[Database] 触发器 ${name} 未创建（已存在或语句有误）:`, e);
+      }
+    };
 
-    try {
-      db!.run(`
+    const progressCheckSql = (triggerName: string, event: 'INSERT' | 'UPDATE') => `
+      CREATE TRIGGER ${triggerName}
+      BEFORE ${event} ON tasks
+      FOR EACH ROW
+      BEGIN
+        SELECT CASE
+          WHEN NEW.progress < 0 OR NEW.progress > 100
+          THEN RAISE(ABORT, 'Progress must be between 0 and 100')
+        END;
+      END;
+    `;
+
+    createTrigger('validate_task_progress_insert', progressCheckSql('validate_task_progress_insert', 'INSERT'));
+    createTrigger('validate_task_progress_update', progressCheckSql('validate_task_progress_update', 'UPDATE'));
+
+    createTrigger(
+      'update_task_timestamp',
+      `
         CREATE TRIGGER update_task_timestamp
         AFTER UPDATE ON tasks
         FOR EACH ROW
         BEGIN
           UPDATE tasks SET updatedAt = datetime('now') WHERE id = NEW.id;
         END;
-      `);
-    } catch (e) {
-      console.log('Trigger update_task_timestamp already exists');
-    }
+      `
+    );
 
-    try {
-      db!.run(`
+    createTrigger(
+      'update_tag_timestamp',
+      `
         CREATE TRIGGER update_tag_timestamp
         AFTER UPDATE ON tags
         FOR EACH ROW
         BEGIN
           UPDATE tags SET updatedAt = datetime('now') WHERE id = NEW.id;
         END;
-      `);
-    } catch (e) {
-      console.log('Trigger update_tag_timestamp already exists');
-    }
+      `
+    );
 
     // 保存数据库
     dbManager.saveDatabase();

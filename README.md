@@ -13,7 +13,7 @@
 **桌面端任务管理软件 - 让任务安全停靠、高效启航**
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.9.3-teal.svg)]()
+[![Version](https://img.shields.io/badge/version-1.9.4-teal.svg)]()
 [![Electron](https://img.shields.io/badge/Electron-28.3.3-blue.svg)](https://www.electronjs.org/)
 [![React](https://img.shields.io/badge/React-18-blue.svg)](https://reactjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue.svg)](https://www.typescriptlang.org/)
@@ -319,6 +319,7 @@ curl -X PUT http://127.0.0.1:18765/api/schedules/<日程ID> \
 
 | 版本 | 日期 | 一句话说明 |
 |---|---|---|
+| **1.9.4** | 2026-10-29 | 修复进度校验触发器从未创建成功（SQLite 不支持 `BEFORE INSERT OR UPDATE ON`，异常被误报为"已存在"）；触发器创建统一打印真实原因 |
 | **1.9.3** | 2026-10-29 | **修复全新电脑首次启动必崩**（`agent_messages` 索引建在驼峰列名上导致建库失败）；索引创建统一容错 |
 | **1.9.2** | 2026-10-29 | 项目卡片宽度改为随项目名长度自适应（名不截断），指标区横向排列 |
 | **1.9.1** | 2026-10-29 | 计划看板项目卡片高度加倍，补上状态占比条与五状态明细，信息密度更足 |
