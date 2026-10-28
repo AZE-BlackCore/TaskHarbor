@@ -1,6 +1,6 @@
 import { app, BrowserWindow, ipcMain, session, globalShortcut, Tray, Menu, dialog } from 'electron';
 import * as path from 'path';
-import { existsSync } from 'fs';
+import { existsSync, mkdirSync, createWriteStream } from 'fs';
 import { setupDatabase, closeDatabase, forceSaveDatabase } from './services/database';
 
 import { setupTaskHandlers } from './ipc-handlers/task-handlers';
@@ -23,6 +23,30 @@ let isQuiting = false;
 
 // 窗口状态跟踪
 let mainWindowVisible = true;
+
+// 文件日志：打包后无控制台，将主进程日志落盘到 userData/logs/main.log，便于用户反馈问题时定位
+function setupFileLogging() {
+  try {
+    const logDir = path.join(app.getPath('userData'), 'logs');
+    if (!existsSync(logDir)) mkdirSync(logDir, { recursive: true });
+    const logFilePath = path.join(logDir, 'main.log');
+    const stream = createWriteStream(logFilePath, { flags: 'a' });
+    const ts = () => new Date().toISOString();
+    const fmt = (a: any) => (a && a.stack) ? a.stack : (typeof a === 'object' ? (() => { try { return JSON.stringify(a); } catch { return String(a); } })() : String(a));
+    const wrap = (orig: (...a: any[]) => void, level: string) => (...args: any[]) => {
+      orig(...args);
+      try { stream.write(`[${ts()}] [${level}] ${args.map(fmt).join(' ')}\n`); } catch { /* ignore */ }
+    };
+    console.log = wrap(console.log.bind(console), 'INFO');
+    console.error = wrap(console.error.bind(console), 'ERROR');
+    console.warn = wrap(console.warn.bind(console), 'WARN');
+    process.on('uncaughtException', (e: any) => console.error('[uncaughtException]', e?.stack || e));
+    process.on('unhandledRejection', (e: any) => console.error('[unhandledRejection]', e?.stack || e));
+    console.log('[Log] File logging enabled at', logFilePath);
+  } catch {
+    // 日志初始化失败不影响主流程
+  }
+}
 
 // 设置 Content Security Policy
 function setupCSP() {
@@ -249,6 +273,9 @@ function getIconPath(): string | undefined {
   if (app.isPackaged) {
     // 尝试多个可能的路径
     const paths = [
+      // 品牌更名后图标位于 renderer/public（extraResources 复制到 resources/renderer/public）
+      path.join(process.resourcesPath, 'renderer', 'public', 'icon.ico'),
+      path.join(process.resourcesPath, 'renderer', 'dist', 'icon.ico'),
       path.join(process.resourcesPath, 'build', 'icon.ico'),
       path.join(process.resourcesPath, 'icon.ico'),
       path.join(__dirname, '../build', 'icon.ico'),
@@ -383,20 +410,19 @@ function updateTrayMenu() {
 // 创建系统托盘
 function createTray() {
   const iconPath = getIconPath();
-  
-  if (iconPath && existsSync(iconPath)) {
-    try {
+
+  // 托盘创建失败不得阻断主初始化（历史上 new Tray('') 会抛 "Failed to load image from path ''"）
+  try {
+    if (iconPath && existsSync(iconPath)) {
       tray = new Tray(iconPath);
       console.log('[createTray] Tray created with icon:', iconPath);
-    } catch (error) {
-      console.error('[createTray] Failed to create tray with icon:', error);
-      // 使用空图标创建托盘（Windows 会显示默认图标）
-      tray = new Tray(path.join(__dirname, 'icon.png'));
+    } else {
+      console.warn('[createTray] No icon found, tray skipped (window still available)');
+      return;
     }
-  } else {
-    console.warn('[createTray] No icon found, creating tray without custom icon');
-    // 创建托盘时不使用图标，Windows 会显示默认图标
-    tray = new Tray('');
+  } catch (error) {
+    console.error('[createTray] Failed to create tray:', error);
+    return;
   }
 
   if (!tray) {
@@ -487,6 +513,7 @@ export function createFloatingWindow(options?: {
 
 app.whenReady().then(async () => {
   try {
+    setupFileLogging();
     console.log('[App] App ready, initializing...');
 
     setupCSP();

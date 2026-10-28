@@ -2,6 +2,14 @@
 
 本文件记录 TaskHarbor 各版本变更。（对外品牌名：**小湾清单 Cove**；内部技术标识仍沿用 `TaskHarbor`。）**版本号按语义化版本（SemVer）+ Conventional Commits 前缀维护**：`feat` 升 minor，`fix` 升 patch，`docs/test` 不升版但仍重新构建。
 
+## [1.6.2] - 2026-10-28
+
+### Fixed
+- **修复安装版托盘图标丢失导致的初始化异常（品牌更名回归）**：图标由 `build/` 迁移至 `renderer/public/` 后，`getIconPath()` 在打包态仍只查找 `resources/build/icon.ico`，找不到图标时执行 `new Tray('')` 抛出 `Failed to load image from path ''`，使托盘创建失败并中断主初始化流程（窗口可显示，但托盘图标/菜单异常，日志出现 `[App] Failed to initialize app`）。
+  - `getIconPath()` 打包态新增 `resources/renderer/public/icon.ico` 与 `resources/renderer/dist/icon.ico` 查找路径（extraResources 已将 `renderer/public` 复制到 `resources/renderer/public`）。
+  - `createTray()` 增加 `try/catch` 与「无图标则跳过托盘」的安全兜底，托盘初始化失败不再阻断主流程。
+- **新增主进程文件日志**：打包态无控制台，现将主进程日志落盘到 `%APPDATA%\taskharbor\logs\main.log`（含 `uncaughtException` / `unhandledRejection` 捕获），便于用户在遇到启动故障时提供日志定位。
+
 ## [1.6.1] - 2026-10-28
 
 ### Changed
