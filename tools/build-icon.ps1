@@ -25,12 +25,25 @@ if (-not (Test-Path $svg)) {
 $tmp = Join-Path $env:TEMP 'taskharbor_icon_png'
 New-Item -ItemType Directory -Force -Path $tmp | Out-Null
 
-# ---------- 1) ImageMagick ----------
-if (Get-Command magick -ErrorAction SilentlyContinue) {
+# ---------- 1) ImageMagick（PATH / 本地 tools/imagemagick / 环境变量） ----------
+$magick = $null
+$cands = @('magick')
+if ($env:IMAGEMAGICK_PATH) { $cands += $env:IMAGEMAGICK_PATH }
+$d = $root
+for ($i = 0; $i -lt 4; $i++) {
+  $cands += Join-Path $d 'tools' 'imagemagick' 'magick.exe'
+  $d = Join-Path $d '..'
+}
+foreach ($c in $cands) {
+  if ($c -eq 'magick') {
+    if (Get-Command magick -ErrorAction SilentlyContinue) { $magick = 'magick'; break }
+  } elseif (Test-Path $c) { $magick = $c; break }
+}
+if ($magick) {
   foreach ($s in $sizes) {
-    & magick -background none -resize "${s}x${s}" $svg (Join-Path $tmp "icon-$s.png")
+    & $magick -background none -resize "${s}x${s}" $svg (Join-Path $tmp "icon-$s.png")
   }
-  & magick (Join-Path $tmp 'icon-*.png') $out
+  & $magick (Join-Path $tmp 'icon-*.png') $out
   Write-Host "已用 ImageMagick 生成: $out" -ForegroundColor Green
   exit 0
 }
