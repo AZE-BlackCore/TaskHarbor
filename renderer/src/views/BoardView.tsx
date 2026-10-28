@@ -16,12 +16,12 @@ interface ProjectSummary {
   averageProgress: number;
 }
 
-const STATUS_META: Array<{ status: string; label: string; dot: string }> = [
-  { status: 'todo', label: '待处理', dot: 'bg-slate-400' },
-  { status: 'in-progress', label: '进行中', dot: 'bg-blue-500' },
-  { status: 'review', label: '等待确认', dot: 'bg-amber-500' },
-  { status: 'done', label: '已完成', dot: 'bg-teal-500' },
-  { status: 'blocked', label: '已暂停', dot: 'bg-red-500' },
+const STATUS_META: Array<{ status: string; label: string; dot: string; bar: string }> = [
+  { status: 'todo', label: '待处理', dot: 'bg-slate-400', bar: 'bg-slate-400' },
+  { status: 'in-progress', label: '进行中', dot: 'bg-blue-500', bar: 'bg-blue-500' },
+  { status: 'review', label: '等待确认', dot: 'bg-amber-500', bar: 'bg-amber-500' },
+  { status: 'done', label: '已完成', dot: 'bg-teal-500', bar: 'bg-teal-500' },
+  { status: 'blocked', label: '已暂停', dot: 'bg-red-500', bar: 'bg-red-500' },
 ];
 
 /**
@@ -88,67 +88,115 @@ export function BoardView() {
     }
   };
 
-  const renderCard = (project: ProjectSummary, muted = false) => (
-    <button
-      key={project.id}
-      onClick={() => navigate(`/board/${project.id}`)}
-      className={`group text-left p-5 rounded-xl border transition-all hover:shadow-md hover:-translate-y-0.5 ${
-        muted
-          ? 'border-dashed border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/30'
-          : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card'
-      }`}
-    >
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center gap-2 min-w-0">
-          <span
-            className="w-3 h-3 rounded-full flex-shrink-0"
-            style={{ backgroundColor: project.color }}
-          />
-          <h3 className="text-base font-semibold text-gray-900 dark:text-white truncate">
-            {project.name}
-          </h3>
-        </div>
-        <ChevronRight className="w-4 h-4 flex-shrink-0 text-gray-300 dark:text-gray-600 group-hover:text-teal-500 transition-colors" />
-      </div>
+  const renderCard = (project: ProjectSummary, muted = false) => {
+    const total = Math.max(0, project.totalTasks);
+    // 状态占比条的基准值，避免全 0 时除零
+    const ratioBase = total || 1;
 
-      <div className="mt-3 flex items-baseline gap-1">
-        <span className="text-2xl font-bold text-gray-900 dark:text-white">{project.totalTasks}</span>
-        <span className="text-xs text-gray-400">个任务</span>
-      </div>
-
-      <div className="mt-3">
-        <div className="flex items-center justify-between text-xs text-gray-400 mb-1">
-          <span>平均进度</span>
-          <span>{project.averageProgress}%</span>
-        </div>
-        <div className="h-1.5 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
-          <div
-            className="h-full rounded-full transition-all"
-            style={{
-              width: `${Math.min(100, Math.max(0, project.averageProgress))}%`,
-              backgroundColor: project.color,
-            }}
-          />
-        </div>
-      </div>
-
-      <div className="mt-3 flex flex-wrap gap-1.5">
-        {STATUS_META.map((meta) => {
-          const count = project.byStatus?.[meta.status] ?? 0;
-          if (!count) return null;
-          return (
+    return (
+      <button
+        key={project.id}
+        onClick={() => navigate(`/board/${project.id}`)}
+        className={`group text-left flex flex-col min-h-[340px] p-6 rounded-xl border transition-all hover:shadow-md hover:-translate-y-0.5 ${
+          muted
+            ? 'border-dashed border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/30'
+            : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card'
+        }`}
+      >
+        {/* 标题 */}
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
             <span
-              key={meta.status}
-              className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300"
-            >
-              <span className={`w-1.5 h-1.5 rounded-full ${meta.dot}`} />
-              {meta.label} {count}
+              className="w-3 h-3 rounded-full flex-shrink-0"
+              style={{ backgroundColor: project.color }}
+            />
+            <h3 className="text-base font-semibold text-gray-900 dark:text-white truncate">
+              {project.name}
+            </h3>
+          </div>
+          <ChevronRight className="w-4 h-4 flex-shrink-0 text-gray-300 dark:text-gray-600 group-hover:text-teal-500 transition-colors" />
+        </div>
+
+        {/* 任务总数 */}
+        <div className="mt-5 flex items-baseline gap-2">
+          <span className="text-4xl font-bold text-gray-900 dark:text-white">{total}</span>
+          <span className="text-sm text-gray-400">个任务</span>
+        </div>
+
+        {/* 平均进度 */}
+        <div className="mt-5">
+          <div className="flex items-center justify-between text-xs text-gray-400 mb-1.5">
+            <span>平均进度</span>
+            <span className="font-medium text-gray-600 dark:text-gray-300">
+              {project.averageProgress}%
             </span>
-          );
-        })}
-      </div>
-    </button>
-  );
+          </div>
+          <div className="h-2 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all"
+              style={{
+                width: `${Math.min(100, Math.max(0, project.averageProgress))}%`,
+                backgroundColor: project.color,
+              }}
+            />
+          </div>
+        </div>
+
+        {/* 状态分布条 */}
+        <div className="mt-5">
+          <div className="flex items-center justify-between text-xs text-gray-400 mb-1.5">
+            <span>状态分布</span>
+            <span>{total} 个任务</span>
+          </div>
+          <div className="h-2.5 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden flex">
+            {STATUS_META.map((meta) => {
+              const count = project.byStatus?.[meta.status] ?? 0;
+              if (!count) return null;
+              return (
+                <div
+                  key={meta.status}
+                  className={`h-full ${meta.bar}`}
+                  style={{ width: `${(count / ratioBase) * 100}%` }}
+                  title={`${meta.label} ${count}`}
+                />
+              );
+            })}
+          </div>
+        </div>
+
+        {/* 各状态明细 */}
+        <div className="mt-4 space-y-2">
+          {STATUS_META.map((meta) => {
+            const count = project.byStatus?.[meta.status] ?? 0;
+            const pct = total ? Math.round((count / ratioBase) * 100) : 0;
+            return (
+              <div key={meta.status} className="flex items-center gap-2">
+                <span className={`w-2 h-2 rounded-full flex-shrink-0 ${meta.dot}`} />
+                <span className="text-xs text-gray-500 dark:text-gray-400 w-16 flex-shrink-0">
+                  {meta.label}
+                </span>
+                <div className="flex-1 h-1.5 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
+                  <div
+                    className={`h-full rounded-full ${meta.bar} transition-all`}
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+                <span className="text-xs font-medium text-gray-700 dark:text-gray-300 w-14 text-right flex-shrink-0">
+                  {count} · {pct}%
+                </span>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* 底部引导 */}
+        <div className="mt-auto pt-4 flex items-center gap-1 text-xs font-medium text-gray-400 group-hover:text-teal-500 transition-colors">
+          进入排期看板
+          <ChevronRight className="w-3.5 h-3.5" />
+        </div>
+      </button>
+    );
+  };
 
   return (
     <div className="h-full flex flex-col bg-light-bg dark:bg-dark-bg">
@@ -205,7 +253,7 @@ export function BoardView() {
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
             {visibleProjects.map((p) => renderCard(p))}
             {showUnassigned && unassigned && (
               <>
