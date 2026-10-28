@@ -8,6 +8,7 @@ import { InboxView } from './views/InboxView'
 import { StatsView } from './views/StatsView'
 import { TagList } from './views/tag/TagList'
 import { AgentHub } from './views/AgentHub'
+import { BoardView } from './views/BoardView'
 import { FloatingWindow } from './views/FloatingWindow'
 import { TaskReminder } from './components/notification/TaskReminder'
 
@@ -41,10 +42,11 @@ function App() {
           <Route path="review" element={<StatsView />} />
           <Route path="tags" element={<TagList />} />
           <Route path="agent" element={<AgentHub />} />
+          <Route path="board" element={<BoardView />} />
           {/* Old route compatibility redirects */}
           <Route path="list" element={<Navigate to="/recent" replace />} />
           <Route path="gantt" element={<Navigate to="/day-todo" replace />} />
-          <Route path="kanban" element={<Navigate to="/day-todo" replace />} />
+          <Route path="kanban" element={<Navigate to="/board" replace />} />
           <Route path="calendar" element={<Navigate to="/day-todo" replace />} />
           <Route path="dashboard" element={<Navigate to="/review" replace />} />
           <Route path="projects" element={<Navigate to="/day-todo" replace />} />

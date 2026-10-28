@@ -13,7 +13,7 @@
 **桌面端任务管理软件 - 让任务安全停靠、高效启航**
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.6.2-teal.svg)]()
+[![Version](https://img.shields.io/badge/version-1.7.0-teal.svg)]()
 [![Electron](https://img.shields.io/badge/Electron-28.3.3-blue.svg)](https://www.electronjs.org/)
 [![React](https://img.shields.io/badge/React-18-blue.svg)](https://reactjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue.svg)](https://www.typescriptlang.org/)
@@ -79,6 +79,14 @@
 - ✅ **快速创建** - 输入描述、选优先级、回车创建
 - ✅ **一键开始** - 任务转为进行中状态
 - ✅ **优先级标识** - 彩色竖条区分优先级
+
+#### 计划看板（1.7.0 新增）
+- ✅ **五列状态看板** - 待处理 / 进行中 / 等待确认 / 已完成 / 已暂停，直接映射任务状态
+- ✅ **拖拽改状态** - 卡片跨列拖拽即可流转状态，落库即时生效
+- ✅ **卡片信息密度** - 标题、描述摘要、优先级徽标、标签、负责人、截止日期（逾期标红）
+- ✅ **卡片快捷操作** - 悬浮编辑 / 删除，编辑复用任务编辑对话框
+- ✅ **搜索过滤** - 按标题、描述、标签实时过滤；每列显示任务计数
+- ✅ **数据双向联动** - 复用现有 `tasks` 表，与其他视图完全同步，无需迁移
 
 #### 日程管理
 - ✅ **月历视图** - 标准 7x6 网格，日程预览（每格最多 2 条）
@@ -290,6 +298,7 @@ curl -X PUT http://127.0.0.1:18765/api/schedules/<日程ID> \
 
 | 版本 | 日期 | 一句话说明 |
 |---|---|---|
+| **1.7.0** | 2026-10-28 | 新增「计划看板」页面：按状态分列展示任务，卡片可拖拽改状态，与任务数据双向联动 |
 | **1.6.2** | 2026-10-28 | 修复安装版托盘图标丢失导致的初始化异常；新增主进程文件日志（`%APPDATA%\taskharbor\logs\main.log`） |
 | **1.6.1** | 2026-10-28 | 对外品牌更名「小湾清单（Cove）」+ 新 Logo（小船停湾）；内部技术标识沿用 `TaskHarbor` |
 | 1.6.0 | 2026-10-27 | 最近待办显示日程信息；Agent 新增 update 任务/日程工具；日程统计可展开明细；打包产物收敛到 `builds/` |
@@ -644,6 +653,7 @@ CREATE TABLE tags (
 - [x] 本地 HTTP API（日程 / 任务 CRUD）
 - [x] MCP Server（6 个任务 / 日程工具）
 - [x] Agent 接入面板（应用内配置 MCP / 查看连接状态）
+- [x] 计划看板视图（五列状态看板 + 拖拽改状态）
 
 ### 进行中 🚧
 - [ ] 云端同步（规划中）
