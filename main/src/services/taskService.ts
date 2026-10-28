@@ -19,6 +19,8 @@ export interface CreateTaskInput {
   estimatedEndDate?: string;
   issues?: string;
   notes?: string;
+  /** 关联的标签（分类）ID 列表；随任务一同写入 task_tag_relations */
+  tagIds?: string[];
 }
 
 /**
@@ -94,6 +96,22 @@ export class TaskService {
       now,
     ]);
 
+    // 写入任务-标签（分类）关联。
+    // 修复：此前新建任务时前端因拿不到 task.id 而跳过关联，导致勾选的分类根本不保存。
+    if (Array.isArray(input.tagIds) && input.tagIds.length > 0) {
+      const relStmt = this.db.prepare(`
+        INSERT OR IGNORE INTO task_tag_relations (id, taskId, tagId, createdAt)
+        VALUES (?, ?, ?, ?)
+      `);
+      for (const tagId of input.tagIds) {
+        if (!tagId) continue;
+        relStmt.run([generateId('rel'), id, tagId, now]);
+      }
+      relStmt.free();
+      // service 层 CRUD 默认不落盘，这里显式保存，避免新建任务的分类关联在强杀时丢失
+      await saveDatabase();
+    }
+
     // 清除相关缓存
     cacheService.invalidateByPrefix('tasks:');
     cacheService.invalidateByPrefix('query:tasks:');
@@ -126,6 +144,33 @@ export class TaskService {
       if (field in updates) {
         setClauses.push(`${field} = ?`);
         values.push(updates[field]);
+      }
+    }
+
+    // 同步任务-标签（分类）关联：仅当调用方显式传入 tagIds 数组时才覆盖
+    // （未传表示不改动分类，避免清空用户既有分类）
+    if (Array.isArray(updates.tagIds)) {
+      const delStmt = this.db.prepare(`DELETE FROM task_tag_relations WHERE taskId = ?`);
+      delStmt.run([id]);
+      delStmt.free();
+
+      if (updates.tagIds.length > 0) {
+        const relStmt = this.db.prepare(`
+          INSERT OR IGNORE INTO task_tag_relations (id, taskId, tagId, createdAt)
+          VALUES (?, ?, ?, ?)
+        `);
+        for (const tagId of updates.tagIds) {
+          if (!tagId) continue;
+          relStmt.run([generateId('rel'), id, tagId, getUTCNow()]);
+        }
+        relStmt.free();
+      }
+      await saveDatabase();
+      cacheService.invalidateByPrefix('tasks:');
+      cacheService.invalidateByPrefix('query:tasks:');
+
+      if (setClauses.length === 0) {
+        return true;
       }
     }
 

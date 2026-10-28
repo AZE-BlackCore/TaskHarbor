@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { Dialog, DialogFooter } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { Input, TextArea, Select } from '../ui/input';
-import { Task, TaskStatus } from '../../types';
+import { Task, TaskStatus, Tag } from '../../types';
 import { useTagStore } from '../../stores/tagStore';
 import { useErrorStore } from '../../stores/errorStore';
 import { Clock, Bell, Tag as TagIcon, AlertCircle } from 'lucide-react';
@@ -76,7 +76,7 @@ const REMINDER_CYCLE_OPTIONS: Array<{ value: string; label: string }> = [
 ];
 
 export function TaskEditDialog({ open, task, onClose, onSave }: TaskEditDialogProps) {
-  const { tags, fetchTags } = useTagStore();
+  const { tags, fetchTags, createTag } = useTagStore();
   const { addError } = useErrorStore();
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
 
@@ -163,36 +163,38 @@ export function TaskEditDialog({ open, task, onClose, onSave }: TaskEditDialogPr
   }, [task, open, reset]);
 
   const onSubmit = async (data: TaskFormData) => {
+    // 「分类」文本框与侧边栏分类目录（tags 表）原本互不相通，
+    // 这里把文本框的值转换为标签：已存在则复用，不存在则新建，使其出现在分类目录中。
+    let finalTagIds = [...selectedTagIds];
+    const moduleName = (data.module || '').trim();
+    if (moduleName) {
+      try {
+        let tag: Tag | null | undefined = tags.find((t) => t.name === moduleName);
+        if (!tag) {
+          tag = await createTag({ name: moduleName });
+          // 新建后立即刷新，保证侧边栏分类目录即时出现
+          fetchTags();
+        }
+        if (tag?.id && !finalTagIds.includes(tag.id)) {
+          finalTagIds.push(tag.id);
+        }
+      } catch (err) {
+        console.error('[TaskEditDialog] 分类转标签失败:', err);
+      }
+    }
+
     // 合并表单数据和标签、优先级
     const taskData = {
       ...data,
       priority: data.priority || 'medium',
     } as Partial<Task>;
-    
-    // 添加 tagIds 到任务数据
-    (taskData as any).tagIds = selectedTagIds;
-    
+
+    // 携带 tagIds：新建与编辑统一由主进程写入 task_tag_relations，
+    // 修复此前「新建任务时因拿不到 id 而跳过标签保存」的问题。
+    (taskData as any).tagIds = finalTagIds;
+
     // 保存任务
     onSave(taskData);
-
-    // 保存标签关联
-    if (task?.id && window.electronAPI) {
-      try {
-        // 先清除所有旧标签关联
-        const currentTags = await window.electronAPI.getTags(task.id);
-        if (currentTags.success && currentTags.data) {
-          for (const tag of currentTags.data) {
-            await window.electronAPI.removeTagFromTask(task.id, tag.id as string);
-          }
-        }
-        // 添加新标签关联
-        for (const tagId of selectedTagIds) {
-          await window.electronAPI.addTagToTask(task.id, tagId);
-        }
-      } catch (err) {
-        console.error('[TaskEditDialog] 保存标签关联失败:', err);
-      }
-    }
 
     // 保存提醒到数据库
     if (window.electronAPI?.createReminder && task?.id) {

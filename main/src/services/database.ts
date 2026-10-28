@@ -518,6 +518,71 @@ export async function setupDatabase() {
       console.log('[Database] Migration skipped or failed:', e);
     }
 
+    // 数据迁移：将 tasks.module（编辑框「分类」文本框）去重后补建为标签并关联
+    // 背景：UI 上「分类」文本框写入的是 tasks.module 游离字段，与侧边栏分类目录（tags 表）互不相通，
+    // 导致用户填了分类却在分类目录看不到。此处做一次性补建，之后由 TaskEditDialog 实时同步。
+    try {
+      const moduleValues = db!.exec(`
+        SELECT DISTINCT TRIM(module) AS m FROM tasks
+        WHERE module IS NOT NULL AND TRIM(module) <> ''
+      `);
+      const names: string[] = [];
+      if (moduleValues.length) {
+        for (const row of moduleValues[0].values) {
+          const v = String(row[0] ?? '').trim();
+          if (v) names.push(v);
+        }
+      }
+
+      let created = 0;
+      let linked = 0;
+      for (const name of names) {
+        // 已存在同名标签则复用，否则新建
+        const exist = db!.exec(`SELECT id FROM tags WHERE name = '${name.replace(/'/g, "''")}' LIMIT 1`);
+        let tagId: string;
+        if (exist.length && exist[0].values.length) {
+          tagId = String(exist[0].values[0][0]);
+        } else {
+          tagId = 'tag_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+          const stmt = db!.prepare(
+            `INSERT INTO tags (id, name, color, createdAt, updatedAt) VALUES (?, ?, ?, datetime('now'), datetime('now'))`
+          );
+          stmt.run([tagId, name, '#3B82F6']);
+          stmt.free();
+          created++;
+        }
+
+        // 关联所有 module 等于该名称的任务（INSERT OR IGNORE 保证可重复执行）
+        const relStmt = db!.prepare(`
+          INSERT OR IGNORE INTO task_tag_relations (id, taskId, tagId, createdAt)
+          SELECT
+            lower(hex(randomblob(16))),
+            t.id,
+            ?,
+            datetime('now')
+          FROM tasks t
+          WHERE TRIM(t.module) = ?
+        `);
+        relStmt.run([tagId, name]);
+        relStmt.free();
+
+        const cnt = db!.exec(`
+          SELECT COUNT(*) FROM task_tag_relations r
+          JOIN tasks t ON t.id = r.taskId
+          WHERE r.tagId = '${tagId}' AND TRIM(t.module) = '${name.replace(/'/g, "''")}'
+        `);
+        if (cnt.length) linked += Number(cnt[0].values[0][0]);
+      }
+
+      if (names.length) {
+        console.log(
+          `[Database] Module→Tags migration done: 分类名 ${names.length} 个（新建标签 ${created} 个，关联 ${linked} 条）`
+        );
+      }
+    } catch (e) {
+      console.log('[Database] Module→Tags migration skipped or failed:', e);
+    }
+
     // 创建数据验证触发器
     try {
       db!.run(`

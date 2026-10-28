@@ -13,7 +13,7 @@
 **桌面端任务管理软件 - 让任务安全停靠、高效启航**
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.7.0-teal.svg)]()
+[![Version](https://img.shields.io/badge/version-1.7.1-teal.svg)]()
 [![Electron](https://img.shields.io/badge/Electron-28.3.3-blue.svg)](https://www.electronjs.org/)
 [![React](https://img.shields.io/badge/React-18-blue.svg)](https://reactjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue.svg)](https://www.typescriptlang.org/)
@@ -79,6 +79,12 @@
 - ✅ **快速创建** - 输入描述、选优先级、回车创建
 - ✅ **一键开始** - 任务转为进行中状态
 - ✅ **优先级标识** - 彩色竖条区分优先级
+
+#### 分类与标签
+- ✅ **分类文本框即标签** - 在任务编辑框「分类」中填写名称（如「工作」），保存时自动创建或复用同名标签，并立即出现在侧边栏分类目录
+- ✅ **标签多选** - 任务编辑框下方「标签」区可勾选多个已有标签
+- ✅ **分类统计** - 分类卡片显示任务总数、完成数、平均进度；点击分类可筛选出该分类下所有任务
+- ✅ **存量自动补建** - v1.7.1 起，历史任务中填写的分类会在应用启动时自动补建为标签并完成关联（幂等，可重复执行）
 
 #### 计划看板（1.7.0 新增）
 - ✅ **五列状态看板** - 待处理 / 进行中 / 等待确认 / 已完成 / 已暂停，直接映射任务状态
@@ -298,6 +304,7 @@ curl -X PUT http://127.0.0.1:18765/api/schedules/<日程ID> \
 
 | 版本 | 日期 | 一句话说明 |
 |---|---|---|
+| **1.7.1** | 2026-10-29 | 修复「填了分类却在分类目录看不到」（分类文本框自动转为标签并补建存量）；修复新建任务标签不保存 |
 | **1.7.0** | 2026-10-28 | 新增「计划看板」页面：按状态分列展示任务，卡片可拖拽改状态，与任务数据双向联动 |
 | **1.6.2** | 2026-10-28 | 修复安装版托盘图标丢失导致的初始化异常；新增主进程文件日志（`%APPDATA%\taskharbor\logs\main.log`） |
 | **1.6.1** | 2026-10-28 | 对外品牌更名「小湾清单（Cove）」+ 新 Logo（小船停湾）；内部技术标识沿用 `TaskHarbor` |

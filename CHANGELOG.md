@@ -2,6 +2,21 @@
 
 本文件记录 TaskHarbor 各版本变更。（对外品牌名：**小湾清单 Cove**；内部技术标识仍沿用 `TaskHarbor`。）**版本号按语义化版本（SemVer）+ Conventional Commits 前缀维护**：`feat` 升 minor，`fix` 升 patch，`docs/test` 不升版但仍重新构建。
 
+## [1.7.1] - 2026-10-29
+
+### Fixed
+- **修复「任务里填了分类，侧边栏分类目录却看不到」（两套分类体系断裂）**：
+  - 根因：UI 存在两套互不相通的「分类」——任务编辑框的「分类」文本框写入的是 `tasks.module` 游离文本字段，而侧边栏「分类」目录读的是 `tags` 表 + `task_tag_relations` 关联表，两者无任何同步逻辑。历史成因是旧版 `projects` 表迁移为 `tags` 后，`module` 字段成为无人认领的孤儿字段。
+  - 修复：`TaskEditDialog` 保存时把「分类」文本框的值**自动转换为标签**——已存在同名标签则复用，否则新建，并与当前任务建立关联，使其出现在分类目录中。
+  - 存量数据：新增一次性启动迁移，把 `tasks.module` 的去重值补建为标签并批量关联（`INSERT OR IGNORE`，可重复执行、幂等）。实测将 21 个任务的 `TaskHarbor 移动端（Cove 手机版）` 正确补建为 1 个分类并关联 21 条。
+- **修复「新建任务时勾选的标签不会保存」**：`TaskEditDialog` 的标签保存逻辑被 `if (task?.id)` 守卫，新建场景下 `task.id` 尚不存在，整个关联写入被跳过。现改为把 `tagIds` 随任务数据一并提交，由主进程 `taskService.createTask` / `updateTask` 统一写入 `task_tag_relations`（新建与编辑走同一条路径）。
+  - 主进程 `CreateTaskInput` 新增 `tagIds?: string[]`；`updateTask` 仅在**显式传入** `tagIds` 数组时才覆盖关联，未传表示不改动分类，避免误清空既有分类。
+  - service 层 CRUD 默认不落盘，创建/更新含标签时显式调用 `saveDatabase()`，避免分类关联在强杀时丢失。
+
+### Notes
+- 本次为 `fix`，升 patch：1.7.0 → 1.7.1。
+- 存量分类补建在**应用启动时自动执行**（与既有 `projects → tags` 迁移并列），用户重启应用即生效，无需手动操作或外部脚本。
+
 ## [1.7.0] - 2026-10-28
 
 ### Added
