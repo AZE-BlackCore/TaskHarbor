@@ -353,13 +353,13 @@ function updateTrayMenu() {
     },
     { type: 'separator' },
     {
-      label: '关于 TaskHarbor',
+      label: '关于 小湾清单',
       click: () => {
         console.log('[updateTrayMenu] Showing about dialog');
         dialog.showMessageBox({
           type: 'info',
-          title: '关于 TaskHarbor',
-          message: `TaskHarbor v${app.getVersion()}`,
+          title: '关于 小湾清单',
+          message: `小湾清单 v${app.getVersion()}`,
           detail: '桌面端任务管理软件\n让任务安全停靠、高效启航',
           buttons: ['确定'],
         });
@@ -407,7 +407,7 @@ function createTray() {
   // 初始化托盘菜单
   updateTrayMenu();
 
-  tray.setToolTip('TaskHarbor - 任务管理系统');
+  tray.setToolTip('小湾清单 - 任务管理系统');
 
   // 单击托盘图标显示/隐藏主窗口
   tray.on('click', () => {

@@ -1,6 +1,46 @@
 # Changelog
 
-本文件记录 TaskHarbor 各版本变更。**版本号按语义化版本（SemVer）+ Conventional Commits 前缀维护**：`feat` 升 minor，`fix` 升 patch，`docs/test` 不升版但仍重新构建。
+本文件记录 TaskHarbor 各版本变更。（对外品牌名：**小湾清单 Cove**；内部技术标识仍沿用 `TaskHarbor`。）**版本号按语义化版本（SemVer）+ Conventional Commits 前缀维护**：`feat` 升 minor，`fix` 升 patch，`docs/test` 不升版但仍重新构建。
+
+## [1.6.1] - 2026-10-28
+
+### Changed
+- **品牌更名（双轨制）**：对外宣传名由 `TaskHarbor` 更改为「**小湾清单（Cove）**」。
+  - 对外门面（README 标题/简介、应用窗口标题、托盘提示、安装包 `productName`、关于对话框）统一使用「小湾清单 / Cove」。
+  - 内部技术标识保持不变：npm 包名 `taskharbor`、应用 `appId` `com.taskharbor.desktop`、环境变量 `TASKHARBOR_API_PORT` / `TASKHARBOR_API_TOKEN`、MCP server id `taskharbor` 及全部 `taskharbor_*` 工具名、HTTP API 端口 `18765`。现有用户已配置的 `mcp.json` **无需改动**。
+  - 本次为纯品牌/文档变更，无功能变化，按补丁版本发布。
+
+## [1.6.0] - 2026-10-27
+
+### Added
+- **最近待办显示日程信息**：按日期统一分组展示「日程 + 任务」。
+  - 每日分组内新增日程卡片（颜色条 / 时间或全天 / 地点 / 优先级），任务与日程共用同一日期轴（任务的创建日 ∪ 日程的开始日）。
+  - 日期头计数改为「N 任务 · M 日程」。
+  - 任务卡片上展示其**关联日程**（`relatedTaskId` 匹配）的标题与时间，便于直接在待办列表看到排期。
+  - 日程随「今天 / 本周 / 本月」时间范围与关键词搜索一同过滤。
+- **Agent 可修改任务与日程（MCP 新增 update 工具）**：此前 Agent 只能增 / 查 / 删，无法修改；本次补齐「改」能力。
+  - 新增 MCP 工具 `taskharbor_update_task`：按 `id` 修改状态、进度、责任人、描述、模块、起止日期、问题、备注等，**部分更新**（未传字段保持原值）。
+  - 新增 MCP 工具 `taskharbor_update_schedule`：按 `id` 修改标题、起止时间、地点、优先级、提醒、重复规则、关联任务等，同为部分更新。
+  - 两个工具在未传 `id`、未传任何待改字段、`id` 不存在时均返回明确错误，不静默成功。
+  - `PUT /api/tasks/:id` 现返回**更新后的完整任务对象**（原仅返回 `{updated:true}`），便于 Agent 回显；`id` 不存在返回 404，无可改字段返回 400（原为 500）。
+  - `PUT /api/schedules/:id` 增加 `id` 存在性校验（不存在返回 404）与空 body 400 校验。
+  - Agent 接入面板：工具列表补充两个 update 工具，curl 示例新增「修改任务 / 修改日程」。
+- **日程统计可展开明细清单**：原先「今日日程 / 本周日程 / 总日程 / 已过期」只有数字，看不到具体是哪些日程。
+  - 四张统计卡改为可点击，点击后在下方展开对应分类清单（再次点击或「收起」关闭），选中卡片高亮。
+  - 清单每项展示：颜色条、标题、优先级标签、开始—结束时间（跨天自动带日期）、全天标识、地点、是否已关联任务。
+  - 已过期项标红「已过期」徽标；「已过期」按时间倒序（最近过期在前），今日 / 本周按开始时间正序。
+  - 计数与清单由同一份数据派生（`useMemo`），保证「卡片数字 = 清单条数」始终一致；空分类显示空态提示。
+
+### Fixed
+- **MCP 任务状态取值错误**：`add_task` / `list_tasks` 的 schema 原写 `in_progress`（下划线），而实际枚举为 `in-progress`（连字符），Agent 照文档写入会产生非法状态导致界面筛选失配。现改为枚举约束 `todo / in-progress / review / done / blocked`。
+
+### Changed
+- **打包产物统一收敛到 `builds/`**：此前 electron-builder 输出目录直接落在仓库根目录（`dist-output`、`dist-output-130` … `dist-output-160n` 共 20 个，约 7 GB），根目录极难浏览。
+  - `build.directories.output` 改为 `builds/dist-output`，`build:win` / `build:win:nsis` / `build:win:portable` 后续产物不再写入仓库根目录。
+  - 历史产物全部迁入 `builds/dist-output-<版本标识>/`，其中 1.1.2 / 1.2.1 时期产物归档为 `builds/dist-output-121/`。
+  - `.gitignore` 增加 `builds/`（保留原有 `dist-output*` 规则以防漏网）。
+  - `simple-pack.ps1` 改用 `$PSScriptRoot` 定位项目根并指向新路径（原硬编码路径已失效）；`tools/smoke-test-api.mjs` 默认可执行文件路径同步更新。
+  - 新增 `tools/cleanup-legacy-build-dirs.ps1`：校验 `builds/` 下归档完整后，清理根目录遗留的空壳目录（默认 dry-run，`-Execute` 执行）。
 
 ## [1.5.3] - 2026-10-27
 

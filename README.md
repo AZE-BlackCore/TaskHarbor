@@ -1,10 +1,12 @@
-# TaskHarbor
+# 小湾清单 (Cove)
 
 **作者：AZE-BlackCore**
 
 **公众号：黑核阿泽**
 
 ---
+
+> 🏷️ **品牌说明（双轨制）**：本项目**对外宣传名**为「**小湾清单（Cove）**」；代码、API、MCP 等**内部技术标识**仍沿用 `TaskHarbor`（npm 包名 `taskharbor`、环境变量 `TASKHARBOR_*`、MCP server id `taskharbor` 及工具 `taskharbor_*`）。下文对外叙述统一使用「小湾清单 / Cove」，出现 `TaskHarbor`、`taskharbor_*` 等均为内部技术标识，无需改动。
 
 <div align="center">
 
@@ -24,13 +26,13 @@
 
 ## 📋 简介
 
-**TaskHarbor** 是一款面向个人与小团队的**桌面端任务与日程管理应用**。它以「本地优先、数据自主」为设计原则，把任务、日程、标签、复盘与智能提醒整合进一个清爽的桌面客户端，并在此基础上提供了 **Agent 接入能力**——让 WorkBuddy / Claude / 各类 AI Agent 与自动化脚本能够通过本地 HTTP API 与 MCP 协议，直接读写你的任务与日程。
+**小湾清单（Cove）** 是一款面向个人与小团队的**桌面端任务与日程管理应用**。它以「本地优先、数据自主」为设计原则，把任务、日程、标签、复盘与智能提醒整合进一个清爽的桌面客户端，并在此基础上提供了 **Agent 接入能力**——让 WorkBuddy / Claude / 各类 AI Agent 与自动化脚本能够通过本地 HTTP API 与 MCP 协议，直接读写你的任务与日程。
 
 **名字寓意**：像港湾一样，让你的所有任务都能安全停靠、有序管理、高效启航。
 
 ### 它解决什么问题
 
-| 传统待办工具的痛点 | TaskHarbor 的做法 |
+| 传统待办工具的痛点 | 小湾清单 的做法 |
 |---|---|
 | 任务散落在多个 App、清单、便签里 | 任务 / 日程 / 标签 / 复盘统一在一个应用内闭环 |
 | 数据在云端，隐私与可用性存疑 | 数据完全落盘本地 SQLite（`todolist.db`），离线可用 |
@@ -93,7 +95,7 @@
 - ✅ **优先级分布** - 柱状图（高/中/低）
 - ✅ **责任人分布** - Top 5 横向条形图
 - ✅ **标签概览** - 彩色 pill 展示所有标签
-- ✅ **日程统计** - 今日/本周/总日程/已过期
+- ✅ **日程统计** - 今日 / 本周 / 总日程 / 已过期四类计数，**点击卡片可展开对应明细清单**（时间、地点、优先级、关联任务、过期标记）
 
 #### 标签系统
 - ✅ **标签管理** - 创建、编辑、删除标签
@@ -146,7 +148,7 @@
 
 #### 界面设置
 - ✅ **菜单栏显示** - 控制顶部菜单栏可见性
-- ✅ **窗口置顶** - TaskHarbor 显示在所有窗口最上层
+- ✅ **窗口置顶** - 小湾清单显示在所有窗口最上层
 - ✅ **关闭行为** - 最小化到托盘或直接退出
 
 #### 数据管理
@@ -158,7 +160,7 @@
 
 ## 🤖 Agent 接入与 MCP（本地 API）
 
-> 自 **v1.4.0** 起提供，v1.5.x 持续完善。让 AI Agent、脚本、自动化流程直接读写 TaskHarbor 的任务与日程。
+> 自 **v1.4.0** 起提供，v1.5.x 持续完善。让 AI Agent、脚本、自动化流程直接读写小湾清单的任务与日程。
 
 ### 设计目标
 
@@ -188,10 +190,12 @@ AI Agent / WorkBuddy / curl / 脚本
 | GET | `/api/health` | 健康检查，返回版本、运行时长、MCP server 安装路径 |
 | POST | `/api/schedules` | 创建日程（`title` / `startTime` / `endTime` 必填） |
 | GET | `/api/schedules` | 列出日程，支持 `date` / `start`+`end` / `priority` / `search` |
-| GET·PUT·DELETE | `/api/schedules/:id` | 日程详情 / 更新 / 删除 |
+| GET·PUT·DELETE | `/api/schedules/:id` | 日程详情 / **部分更新** / 删除 |
 | POST | `/api/tasks` | 创建任务（`description` 必填） |
 | GET | `/api/tasks` | 列出任务，支持 `status` / `assignee` / `search` |
-| GET·PUT·DELETE | `/api/tasks/:id` | 任务详情 / 更新 / 删除 |
+| GET·PUT·DELETE | `/api/tasks/:id` | 任务详情 / **部分更新**（返回更新后对象）/ 删除 |
+
+> `PUT` 为**部分更新**：只需传要改的字段，未传字段保持原值；`id` 不存在返回 404，无任何可改字段返回 400。
 
 **示例**：
 
@@ -207,7 +211,17 @@ curl -X POST http://127.0.0.1:18765/api/schedules \
 # 创建一个任务
 curl -X POST http://127.0.0.1:18765/api/tasks \
   -H "Content-Type: application/json" \
-  -d '{"description":"完成 Agent 接入面板","status":"in_progress","assignee":"WorkBuddy"}'
+  -d '{"description":"完成 Agent 接入面板","status":"in-progress","assignee":"WorkBuddy"}'
+
+# 修改任务（只改状态与进度，其余字段不动）
+curl -X PUT http://127.0.0.1:18765/api/tasks/<任务ID> \
+  -H "Content-Type: application/json" \
+  -d '{"status":"done","progress":100}'
+
+# 修改日程（改时间与地点）
+curl -X PUT http://127.0.0.1:18765/api/schedules/<日程ID> \
+  -H "Content-Type: application/json" \
+  -d '{"startTime":"2026-10-28T02:00:00.000Z","location":"会议室 A"}'
 ```
 
 **可选安全项**（环境变量）：
@@ -217,16 +231,25 @@ curl -X POST http://127.0.0.1:18765/api/tasks \
 | `TASKHARBOR_API_PORT` | 自定义监听端口（默认 18765） |
 | `TASKHARBOR_API_TOKEN` | 设置后所有请求需带 `Authorization: Bearer <token>` |
 
-### MCP 工具（6 个）
+### MCP 工具（8 个）
 
 | 工具 | 功能 |
 |---|---|
 | `taskharbor_add_schedule` | 添加一条日程 |
 | `taskharbor_list_schedules` | 按日期 / 范围 / 关键词列出日程 |
+| `taskharbor_update_schedule` | 按 ID **修改**日程（部分更新：只改传入字段） |
 | `taskharbor_delete_schedule` | 删除一条日程 |
 | `taskharbor_add_task` | 添加一条任务 |
 | `taskharbor_list_tasks` | 按状态 / 负责人 / 关键词列出任务 |
+| `taskharbor_update_task` | 按 ID **修改**任务（状态 / 进度 / 负责人 / 日期等） |
 | `taskharbor_delete_task` | 删除一条任务 |
+
+**典型「先查后改」流程**（Agent 常用）：
+
+1. `taskharbor_list_tasks`（`search` 关键词）→ 拿到目标任务的 `id`
+2. `taskharbor_update_task`（`id` + 要改的字段）→ 只改传入字段，返回更新后的完整对象
+
+> 任务状态枚举：`todo` / `in-progress` / `review` / `done` / `blocked`（注意是连字符 `in-progress`）。
 
 ### 在应用内完成配置（推荐）
 
@@ -322,7 +345,7 @@ curl -X POST http://127.0.0.1:18765/api/tasks \
 
 ### v1.2.0（2026-08-02）
 
-本次更新对 TaskHarbor 进行了全面的界面重构和功能扩展。
+本次更新对小湾清单进行了全面的界面重构和功能扩展。
 
 #### 界面重构
 - 全新侧边栏设计：Day Todo、最近待办、日程概览、待办箱、数据复盘五项主导航
@@ -501,7 +524,7 @@ npm run build:win:portable
 # 打包应用（完整版）
 npm run build:win
 
-# 构建产物在 dist-output/ 目录
+# 构建产物统一输出到 builds/ 目录（不含在 git 版本控制中）
 ```
 
 ### 📦 打包说明

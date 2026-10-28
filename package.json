@@ -1,6 +1,6 @@
 {
   "name": "taskharbor",
-  "version": "1.5.3",
+  "version": "1.6.1",
   "description": "TaskHarbor - 桌面端任务管理软件，让任务安全停靠、高效启航",
   "main": "main/dist/index.js",
   "scripts": {
@@ -55,9 +55,9 @@
   },
   "build": {
     "appId": "com.taskharbor.desktop",
-    "productName": "TaskHarbor",
+    "productName": "小湾清单",
     "directories": {
-      "output": "dist-output"
+      "output": "builds/dist-output"
     },
     "files": [
       "main/dist/**/*",
