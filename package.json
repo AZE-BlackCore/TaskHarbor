@@ -27,8 +27,16 @@
     "format:check": "cd renderer && npx prettier --check \"src/**/*.{ts,tsx,js,jsx,json,css,md}\"",
     "ci": "npm run typecheck:all && npm run lint && npm run test"
   },
-  "author": "",
+  "author": "AZE-BlackCore",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://gitcode.com/AZE-BlackCore/Cove.git"
+  },
+  "homepage": "https://gitcode.com/AZE-BlackCore/Cove",
+  "bugs": {
+    "url": "https://gitcode.com/AZE-BlackCore/Cove/issues"
+  },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^25.5.0",

@@ -10,6 +10,11 @@
   - `createTray()` 增加 `try/catch` 与「无图标则跳过托盘」的安全兜底，托盘初始化失败不再阻断主流程。
 - **新增主进程文件日志**：打包态无控制台，现将主进程日志落盘到 `%APPDATA%\taskharbor\logs\main.log`（含 `uncaughtException` / `unhandledRejection` 捕获），便于用户在遇到启动故障时提供日志定位。
 
+### Changed (文档 / 仓库)
+- **GitCode 仓库地址迁移为 Cove**：新地址 <https://gitcode.com/AZE-BlackCore/Cove>（README 底部链接同步更新；`package.json` 新增 `repository` / `homepage` / `bugs` 字段指向新地址）。
+- **版本记录归口调整**：详细版本变更统一维护在 `CHANGELOG.md`，README 的「版本历史」精简为各版本一句话总览表（避免两处维护产生漂移）。
+- **README 补充安装说明**：新增「安装与默认路径」小节，说明默认安装目录 `%LOCALAPPDATA%\Programs\taskharbor`、用户数据目录 `%APPDATA%\taskharbor`、安装目录名为 `taskharbor` 的成因（中文产品名回退 npm 包名，符合双轨制且规避中文路径风险），以及装完无响应 / 白屏 / 恢复默认路径的排查速查表。
+
 ## [1.6.1] - 2026-10-28
 
 ### Changed

@@ -13,7 +13,7 @@
 **桌面端任务管理软件 - 让任务安全停靠、高效启航**
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.5.3-teal.svg)]()
+[![Version](https://img.shields.io/badge/version-1.6.2-teal.svg)]()
 [![Electron](https://img.shields.io/badge/Electron-28.3.3-blue.svg)](https://www.electronjs.org/)
 [![React](https://img.shields.io/badge/React-18-blue.svg)](https://reactjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue.svg)](https://www.typescriptlang.org/)
@@ -28,7 +28,9 @@
 
 **小湾清单（Cove）** 是一款面向个人与小团队的**桌面端任务与日程管理应用**。它以「本地优先、数据自主」为设计原则，把任务、日程、标签、复盘与智能提醒整合进一个清爽的桌面客户端，并在此基础上提供了 **Agent 接入能力**——让 WorkBuddy / Claude / 各类 AI Agent 与自动化脚本能够通过本地 HTTP API 与 MCP 协议，直接读写你的任务与日程。
 
-**名字寓意**：像港湾一样，让你的所有任务都能安全停靠、有序管理、高效启航。
+**名字寓意**：「小湾」是一处安静、私密的水湾——把散落各处的任务停靠进来，在属于自己的水面里有序安放，再从容启航。新 Logo「小船停湾」正是这个意象：小湾水面 + 停泊的小船 + 一面金色对勾帆。
+
+> 📦 仓库地址：<https://gitcode.com/AZE-BlackCore/Cove>
 
 ### 它解决什么问题
 
@@ -284,149 +286,24 @@ curl -X PUT http://127.0.0.1:18765/api/schedules/<日程ID> \
 
 ## 📦 版本历史
 
-### v1.5.3（2026-10-27）
+> 📌 **完整、详细的版本变更记录统一维护在 [CHANGELOG.md](CHANGELOG.md)**（按语义化版本 SemVer + Conventional Commits 维护：`feat` 升 minor，`fix` 升 patch，`docs/test` 不升版）。以下仅保留各版本一句话总览，便于快速了解演进脉络。
 
-**修复 Agent 接入面板一直显示「未连接」**：生产模式 CSP 的 `connect-src` 此前锁死为 `'self'`，渲染端对本机 `127.0.0.1:18765` 的跨源请求被静默拦截，导致面板即使 API 实际在运行也显示未连接。现放行本机回环 `http://127.0.0.1:* http://localhost:*`（支持面板自定义端口）。
+| 版本 | 日期 | 一句话说明 |
+|---|---|---|
+| **1.6.2** | 2026-10-28 | 修复安装版托盘图标丢失导致的初始化异常；新增主进程文件日志（`%APPDATA%\taskharbor\logs\main.log`） |
+| **1.6.1** | 2026-10-28 | 对外品牌更名「小湾清单（Cove）」+ 新 Logo（小船停湾）；内部技术标识沿用 `TaskHarbor` |
+| 1.6.0 | 2026-10-27 | 最近待办显示日程信息；Agent 新增 update 任务/日程工具；日程统计可展开明细；打包产物收敛到 `builds/` |
+| 1.5.3 | 2026-10-27 | 修复 Agent 接入面板受 CSP 拦截而一直显示「未连接」 |
+| 1.5.2 | 2026-10-27 | MCP 配置路径改由主进程直接读取安装目录，消除占位符残留 |
+| 1.5.1 | 2026-10-27 | 安装包内置 MCP Server（`resources/mcp-server/server.mjs`） |
+| 1.5.0 | 2026-10-27 | 新增「Agent 接入」页面：连接状态检测、MCP 配置可复制、工具列表 |
+| 1.4.0 | 2026-10-27 | 新增任务写入通道（HTTP API + MCP 任务工具） |
+| 1.3.0 | 2026-10-27 | 本地 HTTP API 与 MCP 通道；数据库原子写 + 延迟保存防抖 |
+| 1.2.1 | 2026-08-02 | 任务编辑完善、任务字段通用化、数据复盘增强 |
+| 1.2.0 | 2026-08-02 | 界面重构：Day Todo / 最近待办 / 待办箱 / 日程概览 / 数据复盘 |
+| ≤1.1.2 | — | 早期版本：Markdown 导出、提醒系统、日程管理等（详见 CHANGELOG） |
 
-### v1.5.2（2026-10-27）
-
-**安装目录路径稳定自动获取**：MCP 配置路径改由 `get-app-info` IPC 直接读取主进程安装目录，不再仅依赖 HTTP 健康检查轮询。即使本地 API 尚未就绪，面板也能显示真实安装路径，消除占位符残留。
-
-### v1.5.1（2026-10-27）
-
-**安装包内置 MCP Server**：将 `tools/mcp-server` 纳入 `extraResources`，安装后 `server.mjs` 随包落到 `resources/mcp-server/server.mjs`，无需再从源码仓库单独获取；`/api/health` 返回 `mcpServerPath`，面板据此动态生成 MCP 配置。
-
-### v1.5.0（2026-10-27）
-
-**新增「Agent 接入」面板**：新增独立页面 `/agent`（侧边栏入口），在应用内即可查看并配置外部 Agent 对接——连接状态实时检测、本地 API 信息、可复制的 MCP 配置 JSON（端口联动）、6 个可用工具列表、curl 快速指令。
-
-### v1.4.0（2026-10-27）
-
-**新增任务写入通道**：在日程通道之外补齐对「任务」的外部写入能力。
-- `POST /api/tasks`、`GET /api/tasks`（`status`/`assignee`/`search` 过滤）、`GET/PUT/DELETE /api/tasks/:id`
-- MCP 工具 `taskharbor_add_task` / `taskharbor_list_tasks` / `taskharbor_delete_task`
-- 主进程在数据库就绪后显式初始化 `taskService`
-
-### v1.3.0（2026-10-27）
-
-**新增本地 HTTP API 与 MCP 对接通道**：
-- 主进程内嵌 HTTP Server（`127.0.0.1:18765`），提供日程 CRUD
-- 零依赖 MCP Server（`tools/mcp-server/server.mjs`），暴露 `taskharbor_add_schedule` / `list_schedules` / `delete_schedule`
-- 数据库加固：原子写（`.tmp` → rename → `.bak` 备份），延迟保存防抖 1000ms → 200ms
-
-### v1.2.1（2026-08-02）
-
-本次更新聚焦于任务管理流程的完整性、字段通用化以及数据复盘能力增强。
-
-#### 任务编辑功能完善
-- Day Todo 日程卡片新增 hover 编辑/删除按钮，日程事件创建后可编辑
-- 日程概览创建对话框重构为支持创建/编辑双模式
-- 最近待办新增任务创建和编辑功能，复用 TaskEditDialog 组件
-- 待办箱新增完整任务创建和编辑功能，替换原快速添加表单
-
-#### 任务时间显示优化
-- 最近待办和待办箱任务卡片新增开始时间和结束时间显示
-- 优先显示 startDate 和 estimatedEndDate，无时间时回退显示创建时间
-
-#### 任务字段通用化改造
-- 将软件开发专用术语改为通用任务描述
-- 模块 → 分类，功能模块 → 子分类
-- 开始时间 → 开始日期，预计完成 → 截止日期
-- 责任人 → 负责人，存在的问题 → 遇到的问题，备注 → 补充说明
-- 状态标签通用化：审查中 → 等待确认，已阻塞 → 已暂停
-
-#### 数据复盘增强
-- 新增智能任务分析：生产力评分、完成趋势、优先级分布等多维度分析
-- 新增自动化报告生成：支持 Markdown 格式报告导出，HTML 渲染预览
-- 报告预览支持 react-markdown + remark-gfm 渲染，表格/列表/代码块正常展示
-
-#### 设置面板优化
-- 移除视图设置排序功能，精简设置项
-
-### v1.2.0（2026-08-02）
-
-本次更新对小湾清单进行了全面的界面重构和功能扩展。
-
-#### 界面重构
-- 全新侧边栏设计：Day Todo、最近待办、日程概览、待办箱、数据复盘五项主导航
-- 侧边栏集成分类（标签）和标签管理入口，支持折叠展开
-- 侧边栏支持整体折叠/展开，折叠时仅显示图标
-- 底部新增已达成、回收站快捷入口及设置、主题切换按钮
-
-#### Day Todo 视图（新增）
-- 以今天为中心的 7 天日期滚动导航栏
-- 支持周级别快速切换，选中态青色高亮
-- 日期卡片显示日程指示点，今日标记小圆点
-- 顶部快速添加输入框，回车即可创建当天日程
-- 空状态展示 SVG 插画引导用户添加计划
-
-#### 日程概览重构
-- 新增月历视图与日视图切换
-- 月历支持日程预览（每格最多 2 条），今日高亮
-- 日视图列表展示，含时间、优先级、地点等元信息
-- 新建日程对话框支持标题、描述、时间、地点、优先级、颜色
-
-#### 最近待办（新增）
-- 按今天/本周/本月时间范围筛选任务
-- 支持状态筛选和关键词搜索
-- 按日期分组展示，每组显示日期头部和任务数
-- 任务卡片支持快捷切换完成/待处理状态
-
-#### 待办箱（新增）
-- 仅展示 status=todo 的未处理任务
-- 优先级筛选与搜索功能
-- 快速添加表单：输入描述、选优先级、回车创建
-- 任务卡片支持开始处理（转为进行中）和删除
-
-#### 数据复盘增强
-- 调用后端 tasks:getStats IPC 获取聚合数据
-- 六维概览卡片：总任务/已完成/进行中/待处理/审核中/已阻塞
-- 状态分布水平条形图，优先级分布柱状图，责任人 Top 5 条形图
-- 标签概览彩色 pill 展示
-
-#### 后端能力增强
-- TaskFilters 新增 search、priority、dateRange、dateField 字段
-- taskService.findAll 支持模糊搜索、日期范围筛选、优先级筛选
-- 新增 taskService.getStats() 综合统计方法
-- 注册 tasks:getStats IPC handler，preload 暴露 getTaskStats()
-- renderer/preload/main 三方 TaskFilters 类型统一对齐
-
-#### 标签系统完善
-- TagList 移除 mock 统计逻辑，改为异步调用真实 IPC
-- TagEditDialog 新增自定义颜色拾取器
-
-#### 用户信息设置（新增）
-- 新建 userProfileStore，基于 zustand + localStorage 持久化
-- 支持头像上传（base64）、昵称、个性签名、邮箱
-- 设置面板顶部新增用户信息分区
-- 侧边栏用户区从硬编码改为读取 store
-
-#### 路由调整
-- 默认路由重定向到 /day-todo
-- 新增 /recent、/inbox、/review 路由
-- 旧路由兼容重定向
-
-### v1.1.2
-- 新增 Markdown 导出功能
-- 构建配置更新，图标生成脚本
-
-### v1.0.7
-- 自定义提醒设置
-- 桌面增强功能
-
-### v1.0.6
-- 视图顺序自定义
-- 智能任务提醒面板
-
-### v1.0.5
-- 日程管理系统
-- 悬浮窗口功能
-
-### v1.0.0
-- 初始版本发布
-- 任务管理、多视图展示、项目化管理
-- 甘特图、看板、日历、统计报表
-- 深色模式、数据导出
+**演进脉络**：v1.0.0 提供任务管理与多视图；v1.2.0 完成界面重构；v1.4.0+ 打通 AI Agent 读写通道；v1.6.x 完成品牌更名与视觉焕新。
 
 ---
 
@@ -483,7 +360,7 @@ curl -X PUT http://127.0.0.1:18765/api/schedules/<日程ID> \
 ### 安装依赖
 
 ```bash
-cd TaskHarbor
+cd Cove   # 或你的本地目录名（如 TaskHarbor-Desktop）
 
 # 安装所有依赖
 npm install
@@ -526,6 +403,27 @@ npm run build:win
 
 # 构建产物统一输出到 builds/ 目录（不含在 git 版本控制中）
 ```
+
+### 💿 安装与默认路径
+
+双击安装包按向导安装即可（安装向导支持自定义安装目录）。
+
+| 项目 | 路径 |
+|---|---|
+| **默认安装目录** | `%LOCALAPPDATA%\Programs\taskharbor`（如 `C:\Users\<用户名>\AppData\Local\Programs\taskharbor`） |
+| **用户数据目录** | `%APPDATA%\taskharbor\`（数据库 `todolist.db`、日志 `logs\main.log`） |
+| **MCP Server** | `<安装目录>\resources\mcp-server\server.mjs` |
+
+> ℹ️ **为什么安装目录叫 `taskharbor`？** electron-builder 仅当产品名为纯 ASCII 时才用它作为目录名，中文「小湾清单」会回退使用 npm 包名 `taskharbor`。这与「对外品牌 / 内部技术标识」双轨制一致，也规避了中文路径在杀软、备份工具上的兼容风险——**升级安装不会覆盖用户数据**。
+
+**常见问题速查**
+
+| 现象 | 处理 |
+|---|---|
+| 装完双击无反应 | ① 关闭杀软实时防护后重装，或把安装包复制到别的目录再试（未签名 exe 首次易被拦截）；② 安装 VC++ 2015-2022 x64 运行库；③ 结束残留进程后重装 |
+| 需要排查启动故障 | 查看 `%APPDATA%\taskharbor\logs\main.log`（v1.6.2 起） |
+| 白屏 / 渲染异常 | 用 `--disable-gpu` 启动试一下 |
+| 想恢复默认安装目录 | 卸载后删除注册表 `HKCU\Software\54c8eda9-4e0d-58e1-9270-0962a40743b0`（NSIS 会记忆上次安装位置） |
 
 ### 📦 打包说明
 
@@ -799,6 +697,6 @@ MIT License - 详见 [LICENSE](LICENSE) 文件
 
 **公众号：黑核阿泽**
 
-[⭐ Star on GitCode](https://gitcode.com/AZE-BlackCore/TaskHarbor) • [📖 查看文档](docs/) • [🐛 报告问题](https://gitcode.com/AZE-BlackCore/TaskHarbor/issues)
+[⭐ Star on GitCode](https://gitcode.com/AZE-BlackCore/Cove) • [📖 查看文档](docs/) • [🐛 报告问题](https://gitcode.com/AZE-BlackCore/Cove/issues)
 
 </div>
