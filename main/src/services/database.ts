@@ -428,10 +428,71 @@ export async function setupDatabase() {
       )
     `);
 
+    // ===== 索引创建辅助：索引是纯性能优化，任何 DDL 失败都不能拖垮整个初始化 =====
+    // 背景：v1.9.2 及之前，新建库时 idx_agent_messages_conv 建在 conversationId（驼峰）上，
+    // 而 CREATE TABLE 用的是 conversation_id（下划线）→ 全新电脑首次启动必崩
+    // （no such column: conversationId → setupDatabase 抛错 → App 初始化失败）。
+    // 历史库里该列恰好叫 conversationId 才一直没暴露。
+    const getColumns = (table: string): string[] => {
+      try {
+        const stmt = db!.prepare(`PRAGMA table_info(${table})`);
+        const cols: string[] = [];
+        while (stmt.step()) {
+          cols.push(String((stmt.getAsObject() as any).name));
+        }
+        stmt.free();
+        return cols;
+      } catch (_) {
+        return [];
+      }
+    };
+
+    const safeIndex = (sql: string) => {
+      try {
+        db!.run(sql);
+      } catch (e) {
+        console.warn('[Database] 跳过索引创建（不影响功能）:', sql, e);
+      }
+    };
+
+    // Agent messages 会话列：历史库 conversationId → 统一为 conversation_id
+    const msgCols = getColumns('agent_messages');
+    let convCol: string | null = null;
+    if (msgCols.includes('conversation_id')) {
+      convCol = 'conversation_id';
+    } else if (msgCols.includes('conversationId')) {
+      try {
+        db!.run(`ALTER TABLE agent_messages RENAME COLUMN conversationId TO conversation_id`);
+        convCol = 'conversation_id';
+      } catch (_) {
+        // 老版本 SQLite 不支持 RENAME COLUMN 时退化为新增列
+        try {
+          db!.run(`ALTER TABLE agent_messages ADD COLUMN conversation_id TEXT`);
+          convCol = 'conversation_id';
+        } catch (__) {
+          convCol = 'conversationId';
+        }
+      }
+    }
+
     // Agent 相关索引
-    db!.run(`CREATE INDEX IF NOT EXISTS idx_agent_messages_conv ON agent_messages(conversationId)`);
-    db!.run(`CREATE INDEX IF NOT EXISTS idx_agent_messages_role ON agent_messages(role)`);
-    db!.run(`CREATE INDEX IF NOT EXISTS idx_agent_conv_updated ON agent_conversations(updated_at)`);
+    if (convCol) {
+      safeIndex(`CREATE INDEX IF NOT EXISTS idx_agent_messages_conv ON agent_messages(${convCol})`);
+    }
+    safeIndex(`CREATE INDEX IF NOT EXISTS idx_agent_messages_role ON agent_messages(role)`);
+
+    // agent_conversations 的 updated_at 在历史库里可能是驼峰的 updatedAt
+    const convTableCols = getColumns('agent_conversations');
+    const convUpdatedCol = convTableCols.includes('updated_at')
+      ? 'updated_at'
+      : convTableCols.includes('updatedAt')
+        ? 'updatedAt'
+        : null;
+    if (convUpdatedCol) {
+      safeIndex(
+        `CREATE INDEX IF NOT EXISTS idx_agent_conv_updated ON agent_conversations(${convUpdatedCol})`
+      );
+    }
 
     // ===== 数据库在线迁移（为现有表添加缺失字段）=====
     // 若字段已存在，ALTER TABLE 会抛异常，catch 掉即可（sqlite 无 IF NOT EXISTS 语法）
@@ -450,21 +511,21 @@ export async function setupDatabase() {
     migrateColumn(`ALTER TABLE tasks ADD COLUMN customReminderTimes TEXT`);
     migrateColumn(`ALTER TABLE tasks ADD COLUMN reminderLastFired TEXT`);
 
-    // 创建索引
-    db!.run(`CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status)`);
-    db!.run(`CREATE INDEX IF NOT EXISTS idx_tasks_assignee ON tasks(assignee)`);
-    db!.run(`CREATE INDEX IF NOT EXISTS idx_tasks_startDate ON tasks(startDate)`);
-    db!.run(`CREATE INDEX IF NOT EXISTS idx_subtasks_task ON subtasks(taskId)`);
-    db!.run(`CREATE INDEX IF NOT EXISTS idx_timelogs_task ON timelogs(taskId)`);
-    db!.run(`CREATE INDEX IF NOT EXISTS idx_dependencies_task ON task_dependencies(taskId)`);
-    db!.run(`CREATE INDEX IF NOT EXISTS idx_task_tag_relations_task ON task_tag_relations(taskId)`);
-    db!.run(`CREATE INDEX IF NOT EXISTS idx_task_tag_relations_tag ON task_tag_relations(tagId)`);
-    db!.run(`CREATE INDEX IF NOT EXISTS idx_schedules_startTime ON schedules(startTime)`);
-    db!.run(`CREATE INDEX IF NOT EXISTS idx_schedules_endTime ON schedules(endTime)`);
-    db!.run(`CREATE INDEX IF NOT EXISTS idx_schedules_priority ON schedules(priority)`);
-    db!.run(`CREATE INDEX IF NOT EXISTS idx_task_reminders_task ON task_reminders(taskId)`);
-    db!.run(`CREATE INDEX IF NOT EXISTS idx_task_reminders_nextFire ON task_reminders(nextFireAt)`);
-    db!.run(`CREATE INDEX IF NOT EXISTS idx_task_reminders_enabled ON task_reminders(enabled)`);
+    // 创建索引（全部走 safeIndex：单个索引失败只影响查询性能，不影响启动）
+    safeIndex(`CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status)`);
+    safeIndex(`CREATE INDEX IF NOT EXISTS idx_tasks_assignee ON tasks(assignee)`);
+    safeIndex(`CREATE INDEX IF NOT EXISTS idx_tasks_startDate ON tasks(startDate)`);
+    safeIndex(`CREATE INDEX IF NOT EXISTS idx_subtasks_task ON subtasks(taskId)`);
+    safeIndex(`CREATE INDEX IF NOT EXISTS idx_timelogs_task ON timelogs(taskId)`);
+    safeIndex(`CREATE INDEX IF NOT EXISTS idx_dependencies_task ON task_dependencies(taskId)`);
+    safeIndex(`CREATE INDEX IF NOT EXISTS idx_task_tag_relations_task ON task_tag_relations(taskId)`);
+    safeIndex(`CREATE INDEX IF NOT EXISTS idx_task_tag_relations_tag ON task_tag_relations(tagId)`);
+    safeIndex(`CREATE INDEX IF NOT EXISTS idx_schedules_startTime ON schedules(startTime)`);
+    safeIndex(`CREATE INDEX IF NOT EXISTS idx_schedules_endTime ON schedules(endTime)`);
+    safeIndex(`CREATE INDEX IF NOT EXISTS idx_schedules_priority ON schedules(priority)`);
+    safeIndex(`CREATE INDEX IF NOT EXISTS idx_task_reminders_task ON task_reminders(taskId)`);
+    safeIndex(`CREATE INDEX IF NOT EXISTS idx_task_reminders_nextFire ON task_reminders(nextFireAt)`);
+    safeIndex(`CREATE INDEX IF NOT EXISTS idx_task_reminders_enabled ON task_reminders(enabled)`);
 
     // 数据迁移：将现有的 projects 表迁移为 tags 表
     try {

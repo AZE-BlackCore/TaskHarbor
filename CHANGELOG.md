@@ -2,6 +2,22 @@
 
 本文件记录 TaskHarbor 各版本变更。（对外品牌名：**小湾清单 Cove**；内部技术标识仍沿用 `TaskHarbor`。）**版本号按语义化版本（SemVer）+ Conventional Commits 前缀维护**：`feat` 升 minor，`fix` 升 patch，`docs/test` 不升版但仍重新构建。
 
+## [1.9.3] - 2026-10-29
+
+### Fixed（P0 · 阻断级）
+- **修复全新电脑安装后首次启动必然崩溃**：`database.ts` 建表时 `agent_messages` 用的是下划线列名 `conversation_id`，但紧随其后的索引却写成驼峰 `CREATE INDEX idx_agent_messages_conv ON agent_messages(conversationId)`。
+  - **全新库**：表按 `conversation_id` 创建 → 索引语句抛 `no such column: conversationId` → `setupDatabase()` 中断 → `[App] Failed to initialize app`，**窗口打不开、API 起不来**。
+  - **老库不受影响**：历史遗留的 `agent_messages` 表里那列恰好就叫 `conversationId`，索引能建成功，所以从 v1.9.2 往前的版本在已有机子上一直正常，只有新装机才暴露。
+  - 复现方式：以全新用户数据目录启动（模拟新电脑）`小湾清单.exe --user-data-dir=<空目录>`，日志必现上述报错。
+- 修复方案：
+  1. 启动时读取 `PRAGMA table_info(agent_messages)` 判断实际列名；历史库若只有 `conversationId`，先 `ALTER TABLE ... RENAME COLUMN conversationId TO conversation_id`（不支持时退化为 `ADD COLUMN`），再按真实列名建索引。
+  2. `agent_conversations` 的 `updated_at` 同样按实际列名（历史库可能是 `updatedAt`）建索引，缺失则跳过。
+  3. **所有索引创建改走 `safeIndex()`**：索引只影响查询性能，任何一条 DDL 失败只告警跳过，不再让整个应用初始化失败（防御同类笔误复发）。
+  4. 其余 `db.run` 仍全部是 `CREATE TABLE IF NOT EXISTS` 或已包 try/catch，无同类风险点。
+
+### Notes
+- 纯兼容性与健壮性修复，无数据模型变更；版本号 1.9.2 → 1.9.3（patch）。建议所有新装机用户直接使用 1.9.3 及以上。
+
 ## [1.9.2] - 2026-10-29
 
 ### Changed
