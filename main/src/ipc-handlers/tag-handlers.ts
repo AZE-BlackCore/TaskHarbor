@@ -118,6 +118,28 @@ export async function setupTagHandlers() {
     }
   });
 
+  // 获取全部任务-标签关联关系
+  ipcMain.handle('tags:getRelations', async () => {
+    try {
+      const relations = await tagService.getAllRelations();
+      return { success: true, data: relations };
+    } catch (error: any) {
+      console.error('Error getting tag relations:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // 获取计划看板项目汇总（各分类任务统计 + 未归类统计）
+  ipcMain.handle('tags:getBoardSummary', async () => {
+    try {
+      const summary = await tagService.getBoardSummary();
+      return { success: true, data: summary };
+    } catch (error: any) {
+      console.error('Error getting board summary:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
   // 获取标签的所有任务
   ipcMain.handle('tags:getTasks', async (_, tagId) => {
     try {

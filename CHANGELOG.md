@@ -2,6 +2,23 @@
 
 本文件记录 TaskHarbor 各版本变更。（对外品牌名：**小湾清单 Cove**；内部技术标识仍沿用 `TaskHarbor`。）**版本号按语义化版本（SemVer）+ Conventional Commits 前缀维护**：`feat` 升 minor，`fix` 升 patch，`docs/test` 不升版但仍重新构建。
 
+## [1.8.0] - 2026-10-29
+
+### Added
+- **计划看板改为「项目 → 排期」两级结构**：原先 `/board` 直接铺开所有任务的五列看板，项目一多就混在一起；现在进入计划看板先看到项目，再下钻到具体项目的排期。
+  - **项目列表页（`/board`，`BoardView` 重写）**：以卡片网格列出所有项目（**分类即项目**，复用 `tags` 表，无需数据迁移）。每张卡片显示项目名称 + 颜色标识、任务总数、平均进度条、各状态（待处理/进行中/等待确认/已完成/已暂停）计数；支持按项目名搜索、按任务数排序、右上角「新建项目」直接建分类。
+  - **项目排期看板（`/board/:projectId`，新增 `ProjectBoardView`）**：只展示该项目下的任务，保留原有的五列状态看板与跨列拖拽改状态；顶部有返回按钮、项目色点与项目名，并显示该项目任务总数。
+  - **未归类入口**：没有任何分类关联的任务集中在虚线「未归类」卡片中（仅在存在未归类任务时出现），进入后可查看并在任务编辑里选择分类归入项目，避免任务被隐藏。
+  - **项目内新建自动归属**：在项目排期看板点「新建任务」时，任务自动带上当前项目（`TaskEditDialog` 新增 `defaultTagIds`），不需要再手工勾选。
+
+### Changed
+- `App.tsx` 新增 `/board/:projectId` 路由；`Layout.tsx` 侧边栏高亮逻辑支持子路径（进入项目看板时「计划看板」仍高亮）。
+- 主进程 `tagService` 新增 `getBoardSummary()`（一次查询汇总各项目的任务数 / 状态分布 / 平均进度，以及未归类统计）与 `getAllRelations()`；新增 IPC `tags:getBoardSummary`、`tags:getRelations`，preload 暴露 `getBoardSummary` / `getTaskTagRelations`。
+
+### Notes
+- 本次为 `feat`，升 minor：1.7.1 → 1.8.0。
+- **无数据库结构变更**：项目维度沿用 `tags` + `task_tag_relations`，与 v1.7.1 统一的分类体系完全一致，升级安装不影响既有数据。
+
 ## [1.7.1] - 2026-10-29
 
 ### Fixed

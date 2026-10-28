@@ -179,6 +179,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getTasksByTag: (tagId: string) => 
     ipcRenderer.invoke('tags:getTasks', tagId),
 
+  getTaskTagRelations: () =>
+    ipcRenderer.invoke('tags:getRelations'),
+
+  getBoardSummary: () =>
+    ipcRenderer.invoke('tags:getBoardSummary'),
+
   // ========== 项目管理 ==========
   getProjects: () => 
     ipcRenderer.invoke('projects:getAll'),

@@ -290,6 +290,89 @@ export class TagService {
   }
 
   /**
+   * 获取全部任务-标签（项目）关联关系
+   * 用于前端判断「未归类」任务与项目归属
+   */
+  async getAllRelations() {
+    const stmt = this.db.prepare('SELECT taskId, tagId FROM task_tag_relations');
+
+    const rows: Array<{ taskId: string; tagId: string }> = [];
+    while (stmt.step()) {
+      rows.push(stmt.getAsObject() as any);
+    }
+
+    return rows;
+  }
+
+  /**
+   * 计划看板首页所需的项目汇总：
+   * 每个分类（即项目）的任务数、按状态分布、平均进度，以及未归类任务的同口径统计
+   */
+  async getBoardSummary() {
+    const tags = await this.findAll();
+    const relations = await this.getAllRelations();
+
+    // tagId -> 关联任务 ID 集合
+    const byTag = new Map<string, Set<string>>();
+    const assignedTaskIds = new Set<string>();
+    for (const rel of relations) {
+      if (!byTag.has(rel.tagId)) byTag.set(rel.tagId, new Set());
+      byTag.get(rel.tagId)!.add(rel.taskId);
+      assignedTaskIds.add(rel.taskId);
+    }
+
+    // 全量任务的 status / progress 快照
+    const taskStmt = this.db.prepare('SELECT id, status, progress FROM tasks');
+    const taskMap = new Map<string, { status: string; progress: number }>();
+    while (taskStmt.step()) {
+      const row = taskStmt.getAsObject() as any;
+      taskMap.set(String(row.id), {
+        status: String(row.status ?? 'todo'),
+        progress: Number(row.progress) || 0,
+      });
+    }
+
+    const summarize = (taskIds: Set<string>) => {
+      let total = 0;
+      let progressSum = 0;
+      const byStatus: Record<string, number> = {};
+      for (const id of taskIds) {
+        const t = taskMap.get(id);
+        if (!t) continue;
+        total += 1;
+        progressSum += t.progress;
+        byStatus[t.status] = (byStatus[t.status] || 0) + 1;
+      }
+      return {
+        totalTasks: total,
+        byStatus,
+        averageProgress: total ? Math.round(progressSum / total) : 0,
+      };
+    };
+
+    const projects = tags.map((tag: any) => ({
+      id: String(tag.id),
+      name: String(tag.name),
+      color: String(tag.color || '#3B82F6'),
+      ...summarize(byTag.get(String(tag.id)) ?? new Set<string>()),
+    }));
+
+    const unassignedIds = new Set<string>();
+    for (const id of taskMap.keys()) {
+      if (!assignedTaskIds.has(id)) unassignedIds.add(id);
+    }
+
+    const unassigned = {
+      id: '__unassigned__',
+      name: '未归类',
+      color: '#9CA3AF',
+      ...summarize(unassignedIds),
+    };
+
+    return { projects, unassigned };
+  }
+
+  /**
    * 获取所有标签的汇总统计
    */
   async getAllTagsSummary() {

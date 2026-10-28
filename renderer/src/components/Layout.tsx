@@ -163,7 +163,10 @@ export function Layout({ darkMode, toggleDarkMode }: LayoutProps) {
         {/* Main Navigation */}
         <div className="flex flex-col gap-1 w-full px-3 mb-4">
           {MAIN_NAV.map((item) => {
-            const isActive = location.pathname === item.path || (item.path === '/day-todo' && location.pathname === '/');
+            const isActive =
+              location.pathname === item.path ||
+              location.pathname.startsWith(`${item.path}/`) ||
+              (item.path === '/day-todo' && location.pathname === '/');
             return (
               <button
                 key={item.id}

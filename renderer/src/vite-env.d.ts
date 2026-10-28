@@ -45,6 +45,29 @@ interface ElectronAPI {
   addTagToTask: (taskId: string, tagId: string) => Promise<{ success: boolean; error?: string }>;
   removeTagFromTask: (taskId: string, tagId: string) => Promise<{ success: boolean; error?: string }>;
   getTasksByTag: (tagId: string) => Promise<{ success: boolean; data: Record<string, unknown>[]; error?: string }>;
+  getTaskTagRelations: () => Promise<{ success: boolean; data: Array<{ taskId: string; tagId: string }>; error?: string }>;
+  getBoardSummary: () => Promise<{
+    success: boolean;
+    data: {
+      projects: Array<{
+        id: string;
+        name: string;
+        color: string;
+        totalTasks: number;
+        byStatus: Record<string, number>;
+        averageProgress: number;
+      }>;
+      unassigned: {
+        id: string;
+        name: string;
+        color: string;
+        totalTasks: number;
+        byStatus: Record<string, number>;
+        averageProgress: number;
+      };
+    };
+    error?: string;
+  }>;
   addTag: (taskId: string, tagName: string, tagColor?: string) => Promise<{ success: boolean; error?: string }>;
   
   // 项目

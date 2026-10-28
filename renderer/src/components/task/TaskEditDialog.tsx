@@ -49,6 +49,8 @@ type TaskFormData = z.infer<typeof taskSchema>;
 interface TaskEditDialogProps {
   open: boolean;
   task: Task | null;
+  /** 新建任务时默认归属的项目（分类）ID，例如从项目看板新建 */
+  defaultTagIds?: string[];
   onClose: () => void;
   onSave: (task: Partial<Task>) => void;
 }
@@ -75,7 +77,7 @@ const REMINDER_CYCLE_OPTIONS: Array<{ value: string; label: string }> = [
   { value: 'custom',  label: '自定义周期' },
 ];
 
-export function TaskEditDialog({ open, task, onClose, onSave }: TaskEditDialogProps) {
+export function TaskEditDialog({ open, task, defaultTagIds, onClose, onSave }: TaskEditDialogProps) {
   const { tags, fetchTags, createTag } = useTagStore();
   const { addError } = useErrorStore();
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
@@ -138,6 +140,8 @@ export function TaskEditDialog({ open, task, onClose, onSave }: TaskEditDialogPr
       });
       setSelectedTagIds((task as any).tagIds || []);
     } else {
+      // 新建场景：沿用来源项目（如从项目看板新建时带上当前项目）
+      const initialTagIds = defaultTagIds ?? [];
       reset({
         description: '',
         priority: 'medium',
@@ -148,7 +152,7 @@ export function TaskEditDialog({ open, task, onClose, onSave }: TaskEditDialogPr
         assignee: '',
         startDate: new Date().toISOString().split('T')[0],
         estimatedEndDate: '',
-        tagIds: [],
+        tagIds: initialTagIds,
         issues: '',
         notes: '',
         reminderEnabled: false,
@@ -158,9 +162,9 @@ export function TaskEditDialog({ open, task, onClose, onSave }: TaskEditDialogPr
         reminderIntervalHours: 0,
         customReminderTimes: '',
       });
-      setSelectedTagIds([]);
+      setSelectedTagIds(initialTagIds);
     }
-  }, [task, open, reset]);
+  }, [task, open, reset, defaultTagIds]);
 
   const onSubmit = async (data: TaskFormData) => {
     // 「分类」文本框与侧边栏分类目录（tags 表）原本互不相通，
