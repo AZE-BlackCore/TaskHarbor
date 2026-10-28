@@ -385,7 +385,7 @@ export function SettingsPanel({ open, onClose, darkMode, toggleDarkMode }: Setti
                 <div>
                   <p className="font-medium text-gray-900 dark:text-white">窗口置顶</p>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {alwaysOnTop ? 'TaskHarbor 将显示在所有窗口最上层' : '窗口正常显示'}
+                    {alwaysOnTop ? '小湾清单 将显示在所有窗口最上层' : '窗口正常显示'}
                   </p>
                 </div>
               </div>
@@ -631,7 +631,7 @@ export function SettingsPanel({ open, onClose, darkMode, toggleDarkMode }: Setti
             <div className="flex justify-between items-center">
               <span className="text-sm text-gray-500 dark:text-gray-400">软件名称</span>
               <span className="text-sm font-medium text-gray-900 dark:text-white">
-                {appInfo?.productName || 'TaskHarbor'}
+                {appInfo?.productName || '小湾清单'}
               </span>
             </div>
             <div className="flex justify-between items-center">
@@ -665,7 +665,7 @@ export function SettingsPanel({ open, onClose, darkMode, toggleDarkMode }: Setti
                 {appInfo?.description || '桌面端任务管理软件 - 让任务安全停靠、高效启航'}
               </p>
               <p className="text-xs text-center text-gray-400 dark:text-gray-500 mt-1">
-                © 2026 TaskHarbor. All rights reserved.
+                © 2026 小湾清单 (Cove). All rights reserved.
               </p>
             </div>
           </div>

@@ -36,7 +36,7 @@ export async function exportToMarkdown(options?: ExportOptions): Promise<{ succe
       filename = `taskharbor-backup-${Date.now()}.md`
     } = options || {};
 
-    let content = `# TaskHarbor 数据备份\n\n`;
+    let content = `# 小湾清单 数据备份\n\n`;
     content += `导出时间：${new Date().toLocaleString('zh-CN')}\n\n`;
     content += `---\n\n`;
 
@@ -138,7 +138,7 @@ export async function exportToMarkdown(options?: ExportOptions): Promise<{ succe
     }
 
     content += `---\n\n`;
-    content += `*此文件由 TaskHarbor 自动生成*\n`;
+    content += `*此文件由小湾清单自动生成*\n`;
     content += `*版本: ${process.env.npm_package_version || '1.0.0'}*\n`;
 
     const filePath = path.join(outputPath, filename);

@@ -138,7 +138,7 @@ export function AgentHub() {
   const resolvedMcpPath =
     appInfo?.mcpServerPath ||
     health?.mcpServerPath ||
-    '<TaskHarbor安装目录>/resources/mcp-server/server.mjs';
+    '<小湾清单安装目录>/resources/mcp-server/server.mjs';
   const mcpJson = JSON.stringify(
     {
       mcpServers: {
@@ -243,7 +243,7 @@ export function AgentHub() {
         )}
         {!health?.ok && !checking && (
           <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">
-            提示：请确认 TaskHarbor 已启动且本地 HTTP API 已启用（默认监听 127.0.0.1:18765）。
+            提示：请确认小湾清单已启动且本地 HTTP API 已启用（默认监听 127.0.0.1:18765）。
           </p>
         )}
       </section>
@@ -277,7 +277,7 @@ export function AgentHub() {
           MCP 配置（WorkBuddy / Claude 等）
         </h2>
         <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
-          在 AI 客户端的自定义 MCP 配置中加入以下内容，即可让 Agent 直接读写 TaskHarbor：
+          在 AI 客户端的自定义 MCP 配置中加入以下内容，即可让 Agent 直接读写小湾清单：
         </p>
         <div className="flex items-start justify-between gap-3 mb-3">
           <span className="text-xs text-gray-500 dark:text-gray-400">~/.workbuddy/mcp.json（或对应客户端配置）</span>
@@ -289,7 +289,7 @@ export function AgentHub() {
         <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">
           说明：<code className="font-mono">server.mjs</code> 已随安装包内置，上方配置中的路径已自动指向安装目录的{' '}
           <code className="font-mono">resources/mcp-server/server.mjs</code>，无需手动替换。
-          若显示占位路径，请确认 TaskHarbor 已启动后点「重新检测」。添加后需在连接器管理中点 <strong>Trust</strong> 启用。
+          若显示占位路径，请确认小湾清单已启动后点「重新检测」。添加后需在连接器管理中点 <strong>Trust</strong> 启用。
         </p>
 
         <h3 className="mt-5 mb-2 text-sm font-semibold text-gray-900 dark:text-white">可用工具</h3>
@@ -336,7 +336,7 @@ export function AgentHub() {
 
       <p className="text-xs text-center text-gray-400 dark:text-gray-500 flex items-center justify-center gap-1.5">
         <ExternalLink className="w-3.5 h-3.5" />
-        Agent 接入通道自 v1.4.0 起提供，所有写入均落盘到本机 TaskHarbor 数据库
+        Agent 接入通道自 v1.4.0 起提供，所有写入均落盘到本机小湾清单数据库
       </p>
     </div>
   );

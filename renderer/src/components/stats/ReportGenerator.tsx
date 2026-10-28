@@ -41,7 +41,7 @@ export function ReportGenerator({ tasks, tags, schedules }: ReportGeneratorProps
   const handleDownload = () => {
     const meta = REPORT_META[reportType];
     const dateStr = dayjs(reportDate).format('YYYY-MM-DD');
-    const filename = `TaskHarbor_${meta.label}_${dateStr}.md`;
+    const filename = `小湾清单_${meta.label}_${dateStr}.md`;
     // Use Blob to trigger download
     const blob = new Blob([reportContent], { type: 'text/markdown;charset=utf-8' });
     const url = URL.createObjectURL(blob);
@@ -210,7 +210,7 @@ function generateReport(
   const lines: string[] = [];
 
   // Header
-  lines.push(`# TaskHarbor ${meta.label}`);
+  lines.push(`# 小湾清单 ${meta.label}`);
   lines.push('');
   lines.push(`> 生成时间：${now.format('YYYY-MM-DD HH:mm:ss')}`);
   lines.push(`> 报告范围：${startDate.format('YYYY-MM-DD')} ~ ${endDate.format('YYYY-MM-DD')}`);
@@ -379,7 +379,7 @@ function generateReport(
   // Footer
   lines.push('---');
   lines.push('');
-  lines.push('*本报告由 TaskHarbor 自动生成*');
+  lines.push('*本报告由小湾清单自动生成*');
 
   return lines.join('\n');
 }
