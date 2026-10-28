@@ -10,6 +10,10 @@
   - 内部技术标识保持不变：npm 包名 `taskharbor`、应用 `appId` `com.taskharbor.desktop`、环境变量 `TASKHARBOR_API_PORT` / `TASKHARBOR_API_TOKEN`、MCP server id `taskharbor` 及全部 `taskharbor_*` 工具名、HTTP API 端口 `18765`。现有用户已配置的 `mcp.json` **无需改动**。
   - 本次为纯品牌/文档变更，无功能变化，按补丁版本发布。
 
+### Changed (视觉)
+- **视觉 Logo 更新（方案 A · 小船停湾）**：中心图标由「清单」替换为「小湾水面 + 停泊小船 + 金色对勾帆」意象，同时呈现「小湾」字面、任务停靠与清单完成感；沿用蓝紫渐变底色（`#3B82F6→#8B5CF6`）与右上角金色星记忆点。更新文件：`renderer/public/app-logo.svg`、`renderer/public/icon.svg`。
+- 安装包 `build/icon.ico`（多尺寸）需栅格化工具生成，已附一键脚本 `tools/build-icon.ps1`（自动探测 ImageMagick / Inkscape / python+cairosvg+pillow）。沙箱环境缺栅格化工具，待本地具备后执行 `pwsh tools/build-icon.ps1` 生成，当前 `icon.ico` 仍为旧版，不影响源码态显示。
+
 ## [1.6.0] - 2026-10-27
 
 ### Added
