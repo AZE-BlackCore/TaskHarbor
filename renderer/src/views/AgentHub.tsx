@@ -69,13 +69,27 @@ interface AppInfo {
   mcpServerPath?: string;
 }
 
-const TOOLS: [string, string][] = [
-  ['taskharbor_add_schedule', '添加一条日程'],
-  ['taskharbor_list_schedules', '按日期 / 范围 / 关键词列出日程'],
-  ['taskharbor_delete_schedule', '删除一条日程'],
-  ['taskharbor_add_task', '添加一条任务'],
-  ['taskharbor_list_tasks', '按状态 / 责任人 / 关键词列出任务'],
-  ['taskharbor_delete_task', '删除一条任务'],
+interface AgentTool {
+  name: string;
+  description: string;
+  required?: string[];
+  properties?: string[];
+}
+
+/**
+ * 兜底清单：仅在读不到内置 MCP server 时显示。
+ * 真实清单由主进程执行 `node server.mjs --list-tools` 实时读取（单一数据源），
+ * 因此新增工具只需改 tools/mcp-server/server.mjs，页面会自动同步。
+ */
+const FALLBACK_TOOLS: AgentTool[] = [
+  { name: 'taskharbor_add_schedule', description: '添加一条日程', required: ['title', 'startTime', 'endTime'] },
+  { name: 'taskharbor_list_schedules', description: '按日期 / 范围 / 关键词列出日程' },
+  { name: 'taskharbor_update_schedule', description: '按 ID 修改日程（只改传入字段）', required: ['id'] },
+  { name: 'taskharbor_delete_schedule', description: '删除一条日程', required: ['id'] },
+  { name: 'taskharbor_add_task', description: '添加一条任务', required: ['description'] },
+  { name: 'taskharbor_list_tasks', description: '按状态 / 责任人 / 关键词列出任务' },
+  { name: 'taskharbor_update_task', description: '按 ID 修改任务（状态 / 进度 / 责任人等）', required: ['id'] },
+  { name: 'taskharbor_delete_task', description: '删除一条任务', required: ['id'] },
 ];
 
 export function AgentHub() {
@@ -83,6 +97,13 @@ export function AgentHub() {
   const [health, setHealth] = useState<Health | null>(null);
   const [checking, setChecking] = useState(false);
   const [appInfo, setAppInfo] = useState<AppInfo | null>(null);
+  const [tools, setTools] = useState<AgentTool[]>(FALLBACK_TOOLS);
+  const [toolsMeta, setToolsMeta] = useState<{
+    source: string;
+    serverVersion?: string;
+    error?: string;
+  } | null>(null);
+  const [toolsLoading, setToolsLoading] = useState(false);
 
   const check = useCallback(async (p: string) => {
     setChecking(true);
@@ -119,6 +140,30 @@ export function AgentHub() {
     const id = setInterval(() => check(p), 15000);
     return () => clearInterval(id);
   }, [port, check]);
+
+  // 读取内置 MCP server 的真实工具清单（单一数据源，新增接口后自动同步）
+  const loadTools = useCallback(async () => {
+    const api = (window as any).electronAPI;
+    if (!api?.getAgentTools) return;
+    setToolsLoading(true);
+    try {
+      const res = await api.getAgentTools();
+      if (res?.tools?.length) setTools(res.tools as AgentTool[]);
+      setToolsMeta({
+        source: res?.source ?? 'fallback',
+        serverVersion: res?.serverVersion,
+        error: res?.error,
+      });
+    } catch {
+      setToolsMeta({ source: 'fallback', error: '读取工具清单失败' });
+    } finally {
+      setToolsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadTools();
+  }, [loadTools]);
 
   // 挂载时直接经 IPC 读取真实安装目录（不依赖 HTTP API 是否就绪）
   useEffect(() => {
@@ -159,7 +204,15 @@ export function AgentHub() {
 
   const curlTask = `curl -X POST ${base}/api/tasks \\
   -H "Content-Type: application/json" \\
-  -d '{"description":"完成 Agent 接入面板","status":"in_progress","assignee":"WorkBuddy"}'`;
+  -d '{"description":"完成 Agent 接入面板","status":"in-progress","assignee":"WorkBuddy"}'`;
+
+  const curlUpdateTask = `curl -X PUT ${base}/api/tasks/<任务ID> \\
+  -H "Content-Type: application/json" \\
+  -d '{"status":"done","progress":100}'`;
+
+  const curlUpdateSchedule = `curl -X PUT ${base}/api/schedules/<日程ID> \\
+  -H "Content-Type: application/json" \\
+  -d '{"startTime":"2026-10-28T02:00:00.000Z","location":"会议室 A"}'`;
 
   const fmtUptime = (s?: number) => {
     if (s == null) return '—';
@@ -292,15 +345,47 @@ export function AgentHub() {
           若显示占位路径，请确认小湾清单已启动后点「重新检测」。添加后需在连接器管理中点 <strong>Trust</strong> 启用。
         </p>
 
-        <h3 className="mt-5 mb-2 text-sm font-semibold text-gray-900 dark:text-white">可用工具</h3>
+        <div className="mt-5 mb-2 flex items-center gap-2">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">可用工具</h3>
+          <span className="text-xs text-gray-400">{tools.length} 个</span>
+          <button
+            onClick={loadTools}
+            className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded-md border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            title="重新读取内置 MCP server 的工具清单"
+          >
+            <RefreshCw className={`w-3 h-3 ${toolsLoading ? 'animate-spin' : ''}`} />
+            刷新
+          </button>
+        </div>
+        <p className="mb-2 text-xs text-gray-500 dark:text-gray-400">
+          {toolsMeta?.source === 'server' ? (
+            <>
+              清单实时读取自安装包内置的{' '}
+              <code className="font-mono">resources/mcp-server/server.mjs</code>
+              {toolsMeta.serverVersion ? `（server v${toolsMeta.serverVersion}）` : ''}
+              ，新增工具后点「刷新」即可显示。
+            </>
+          ) : (
+            <>
+              当前显示的是内置默认清单（
+              {toolsMeta?.error || '未能读取内置 MCP server'}
+              ）。工具能力以安装包内 server.mjs 为准，安装 Node.js 并重启后可实时读取。
+            </>
+          )}
+        </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {TOOLS.map(([name, desc]) => (
+          {tools.map((tool) => (
             <div
-              key={name}
+              key={tool.name}
               className="p-2.5 bg-white dark:bg-dark-bg rounded-lg border border-gray-200 dark:border-gray-700"
             >
-              <p className="text-xs font-mono font-semibold text-teal-600 dark:text-teal-400">{name}</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{desc}</p>
+              <p className="text-xs font-mono font-semibold text-teal-600 dark:text-teal-400">{tool.name}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{tool.description}</p>
+              {tool.required && tool.required.length > 0 && (
+                <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">
+                  必填：{tool.required.join(' / ')}
+                </p>
+              )}
             </div>
           ))}
         </div>
@@ -323,13 +408,37 @@ export function AgentHub() {
           </pre>
         </div>
 
-        <div>
+        <div className="mb-4">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-medium text-gray-600 dark:text-gray-300">创建任务</span>
             <CopyButton text={curlTask} />
           </div>
           <pre className="p-3 rounded-md bg-gray-900 dark:bg-black/40 text-gray-100 text-xs font-mono overflow-x-auto whitespace-pre">
 {curlTask}
+          </pre>
+        </div>
+
+        <div className="mb-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-medium text-gray-600 dark:text-gray-300">
+              修改任务（部分更新，未传字段保持原值）
+            </span>
+            <CopyButton text={curlUpdateTask} />
+          </div>
+          <pre className="p-3 rounded-md bg-gray-900 dark:bg-black/40 text-gray-100 text-xs font-mono overflow-x-auto whitespace-pre">
+{curlUpdateTask}
+          </pre>
+        </div>
+
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-medium text-gray-600 dark:text-gray-300">
+              修改日程（部分更新，未传字段保持原值）
+            </span>
+            <CopyButton text={curlUpdateSchedule} />
+          </div>
+          <pre className="p-3 rounded-md bg-gray-900 dark:bg-black/40 text-gray-100 text-xs font-mono overflow-x-auto whitespace-pre">
+{curlUpdateSchedule}
           </pre>
         </div>
       </section>

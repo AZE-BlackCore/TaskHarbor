@@ -4,6 +4,20 @@ import * as path from 'path';
 import { app } from 'electron';
 import * as scheduleService from '../services/scheduleService';
 import { taskService } from '../services/taskService';
+import { saveDatabase } from '../services/database';
+
+/**
+ * 写操作成功后统一落盘。
+ * service 层 CRUD 默认不触发 saveDatabase（IPC 路径由 project-handlers 等显式调用），
+ * 若 HTTP API / MCP 写入不收口落盘，App 强杀或崩溃时数据会全部丢失。
+ */
+function flush(): void {
+  try {
+    saveDatabase();
+  } catch (e) {
+    console.error('[API] saveDatabase failed:', e);
+  }
+}
 
 /**
  * TaskHarbor 本地 HTTP API
@@ -20,8 +34,13 @@ import { taskService } from '../services/taskService';
  *   POST /api/schedules            body = CreateScheduleInput
  *   GET  /api/schedules?date=      | ?start=&end=&priority=&search=
  *   GET  /api/schedules/:id
- *   PUT  /api/schedules/:id        body = Partial<CreateScheduleInput>
+ *   PUT  /api/schedules/:id        body = Partial<CreateScheduleInput>  （部分更新）
  *   DELETE /api/schedules/:id
+ *   POST /api/tasks                body = CreateTaskInput
+ *   GET  /api/tasks?status=&assignee=&search=
+ *   GET  /api/tasks/:id
+ *   PUT  /api/tasks/:id            body = Partial<CreateTaskInput>      （部分更新）
+ *   DELETE /api/tasks/:id
  */
 
 const DEFAULT_PORT = 18765;
@@ -126,6 +145,7 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
           return;
         }
         const schedule = await scheduleService.createSchedule(body as any);
+        flush();
         sendJson(res, 201, { success: true, data: schedule });
         return;
       }
@@ -168,12 +188,23 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
       }
       if (req.method === 'PUT') {
         const body = await readBody(req);
+        if (Object.keys(body).length === 0) {
+          sendJson(res, 400, { error: 'No fields to update' });
+          return;
+        }
+        const existing = await scheduleService.getScheduleById(id);
+        if (!existing) {
+          sendJson(res, 404, { error: 'Schedule not found' });
+          return;
+        }
         const schedule = await scheduleService.updateSchedule({ id, ...body } as any);
+        flush();
         sendJson(res, 200, { success: true, data: schedule });
         return;
       }
       if (req.method === 'DELETE') {
         await scheduleService.deleteSchedule(id);
+        flush();
         sendJson(res, 200, { success: true });
         return;
       }
@@ -188,6 +219,7 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
           return;
         }
         const task = await taskService.createTask(body as any);
+        flush();
         sendJson(res, 201, { success: true, data: task });
         return;
       }
@@ -219,12 +251,33 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
       }
       if (req.method === 'PUT') {
         const body = await readBody(req);
-        const ok = await taskService.updateTask(id, body as any);
-        sendJson(res, 200, { success: true, data: { updated: ok } });
+        if (Object.keys(body).length === 0) {
+          sendJson(res, 400, { error: 'No fields to update' });
+          return;
+        }
+        const existing = await taskService.findById(id);
+        if (!existing) {
+          sendJson(res, 404, { error: 'Task not found' });
+          return;
+        }
+        try {
+          await taskService.updateTask(id, body as any);
+        } catch (e: any) {
+          // taskService 对「没有任何合法字段」会抛错，这里归为 400 而非 500
+          if (String(e?.message || '').includes('No valid fields')) {
+            sendJson(res, 400, { error: 'No valid fields to update' });
+            return;
+          }
+          throw e;
+        }
+        const updated = await taskService.findById(id);
+        flush();
+        sendJson(res, 200, { success: true, data: updated ?? { id, updated: true } });
         return;
       }
       if (req.method === 'DELETE') {
         const ok = await taskService.deleteTask(id);
+        flush();
         sendJson(res, 200, { success: true, data: { deleted: ok } });
         return;
       }

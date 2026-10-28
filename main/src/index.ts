@@ -11,6 +11,7 @@ import { setupNotificationHandlers } from './ipc-handlers/notification-handlers'
 import { setupScheduleHandlers } from './ipc-handlers/schedule-handlers';
 import { setupReminderHandlers } from './ipc-handlers/reminder-handlers';
 import { setupExportHandlers } from './ipc-handlers/export-handlers';
+import { setupAgentHandlers } from './ipc-handlers/agent-handlers';
 import { startReminderScheduler, stopReminderScheduler } from './services/reminderService';
 import { setupApiServer, closeApiServer } from './server/apiServer';
 import { taskService } from './services/taskService';
@@ -531,6 +532,7 @@ app.whenReady().then(async () => {
     await setupScheduleHandlers();
     setupReminderHandlers();
     setupExportHandlers();
+    setupAgentHandlers();
     console.log('[App] IPC handlers setup complete');
 
     // 启动本地 HTTP API（供 WorkBuddy / MCP / 脚本对接写入日程）

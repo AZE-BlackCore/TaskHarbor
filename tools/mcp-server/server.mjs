@@ -12,9 +12,11 @@
  * 工具：
  *   taskharbor_add_schedule     添加一条日程
  *   taskharbor_list_schedules   按日期/范围列出日程
+ *   taskharbor_update_schedule  修改一条日程（按 id，仅改传入字段）
  *   taskharbor_delete_schedule  删除一条日程
  *   taskharbor_add_task         添加一条任务
  *   taskharbor_list_tasks       按状态/责任人/关键词列出任务
+ *   taskharbor_update_task      修改一条任务（按 id，仅改传入字段）
  *   taskharbor_delete_task      删除一条任务
  */
 
@@ -23,6 +25,9 @@ import process from 'node:process';
 const PORT = parseInt(process.env.TASKHARBOR_API_PORT || '18765', 10) || 18765;
 const TOKEN = process.env.TASKHARBOR_API_TOKEN || '';
 const BASE = `http://127.0.0.1:${PORT}`;
+
+/** MCP server 版本，随 --list-tools 一并输出 */
+const MCP_SERVER_VERSION = '1.1.0';
 
 const SCHEDULE_PROPS = {
   title: { type: 'string', description: '日程标题（必填）' },
@@ -46,17 +51,43 @@ const SCHEDULE_PROPS = {
   relatedTaskId: { type: 'string', description: '关联任务 ID' },
 };
 
-const TASK_PROPS = {
-  description: { type: 'string', description: '任务描述（必填）' },
+const TASK_STATUS_VALUES = ['todo', 'in-progress', 'review', 'done', 'blocked'];
+
+/** 任务可写字段（update 复用，去掉 description 必填约束、加入 actualEndDate） */
+const TASK_FIELD_PROPS = {
   module: { type: 'string', description: '所属模块名称' },
   functionModule: { type: 'string', description: '功能模块' },
-  status: { type: 'string', description: '状态，如 todo / in_progress / done，默认 todo' },
+  status: {
+    type: 'string',
+    enum: TASK_STATUS_VALUES,
+    description: '状态：todo(待办) / in-progress(进行中) / review(验收) / done(已完成) / blocked(阻塞)，默认 todo',
+  },
   assignee: { type: 'string', description: '责任人' },
   startDate: { type: 'string', description: '开始日期 ISO，如 2026-10-27' },
   estimatedEndDate: { type: 'string', description: '预计完成日期 ISO' },
+  actualEndDate: { type: 'string', description: '实际完成日期 ISO（仅修改时可用）' },
   progress: { type: 'number', description: '进度 0-100，默认 0' },
   issues: { type: 'string', description: '问题与阻塞' },
   notes: { type: 'string', description: '备注' },
+};
+
+const TASK_PROPS = {
+  description: { type: 'string', description: '任务描述（必填）' },
+  ...TASK_FIELD_PROPS,
+};
+
+const TASK_UPDATE_PROPS = {
+  id: { type: 'string', description: '要修改的任务 ID（必填，可先用 taskharbor_list_tasks 查）' },
+  description: { type: 'string', description: '任务描述（要改才传）' },
+  ...TASK_FIELD_PROPS,
+};
+
+const SCHEDULE_UPDATE_PROPS = {
+  id: { type: 'string', description: '要修改的日程 ID（必填，可先用 taskharbor_list_schedules 查）' },
+  ...SCHEDULE_PROPS,
+  title: { type: 'string', description: '日程标题（要改才传）' },
+  startTime: { type: 'string', description: '开始时间 ISO 8601（要改才传）' },
+  endTime: { type: 'string', description: '结束时间 ISO 8601（要改才传）' },
 };
 
 const TOOLS = [
@@ -84,6 +115,16 @@ const TOOLS = [
     },
   },
   {
+    name: 'taskharbor_update_schedule',
+    description:
+      '按 ID 修改一条 TaskHarbor 日程（部分更新：只改传入的字段，未传字段保持原值）。先用 taskharbor_list_schedules 拿到 id。',
+    inputSchema: {
+      type: 'object',
+      properties: SCHEDULE_UPDATE_PROPS,
+      required: ['id'],
+    },
+  },
+  {
     name: 'taskharbor_delete_schedule',
     description: '按 ID 删除一条 TaskHarbor 日程。',
     inputSchema: {
@@ -107,10 +148,24 @@ const TOOLS = [
     inputSchema: {
       type: 'object',
       properties: {
-        status: { type: 'string', description: '状态过滤，如 todo / in_progress / done' },
+        status: {
+          type: 'string',
+          enum: TASK_STATUS_VALUES,
+          description: '状态过滤：todo / in-progress / review / done / blocked',
+        },
         assignee: { type: 'string', description: '责任人过滤' },
         search: { type: 'string', description: '关键词搜索（描述/备注/问题）' },
       },
+    },
+  },
+  {
+    name: 'taskharbor_update_task',
+    description:
+      '按 ID 修改一条 TaskHarbor 任务（部分更新：只改传入的字段，未传字段保持原值）。常用于改状态、进度、责任人、预计完成日期。先用 taskharbor_list_tasks 拿到 id。',
+    inputSchema: {
+      type: 'object',
+      properties: TASK_UPDATE_PROPS,
+      required: ['id'],
     },
   },
   {
@@ -147,6 +202,15 @@ async function api(method, path, body) {
   return data;
 }
 
+/** 剔除 undefined（未传的字段），保留 null / '' 以支持显式清空 */
+function pickPatch(obj) {
+  const out = {};
+  for (const [k, v] of Object.entries(obj)) {
+    if (v !== undefined) out[k] = v;
+  }
+  return out;
+}
+
 async function callTool(name, args) {
   switch (name) {
     case 'taskharbor_add_schedule': {
@@ -174,6 +238,19 @@ async function callTool(name, args) {
         ],
       };
     }
+    case 'taskharbor_update_schedule': {
+      const { id, ...rest } = args;
+      if (!id) throw new Error('缺少 id');
+      const patch = pickPatch(rest);
+      if (Object.keys(patch).length === 0) {
+        throw new Error('未提供任何要修改的字段（title / startTime / endTime / location / priority 等至少传一个）');
+      }
+      const result = await api('PUT', `/api/schedules/${encodeURIComponent(id)}`, patch);
+      if (!result?.data) throw new Error(`未找到日程 id=${id}（可能已被删除）`);
+      return {
+        content: [{ type: 'text', text: '日程已更新：\n' + JSON.stringify(result.data, null, 2) }],
+      };
+    }
     case 'taskharbor_delete_schedule': {
       if (!args.id) throw new Error('缺少 id');
       const result = await api('DELETE', `/api/schedules/${encodeURIComponent(args.id)}`);
@@ -197,6 +274,20 @@ async function callTool(name, args) {
         content: [
           { type: 'text', text: `共 ${list.length} 条任务：\n` + JSON.stringify(list, null, 2) },
         ],
+      };
+    }
+    case 'taskharbor_update_task': {
+      const { id, ...rest } = args;
+      if (!id) throw new Error('缺少 id');
+      const patch = pickPatch(rest);
+      if (Object.keys(patch).length === 0) {
+        throw new Error('未提供任何要修改的字段（status / progress / assignee / description 等至少传一个）');
+      }
+      const result = await api('PUT', `/api/tasks/${encodeURIComponent(id)}`, patch);
+      const updated = result?.data;
+      if (!updated || updated.updated === false) throw new Error(`未找到任务 id=${id}（可能已被删除）`);
+      return {
+        content: [{ type: 'text', text: '任务已更新：\n' + JSON.stringify(updated, null, 2) }],
       };
     }
     case 'taskharbor_delete_task': {
@@ -261,6 +352,30 @@ function handleMessage(msg) {
       send({ jsonrpc: '2.0', id, error: { code: -32603, message: String(err) } });
     }
   }
+}
+
+/**
+ * CLI 模式：`node server.mjs --list-tools`
+ * 以 JSON 输出当前工具清单，供桌面端「Agent 接入」页实时展示。
+ * 工具清单只在 TOOLS 定义一处，新增/修改工具后界面自动同步，无需再手工维护页面列表。
+ */
+if (process.argv.includes('--list-tools')) {
+  process.stdout.write(
+    JSON.stringify(
+      {
+        serverInfo: { name: 'taskharbor-mcp', version: MCP_SERVER_VERSION },
+        tools: TOOLS.map((t) => ({
+          name: t.name,
+          description: t.description,
+          required: t.inputSchema?.required ?? [],
+          properties: Object.keys(t.inputSchema?.properties ?? {}),
+        })),
+      },
+      null,
+      2
+    ) + '\n'
+  );
+  process.exit(0);
 }
 
 // 逐行解析 stdin（MCP stdio 使用换行分隔的 JSON-RPC 消息）

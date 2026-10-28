@@ -185,6 +185,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getBoardSummary: () =>
     ipcRenderer.invoke('tags:getBoardSummary'),
 
+  // ========== Agent 接入 ==========
+  getAgentTools: () =>
+    ipcRenderer.invoke('agent:listTools'),
+
   // ========== 项目管理 ==========
   getProjects: () => 
     ipcRenderer.invoke('projects:getAll'),

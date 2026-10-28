@@ -13,7 +13,7 @@
 **桌面端任务管理软件 - 让任务安全停靠、高效启航**
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.8.0-teal.svg)]()
+[![Version](https://img.shields.io/badge/version-1.9.0-teal.svg)]()
 [![Electron](https://img.shields.io/badge/Electron-28.3.3-blue.svg)](https://www.electronjs.org/)
 [![React](https://img.shields.io/badge/React-18-blue.svg)](https://reactjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue.svg)](https://www.typescriptlang.org/)
@@ -250,7 +250,9 @@ curl -X PUT http://127.0.0.1:18765/api/schedules/<日程ID> \
 | `TASKHARBOR_API_PORT` | 自定义监听端口（默认 18765） |
 | `TASKHARBOR_API_TOKEN` | 设置后所有请求需带 `Authorization: Bearer <token>` |
 
-### MCP 工具（8 个）
+> 📌 **工具清单单一数据源**：所有工具只在 `tools/mcp-server/server.mjs` 的 `TOOLS` 中定义一次。应用内「Agent 接入」页通过 `node server.mjs --list-tools` **实时读取**安装包内的 server 文件来展示工具名、描述与必填参数（支持手动刷新）。因此新增/修改工具后，界面会自动同步，无需再改页面代码。
+
+### MCP 工具（8 个，随版本演进）
 
 | 工具 | 功能 |
 |---|---|
@@ -262,6 +264,15 @@ curl -X PUT http://127.0.0.1:18765/api/schedules/<日程ID> \
 | `taskharbor_list_tasks` | 按状态 / 负责人 / 关键词列出任务 |
 | `taskharbor_update_task` | 按 ID **修改**任务（状态 / 进度 / 负责人 / 日期等） |
 | `taskharbor_delete_task` | 删除一条任务 |
+
+上表为**当前版本快照**；以应用内「Agent 接入」页实时读取到的清单为准。
+
+#### 新增一个 Agent 技能（开发者流程）
+
+1. **加工具**：在 `tools/mcp-server/server.mjs` 的 `TOOLS` 里加一项（name / description / inputSchema），并在 `callTool` 的 switch 里实现分支。
+2. **补接口**（仅当工具需要新端点时）：在 `main/src/server/apiServer.ts` 增加路由，并在写操作成功后调用 `flush()`（内部走 `saveDatabase()`），否则 App 崩溃时数据会丢。
+3. **重新构建**：`npm run build:win`，server.mjs 随安装包内置到 `resources/mcp-server/server.mjs`。
+4. **界面自动同步**：无需改前端；页面点「刷新」即显示新工具（含必填参数）。
 
 **典型「先查后改」流程**（Agent 常用）：
 
@@ -276,8 +287,8 @@ curl -X PUT http://127.0.0.1:18765/api/schedules/<日程ID> \
 
 1. **连接状态** — 实时检测本地 API 是否在线（在线/未连接、版本、运行时长），端口可改，每 15s 轮询。
 2. **本地 API 信息** — API 地址（可一键复制）与全部端点说明。
-3. **MCP 配置** — 一键复制 MCP 配置 JSON，其中 `server.mjs` 路径**已自动指向你当前安装目录**（`<安装目录>/resources/mcp-server/server.mjs`），无需手工替换；同时列出 6 个可用工具。
-4. **快速指令** — curl 创建日程 / 任务的示例，可直接复制运行。
+3. **MCP 配置** — 一键复制 MCP 配置 JSON，其中 `server.mjs` 路径**已自动指向你当前安装目录**（`<安装目录>/resources/mcp-server/server.mjs`），无需手工替换；下方**实时列出内置 server 的全部可用工具**（含必填参数，支持刷新）。
+4. **快速指令** — curl 创建 / 修改日程与任务的示例，可直接复制运行。
 
 把 MCP 配置粘贴到客户端（如 `~/.workbuddy/mcp.json`）后，在连接器管理点 **Trust** 启用即可：
 
@@ -307,6 +318,7 @@ curl -X PUT http://127.0.0.1:18765/api/schedules/<日程ID> \
 
 | 版本 | 日期 | 一句话说明 |
 |---|---|---|
+| **1.9.0** | 2026-10-29 | Agent 更新类技能（`update_task` / `update_schedule`）正式打进安装包；Agent 接入页工具列表改为实时读取内置 MCP server（后续新增接口自动同步）；修复 API/MCP 写入不落盘 |
 | **1.8.0** | 2026-10-29 | 计划看板改为两级：先列出所有项目（分类即项目），点进项目才看该项目的排期看板；新增「未归类」入口 |
 | **1.7.1** | 2026-10-29 | 修复「填了分类却在分类目录看不到」（分类文本框自动转为标签并补建存量）；修复新建任务标签不保存 |
 | **1.7.0** | 2026-10-28 | 新增「计划看板」页面：按状态分列展示任务，卡片可拖拽改状态，与任务数据双向联动 |

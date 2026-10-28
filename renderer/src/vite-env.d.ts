@@ -70,6 +70,16 @@ interface ElectronAPI {
   }>;
   addTag: (taskId: string, tagName: string, tagColor?: string) => Promise<{ success: boolean; error?: string }>;
   
+  // Agent 接入
+  getAgentTools: () => Promise<{
+    success: boolean;
+    source: 'server' | 'file' | 'fallback';
+    serverPath?: string;
+    serverVersion?: string;
+    error?: string;
+    tools: Array<{ name: string; description: string; required?: string[]; properties?: string[] }>;
+  }>;
+
   // 项目
   getProjects: () => Promise<{ success: boolean; data: Record<string, unknown>[]; error?: string }>;
   getProjectById: (id: string) => Promise<{ success: boolean; data: Record<string, unknown>; error?: string }>;

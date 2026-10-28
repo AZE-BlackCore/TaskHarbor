@@ -2,6 +2,28 @@
 
 本文件记录 TaskHarbor 各版本变更。（对外品牌名：**小湾清单 Cove**；内部技术标识仍沿用 `TaskHarbor`。）**版本号按语义化版本（SemVer）+ Conventional Commits 前缀维护**：`feat` 升 minor，`fix` 升 patch，`docs/test` 不升版但仍重新构建。
 
+## [1.9.0] - 2026-10-29
+
+### Added
+- **Agent 更新类技能正式纳入安装包**：此前 `taskharbor_update_task` / `taskharbor_update_schedule` 两个工具以及支撑它们的 HTTP API `PUT` 部分更新逻辑一直停留在工作区未提交，按「构建前 stash 遗留改动」的红线约定，每次打包都被排除，**安装版 MCP 实际只有 6 个工具**。本次将其正式提交，7/8 号工具真正随安装包分发（`resources/mcp-server/server.mjs`）。
+  - `tools/mcp-server/server.mjs`：新增 `taskharbor_update_task` / `taskharbor_update_schedule`，任务/日程字段（含 `actualEndDate`、状态枚举 `todo / in-progress / review / done / blocked`）与部分更新语义（只改传入字段）。
+  - `main/src/server/apiServer.ts`：`PUT /api/tasks/:id` 与 `PUT /api/schedules/:id` 增加空 body 400、不存在 404 校验，并返回更新后的完整对象（原先只返回 `{ updated: boolean }`）。
+  - `AgentHub`：补充两个 curl「修改任务 / 修改日程」示例，工具列表补上 update 两项。
+
+### Added（机制）
+- **Agent 工具清单改为单一数据源，后续新增接口自动同步**：原先 `AgentHub.tsx` 里硬编码了一份 `TOOLS` 常量，与 MCP server 内的定义两处维护，新增工具时极易漏改界面。
+  - `server.mjs` 新增 CLI 模式 `node server.mjs --list-tools`，输出 `{ serverInfo, tools: [{ name, description, required, properties }] }`。
+  - 新增 `main/src/ipc-handlers/agent-handlers.ts` 与 IPC `agent:listTools`：优先 `spawnSync('node', [serverPath, '--list-tools'])` 读取权威清单；无 Node.js 时退化为正则解析 server 源码提取工具名；再失败才用内置兜底清单（页面会明确提示当前为默认清单）。
+  - preload 暴露 `getAgentTools`；「Agent 接入」页工具区改为实时渲染（工具数、描述、**必填参数**、数据来源标注 + 手动刷新按钮）。
+  - 规则固化：**以后新增 Agent 技能只需改 `server.mjs`**（需要新端点时同步 `apiServer.ts`），界面无需改动即可显示。
+
+### Fixed
+- **修复 HTTP API / MCP 写入不落盘**：`saveDatabase()` 原本只在 IPC 路径与少数 service 中调用，`apiServer.ts` 的所有写操作（增/改/删任务与日程）成功后都不落盘，App 强杀或崩溃时经 API/MCP 写入的数据会全部丢失（v1.7.1 记录的已知缺陷）。现统一收口：新增 `flush()` 辅助函数，6 处写分支（`POST /api/schedules`、`PUT`/`DELETE /api/schedules/:id`、`POST /api/tasks`、`PUT`/`DELETE /api/tasks/:id`）成功后调用。
+
+### Notes
+- 本次含 `feat`（新工具纳入分发 + 动态清单机制）与 `fix`（写入落盘），升 minor：1.8.0 → 1.9.0。
+- 界面实时清单依赖本机 Node.js（MCP 配置本身也要求 `command: "node"`）；未安装 Node.js 时页面会降级显示内置默认清单并提示，不影响 MCP 配置复制与 curl 示例使用。
+
 ## [1.8.0] - 2026-10-29
 
 ### Added
