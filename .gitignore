@@ -88,6 +88,8 @@ Thumbs.db
 *.backup
 
 # Build outputs (explicit)
+# 所有打包产物统一收敛到 builds/ 目录，仓库根目录不再产生 dist-output*
+builds/
 dist-output/
 dist-output-*/
 *.exe

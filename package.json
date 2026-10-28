@@ -1,7 +1,7 @@
 {
   "name": "taskharbor",
   "version": "1.6.1",
-  "description": "TaskHarbor - 桌面端任务管理软件，让任务安全停靠、高效启航",
+  "description": "小湾清单 (Cove) - 桌面端任务管理软件，让任务安全停靠、高效启航",
   "main": "main/dist/index.js",
   "scripts": {
     "dev": "concurrently \"npm run dev:vite\" \"npm run dev:electron\"",
@@ -104,15 +104,15 @@
           "arch": ["x64"]
         }
       ],
-      "icon": null
+      "icon": "renderer/public/icon.ico"
     },
     "nsis": {
       "oneClick": false,
       "perMachine": false,
       "allowToChangeInstallationDirectory": true,
-      "installerIcon": null,
-      "uninstallerIcon": null,
-      "installerHeaderIcon": null
+      "installerIcon": "renderer/public/icon.ico",
+      "uninstallerIcon": "renderer/public/icon.ico",
+      "installerHeaderIcon": "renderer/public/icon.ico"
     }
   }
 }

@@ -12,7 +12,7 @@
 
 ### Changed (视觉)
 - **视觉 Logo 更新（方案 A · 小船停湾）**：中心图标由「清单」替换为「小湾水面 + 停泊小船 + 金色对勾帆」意象，同时呈现「小湾」字面、任务停靠与清单完成感；沿用蓝紫渐变底色（`#3B82F6→#8B5CF6`）与右上角金色星记忆点。更新文件：`renderer/public/app-logo.svg`、`renderer/public/icon.svg`。
-- 安装包 `build/icon.ico`（256/128/64/48/32/16 多尺寸）已用本地 ImageMagick（librsvg）由 `renderer/public/icon.svg` 栅格化生成，视觉与 SVG 一致（蓝紫渐变小船停湾）。`tools/build-icon.ps1` 已支持探测本地 `tools/imagemagick`（含 PATH / 环境变量 `IMAGEMAGICK_PATH` / 向上查找），可重复执行重新生成。
+- 打包安装版图标锁定：安装包 `renderer/public/icon.ico`（256/128/64/48/32/16 多尺寸，新 Logo 小船停湾）已用本地 ImageMagick（librsvg）由 `renderer/public/icon.svg` 栅格化生成，并**纳入 git 版本控制**（`renderer/public` 为 electron-builder 分发资产目录，确保 clone / CI 打包也使用新 Logo）。`package.json` 的 `build.win.icon` 与 `nsis` 的 `installerIcon` / `uninstallerIcon` / `installerHeaderIcon` 已显式锁定指向该文件（应用 exe、安装程序、卸载程序、安装向导头四处图标统一为小船停湾）。`tools/build-icon.ps1` 支持探测本地 `tools/imagemagick`（含 PATH / 环境变量 `IMAGEMAGICK_PATH` / 向上查找），可重复执行重新生成。
 
 ## [1.6.0] - 2026-10-27
 
