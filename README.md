@@ -13,7 +13,7 @@
 **桌面端任务管理软件 - 让任务安全停靠、高效启航**
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.12.0-teal.svg)]()
+[![Version](https://img.shields.io/badge/version-1.13.0-teal.svg)]()
 [![Electron](https://img.shields.io/badge/Electron-28.3.3-blue.svg)](https://www.electronjs.org/)
 [![React](https://img.shields.io/badge/React-18-blue.svg)](https://reactjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue.svg)](https://www.typescriptlang.org/)
@@ -107,7 +107,7 @@
 - ✅ **重复事件** - 支持每日/每周/每月/每年重复
 - ✅ **任务关联** - 日程可关联到具体任务
 - ✅ **完成标记** - 每条日程带勾选框，勾选后标题置删除线、卡片降透明度；月历 / 清单视图同步呈现完成态（1.11.0）
-- ✅ **数据复盘同步** - 「数据复盘 → 日程统计」新增「已完成」统计卡（按 `completed` 字段计数），在日程概览勾选完成后实时同步（1.12.0）
+- ✅ **日程统计独立 Tab** - 「数据复盘」新增「日程统计」Tab，与「统计概览」并列；内含今日 / 本周 / 总 / 已过期 / 已完成 五张统计卡，点击可展开清单（1.13.0）
 - ✅ **搜索过滤** - 按关键词、优先级筛选日程
 
 #### 数据复盘
@@ -321,6 +321,7 @@ curl -X PUT http://127.0.0.1:18765/api/schedules/<日程ID> \
 
 | 版本 | 日期 | 一句话说明 |
 |---|---|---|
+| **1.13.0** | 2026-10-31 | 「数据复盘」新增「日程统计」独立 Tab（与「统计概览」并列）：今日 / 本周 / 总 / 已过期 / 已完成 五张统计卡，点击展开清单 |
 | **1.12.0** | 2026-10-31 | 「数据复盘 → 日程统计」新增「已完成」统计卡，按 `completed` 字段实时计数；在日程概览勾选完成后自动同步（依赖共享 store 响应式） |
 | **1.11.0** | 2026-10-31 | 日程新增「完成标记」：每条日程带勾选框，勾选后标题置删除线、卡片降透明度；月历 / 清单视图同步呈现完成态（数据模型新增 `completed` 字段，HTTP API / MCP 可写） |
 | **1.10.0** | 2026-10-30 | 「日程概览」新增「清单」视图：按日期分组、时间排序列出全部日程，一屏总览（与月视图、日视图并列切换） |

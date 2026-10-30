@@ -10,7 +10,7 @@ import {
   BarChart3, Users, Flag, Tag as TagIcon, Loader, Brain, FileText,
 } from 'lucide-react';
 
-type StatsTab = 'overview' | 'analysis' | 'report';
+type StatsTab = 'overview' | 'schedule' | 'analysis' | 'report';
 
 interface BackendStats {
   total: number;
@@ -138,6 +138,7 @@ export function StatsView() {
       {/* Tab navigation */}
       <div className="flex items-center gap-1 mb-6 border-b border-gray-200 dark:border-gray-700">
         <TabButton active={activeTab === 'overview'} onClick={() => setActiveTab('overview')} icon={BarChart3} label="统计概览" />
+        <TabButton active={activeTab === 'schedule'} onClick={() => setActiveTab('schedule')} icon={Calendar} label="日程统计" />
         <TabButton active={activeTab === 'analysis'} onClick={() => setActiveTab('analysis')} icon={Brain} label="智能分析" />
         <TabButton active={activeTab === 'report'} onClick={() => setActiveTab('report')} icon={FileText} label="报告生成" />
       </div>
@@ -285,18 +286,21 @@ export function StatsView() {
         )}
       </div>
 
-      {/* Schedule stats */}
-      <div>
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">日程统计</h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-          <ScheduleCard title="今日日程" value={scheduleStats.today} icon={Calendar} color="bg-purple-500" />
-          <ScheduleCard title="本周日程" value={scheduleStats.thisWeek} icon={Calendar} color="bg-indigo-500" />
-          <ScheduleCard title="总日程" value={scheduleStats.total} icon={Calendar} color="bg-pink-500" />
-          <ScheduleCard title="已过期" value={scheduleStats.overdue} icon={AlertCircle} color="bg-red-500" />
-          <ScheduleCard title="已完成" value={scheduleStats.completed} icon={CheckCircle2} color="bg-green-500" />
-        </div>
-      </div>
         </>
+      )}
+
+      {/* 日程统计 子页面（与「统计概览」并列的 Tab） */}
+      {activeTab === 'schedule' && (
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">日程统计</h2>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+            <ScheduleCard title="今日日程" value={scheduleStats.today} icon={Calendar} color="bg-purple-500" />
+            <ScheduleCard title="本周日程" value={scheduleStats.thisWeek} icon={Calendar} color="bg-indigo-500" />
+            <ScheduleCard title="总日程" value={scheduleStats.total} icon={Calendar} color="bg-pink-500" />
+            <ScheduleCard title="已过期" value={scheduleStats.overdue} icon={AlertCircle} color="bg-red-500" />
+            <ScheduleCard title="已完成" value={scheduleStats.completed} icon={CheckCircle2} color="bg-green-500" />
+          </div>
+        </div>
       )}
     </div>
   );
