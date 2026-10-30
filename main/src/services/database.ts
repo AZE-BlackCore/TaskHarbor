@@ -374,6 +374,7 @@ export async function setupDatabase() {
         repeatInterval INTEGER DEFAULT 1,
         repeatEndDate TEXT,
         relatedTaskId TEXT,
+        completed INTEGER DEFAULT 0,
         createdAt TEXT DEFAULT (datetime('now')),
         updatedAt TEXT DEFAULT (datetime('now')),
         FOREIGN KEY (relatedTaskId) REFERENCES tasks(id) ON DELETE SET NULL
@@ -510,6 +511,9 @@ export async function setupDatabase() {
     migrateColumn(`ALTER TABLE tasks ADD COLUMN reminderIntervalUnit TEXT DEFAULT 'day'`);
     migrateColumn(`ALTER TABLE tasks ADD COLUMN customReminderTimes TEXT`);
     migrateColumn(`ALTER TABLE tasks ADD COLUMN reminderLastFired TEXT`);
+
+    // schedules 表迁移：添加 completed 字段（标记日程是否已完成）
+    migrateColumn(`ALTER TABLE schedules ADD COLUMN completed INTEGER DEFAULT 0`);
 
     // 创建索引（全部走 safeIndex：单个索引失败只影响查询性能，不影响启动）
     safeIndex(`CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status)`);

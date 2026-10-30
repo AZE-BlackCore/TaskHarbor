@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import dayjs, { Dayjs } from 'dayjs';
 import { useScheduleStore } from '../stores/scheduleStore';
-import { Calendar, Clock, MapPin, Plus, ChevronLeft, ChevronRight, MoreVertical, Search, Filter, Pencil, Trash2 } from 'lucide-react';
+import { Calendar, Clock, MapPin, Plus, ChevronLeft, ChevronRight, MoreVertical, Search, Filter, Pencil, Trash2, Check } from 'lucide-react';
 import type { Schedule } from '../types';
 
 export function ScheduleView() {
@@ -98,6 +98,10 @@ export function ScheduleView() {
     if (confirm('确定要删除这个日程吗？')) {
       await deleteSchedule(id);
     }
+  };
+
+  const handleToggleComplete = (schedule: Schedule) => {
+    updateSchedule(schedule.id, { completed: !schedule.completed });
   };
 
   return (
@@ -215,7 +219,7 @@ export function ScheduleView() {
                       {daySchedules.slice(0, 2).map((schedule) => (
                         <div
                           key={schedule.id}
-                          className="text-xs px-1.5 py-0.5 rounded truncate text-white"
+                          className={`text-xs px-1.5 py-0.5 rounded truncate text-white ${schedule.completed ? 'line-through opacity-60' : ''}`}
                           style={{ backgroundColor: schedule.color }}
                         >
                           {schedule.title}
@@ -265,6 +269,7 @@ export function ScheduleView() {
                     schedule={schedule}
                     onDelete={handleDelete}
                     onEdit={(s) => setEditingSchedule(s)}
+                    onToggleComplete={handleToggleComplete}
                   />
                 ))}
               </div>
@@ -301,6 +306,7 @@ export function ScheduleView() {
                         schedule={schedule}
                         onDelete={handleDelete}
                         onEdit={(s) => setEditingSchedule(s)}
+                        onToggleComplete={handleToggleComplete}
                       />
                     ))}
                   </div>
@@ -332,17 +338,29 @@ export function ScheduleView() {
   );
 }
 
-function ScheduleItem({ schedule, onDelete, onEdit }: { schedule: Schedule; onDelete: (id: string) => void; onEdit: (s: Schedule) => void }) {
+function ScheduleItem({ schedule, onDelete, onEdit, onToggleComplete }: { schedule: Schedule; onDelete: (id: string) => void; onEdit: (s: Schedule) => void; onToggleComplete: (s: Schedule) => void }) {
+  const done = !!schedule.completed;
   return (
-    <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-dark-card hover:shadow-md transition-shadow">
+    <div className={`p-4 border rounded-xl bg-white dark:bg-dark-card hover:shadow-md transition-shadow ${done ? 'border-gray-200 dark:border-gray-700 opacity-70' : 'border-gray-200 dark:border-gray-700'}`}>
       <div className="flex items-start gap-3">
+        <button
+          onClick={(e) => { e.stopPropagation(); onToggleComplete(schedule); }}
+          title={done ? '标记为未完成' : '标记为已完成'}
+          className={`mt-1 w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center border-2 transition-colors ${
+            done
+              ? 'bg-teal-500 border-teal-500 text-white'
+              : 'border-gray-300 dark:border-gray-600 text-transparent hover:border-teal-500'
+          }`}
+        >
+          <Check className="w-3.5 h-3.5" />
+        </button>
         <div
           className="w-1 h-12 rounded-full flex-shrink-0 mt-1"
           style={{ backgroundColor: schedule.color }}
         />
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between">
-            <h3 className="text-base font-semibold text-gray-900 dark:text-white truncate">
+            <h3 className={`text-base font-semibold truncate ${done ? 'line-through text-gray-400 dark:text-gray-500' : 'text-gray-900 dark:text-white'}`}>
               {schedule.title}
             </h3>
             <div className="flex items-center gap-1 flex-shrink-0">
@@ -415,6 +433,7 @@ function ScheduleDialog({ onClose, onCreate, onUpdate, defaultDate, schedule }: 
   const [allDay, setAllDay] = useState(schedule?.allDay ?? false);
   const [priority, setPriority] = useState<'low' | 'medium' | 'high'>(schedule?.priority || 'medium');
   const [color, setColor] = useState(schedule?.color || '#3B82F6');
+  const [completed, setCompleted] = useState(schedule?.completed ?? false);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
@@ -431,6 +450,7 @@ function ScheduleDialog({ onClose, onCreate, onUpdate, defaultDate, schedule }: 
         allDay,
         priority,
         color,
+        completed,
       };
 
       if (isEdit && schedule && onUpdate) {
@@ -534,6 +554,16 @@ function ScheduleDialog({ onClose, onCreate, onUpdate, defaultDate, schedule }: 
               className="rounded border-gray-300 dark:border-gray-600 text-teal-500 focus:ring-teal-500"
             />
             <label htmlFor="allDay" className="text-sm text-gray-700 dark:text-gray-300">全天事件</label>
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="completed"
+              checked={completed}
+              onChange={(e) => setCompleted(e.target.checked)}
+              className="rounded border-gray-300 dark:border-gray-600 text-teal-500 focus:ring-teal-500"
+            />
+            <label htmlFor="completed" className="text-sm text-gray-700 dark:text-gray-300">标记完成</label>
           </div>
         </div>
         <div className="flex gap-3 mt-6">

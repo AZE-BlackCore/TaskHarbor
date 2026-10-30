@@ -13,7 +13,7 @@
 **桌面端任务管理软件 - 让任务安全停靠、高效启航**
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.10.0-teal.svg)]()
+[![Version](https://img.shields.io/badge/version-1.11.0-teal.svg)]()
 [![Electron](https://img.shields.io/badge/Electron-28.3.3-blue.svg)](https://www.electronjs.org/)
 [![React](https://img.shields.io/badge/React-18-blue.svg)](https://reactjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue.svg)](https://www.typescriptlang.org/)
@@ -106,6 +106,7 @@
 - ✅ **优先级管理** - 低/中/高三级优先级，颜色标识
 - ✅ **重复事件** - 支持每日/每周/每月/每年重复
 - ✅ **任务关联** - 日程可关联到具体任务
+- ✅ **完成标记** - 每条日程带勾选框，勾选后标题置删除线、卡片降透明度；月历 / 清单视图同步呈现完成态（1.11.0）
 - ✅ **搜索过滤** - 按关键词、优先级筛选日程
 
 #### 数据复盘
@@ -319,6 +320,7 @@ curl -X PUT http://127.0.0.1:18765/api/schedules/<日程ID> \
 
 | 版本 | 日期 | 一句话说明 |
 |---|---|---|
+| **1.11.0** | 2026-10-31 | 日程新增「完成标记」：每条日程带勾选框，勾选后标题置删除线、卡片降透明度；月历 / 清单视图同步呈现完成态（数据模型新增 `completed` 字段，HTTP API / MCP 可写） |
 | **1.10.0** | 2026-10-30 | 「日程概览」新增「清单」视图：按日期分组、时间排序列出全部日程，一屏总览（与月视图、日视图并列切换） |
 | **1.9.4** | 2026-10-29 | 修复进度校验触发器从未创建成功（SQLite 不支持 `BEFORE INSERT OR UPDATE ON`，异常被误报为"已存在"）；触发器创建统一打印真实原因 |
 | **1.9.3** | 2026-10-29 | **修复全新电脑首次启动必崩**（`agent_messages` 索引建在驼峰列名上导致建库失败）；索引创建统一容错 |
@@ -608,6 +610,7 @@ CREATE TABLE schedules (
   repeatInterval INTEGER DEFAULT 1,
   repeatEndDate TEXT,
   relatedTaskId TEXT,
+  completed INTEGER DEFAULT 0,
   createdAt TEXT,
   updatedAt TEXT
 )

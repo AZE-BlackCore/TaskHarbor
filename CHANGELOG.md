@@ -2,6 +2,19 @@
 
 本文件记录 TaskHarbor 各版本变更。（对外品牌名：**小湾清单 Cove**；内部技术标识仍沿用 `TaskHarbor`。）**版本号按语义化版本（SemVer）+ Conventional Commits 前缀维护**：`feat` 升 minor，`fix` 升 patch，`docs/test` 不升版但仍重新构建。
 
+## [1.11.0] - 2026-10-31
+
+### Added
+- **日程「完成标记」**：每条日程新增勾选框，点击即标记完成 / 取消完成（乐观更新，立即生效）。
+  - **日视图 / 清单视图**：`ScheduleItem` 卡片左侧新增圆形勾选按钮；勾选后标题置删除线、卡片整体降透明度（70%），并保留编辑 / 删除入口。
+  - **月历视图**：已完成日程的色块同步加删除线 + 降透明度，一眼区分。
+  - **新建 / 编辑弹窗**：新增「标记完成」勾选项，可在创建或编辑时直接设定完成态。
+  - **数据模型**：`schedules` 表新增 `completed INTEGER DEFAULT 0` 字段（新库建表即带；旧库通过 `ALTER TABLE` 在线迁移补齐）。`Schedule` 类型（主进程 `scheduleService` + 渲染进程 `types`）同步增加 `completed?`。
+  - **全链路打通**：`scheduleService.createSchedule` 写入、`getScheduleById` / `getSchedules` / `getSchedulesByDate` 读取映射、`updateSchedule` 部分更新均已支持；HTTP API（`POST/PUT /api/schedules`）与 IPC（`schedules:create` / `schedules:update`）透传 `completed`，MCP 亦可写。
+
+### Notes
+- 数据模型 + 全链路功能增强；版本号 1.10.0 → 1.11.0（minor，`feat`）。
+
 ## [1.10.0] - 2026-10-30
 
 ### Added

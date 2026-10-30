@@ -17,6 +17,7 @@ interface Schedule {
     endDate?: string;
   };
   relatedTaskId?: string;
+  completed?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -49,6 +50,7 @@ export interface CreateScheduleInput {
     endDate?: string;
   };
   relatedTaskId?: string;
+  completed?: boolean;
 }
 
 /**
@@ -70,8 +72,8 @@ export async function createSchedule(input: CreateScheduleInput): Promise<Schedu
     INSERT INTO schedules (
       id, title, description, location, startTime, endTime,
       allDay, color, priority, reminder, repeatType, repeatInterval,
-      repeatEndDate, relatedTaskId, createdAt, updatedAt
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      repeatEndDate, relatedTaskId, completed, createdAt, updatedAt
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `, [
     id,
     input.title,
@@ -87,6 +89,7 @@ export async function createSchedule(input: CreateScheduleInput): Promise<Schedu
     input.repeat?.interval || 1,
     input.repeat?.endDate || null,
     input.relatedTaskId || null,
+    input.completed ? 1 : 0,
     now,
     now
   ]);
@@ -125,6 +128,7 @@ export async function getScheduleById(id: string): Promise<Schedule> {
       endDate: row.repeatEndDate
     } : undefined,
     relatedTaskId: row.relatedTaskId,
+    completed: row.completed === 1,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt
   };
@@ -181,6 +185,7 @@ export async function getSchedules(filters?: ScheduleFilters): Promise<Schedule[
       endDate: row.repeatEndDate
     } : undefined,
     relatedTaskId: row.relatedTaskId,
+    completed: row.completed === 1,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt
   }));
@@ -244,6 +249,10 @@ export async function updateSchedule(input: UpdateScheduleInput): Promise<Schedu
     fields.push('relatedTaskId = ?');
     params.push(input.relatedTaskId);
   }
+  if (input.completed !== undefined) {
+    fields.push('completed = ?');
+    params.push(input.completed ? 1 : 0);
+  }
 
   if (fields.length === 0) {
     return getScheduleById(input.id);
@@ -305,6 +314,7 @@ export async function getSchedulesByDate(date: string): Promise<Schedule[]> {
       endDate: row.repeatEndDate
     } : undefined,
     relatedTaskId: row.relatedTaskId,
+    completed: row.completed === 1,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt
   }));

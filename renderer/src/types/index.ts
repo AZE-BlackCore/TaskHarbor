@@ -113,6 +113,7 @@ export interface Schedule {
     endDate?: string;  // 重复结束日期
   };
   relatedTaskId?: string; // 关联的任务 ID
+  completed?: boolean;   // 是否已标记完成
   createdAt: string;
   updatedAt: string;
 }

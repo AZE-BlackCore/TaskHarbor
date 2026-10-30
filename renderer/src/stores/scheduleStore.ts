@@ -155,6 +155,7 @@ export const useScheduleStore = create<ScheduleState>()(
         allDay: scheduleData.allDay ?? false,
         color: scheduleData.color || '#3B82F6',
         priority: scheduleData.priority || 'medium',
+        completed: scheduleData.completed ?? false,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       } as Schedule;
