@@ -39,7 +39,7 @@ export function StatsView() {
   const { schedules, fetchSchedules } = useScheduleStore();
   const { tags, fetchTags } = useTagStore();
   const [stats, setStats] = useState<BackendStats | null>(null);
-  const [scheduleStats, setScheduleStats] = useState({ total: 0, today: 0, thisWeek: 0, overdue: 0 });
+  const [scheduleStats, setScheduleStats] = useState({ total: 0, today: 0, thisWeek: 0, overdue: 0, completed: 0 });
   const [activeTab, setActiveTab] = useState<StatsTab>('overview');
 
   useEffect(() => {
@@ -83,7 +83,9 @@ export function StatsView() {
       return d < today;
     }).length;
 
-    setScheduleStats({ total: schedules.length, today: todayCount, thisWeek: thisWeekCount, overdue: overdueCount });
+    const completedCount = schedules.filter(s => s.completed).length;
+
+    setScheduleStats({ total: schedules.length, today: todayCount, thisWeek: thisWeekCount, overdue: overdueCount, completed: completedCount });
   }, [schedules]);
 
   const total = stats?.total ?? tasks.length;
@@ -286,11 +288,12 @@ export function StatsView() {
       {/* Schedule stats */}
       <div>
         <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">日程统计</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
           <ScheduleCard title="今日日程" value={scheduleStats.today} icon={Calendar} color="bg-purple-500" />
           <ScheduleCard title="本周日程" value={scheduleStats.thisWeek} icon={Calendar} color="bg-indigo-500" />
           <ScheduleCard title="总日程" value={scheduleStats.total} icon={Calendar} color="bg-pink-500" />
           <ScheduleCard title="已过期" value={scheduleStats.overdue} icon={AlertCircle} color="bg-red-500" />
+          <ScheduleCard title="已完成" value={scheduleStats.completed} icon={CheckCircle2} color="bg-green-500" />
         </div>
       </div>
         </>

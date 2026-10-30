@@ -2,6 +2,17 @@
 
 本文件记录 TaskHarbor 各版本变更。（对外品牌名：**小湾清单 Cove**；内部技术标识仍沿用 `TaskHarbor`。）**版本号按语义化版本（SemVer）+ Conventional Commits 前缀维护**：`feat` 升 minor，`fix` 升 patch，`docs/test` 不升版但仍重新构建。
 
+## [1.12.0] - 2026-10-31
+
+### Added
+- **数据复盘「日程统计」完成态同步**：在「日程概览」清单 / 日视图勾选日程完成后，「数据复盘 → 日程统计」段的「已完成」统计卡实时同步计数。
+  - `StatsView` 的日程分桶新增 `completed` 桶（基于 `schedule.completed === true`），新增「已完成」统计卡（绿色，可点击展开已完成清单）。
+  - 展开清单的 `ScheduleRow` 对已完成日程加删除线 + 降透明度 + 「已完成」徽标，与日程概览视觉一致。
+  - 响应式由共享 `useScheduleStore` 保证：日程概览的勾选通过 `updateSchedule` 乐观更新内存 `schedules`，数据复盘页订阅同一 store 自动重算分桶，无需手动刷新。
+
+### Notes
+- 依赖 v1.11.0 已落地的 `completed` 数据模型；本版本仅前端统计视图增强。版本号 1.11.0 → 1.12.0（minor，`feat`）。
+
 ## [1.11.0] - 2026-10-31
 
 ### Added

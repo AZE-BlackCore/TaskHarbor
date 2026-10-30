@@ -1,6 +1,6 @@
 {
   "name": "taskharbor",
-  "version": "1.11.0",
+  "version": "1.12.0",
   "description": "小湾清单 (Cove) - 桌面端任务管理软件，让任务安全停靠、高效启航",
   "main": "main/dist/index.js",
   "scripts": {
