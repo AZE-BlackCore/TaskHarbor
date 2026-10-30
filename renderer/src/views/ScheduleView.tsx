@@ -8,7 +8,7 @@ export function ScheduleView() {
   const { schedules, fetchSchedules, createSchedule, deleteSchedule, updateSchedule } = useScheduleStore();
   const [currentMonth, setCurrentMonth] = useState<Dayjs>(dayjs());
   const [selectedDate, setSelectedDate] = useState<Dayjs>(dayjs());
-  const [showMonthView, setShowMonthView] = useState(true);
+  const [viewMode, setViewMode] = useState<'month' | 'day' | 'list'>('month');
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null);
@@ -66,13 +66,33 @@ export function ScheduleView() {
 
   const handleDateClick = (date: Dayjs) => {
     setSelectedDate(date);
-    setShowMonthView(false);
+    setViewMode('day');
   };
 
   const days = getDaysInMonth();
   const weekDays = ['日', '一', '二', '三', '四', '五', '六'];
   const monthNames = ['一月', '二月', '三月', '四月', '五月', '六月', '七月', '八月', '九月', '十月', '十一月', '十二月'];
   const filteredSchedules = getSchedulesForDate(selectedDate);
+
+  // 全部日程清单（按搜索过滤 + 按开始时间排序），供「清单」视图使用
+  const listSchedules = schedules
+    .filter(s => {
+      if (!searchTerm) return true;
+      const t = searchTerm.toLowerCase();
+      return s.title.toLowerCase().includes(t) ||
+             s.description?.toLowerCase().includes(t) ||
+             s.location?.toLowerCase().includes(t);
+    })
+    .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+  const groupedSchedules = (() => {
+    const map = new Map<string, Schedule[]>();
+    listSchedules.forEach(s => {
+      const key = dayjs(s.startTime).format('YYYY-MM-DD');
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(s);
+    });
+    return Array.from(map.entries()).map(([k, items]) => ({ date: dayjs(k), items }));
+  })();
 
   const handleDelete = async (id: string) => {
     if (confirm('确定要删除这个日程吗？')) {
@@ -124,12 +144,26 @@ export function ScheduleView() {
               />
             </div>
 
-            <button
-              onClick={() => setShowMonthView(!showMonthView)}
-              className="px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-dark-card text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-            >
-              {showMonthView ? '日视图' : '月视图'}
-            </button>
+            <div className="flex items-center gap-1 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+              <button
+                onClick={() => setViewMode('month')}
+                className={`px-3 py-2 text-sm transition-colors ${viewMode === 'month' ? 'bg-teal-500 text-white' : 'bg-white dark:bg-dark-card text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
+              >
+                月视图
+              </button>
+              <button
+                onClick={() => setViewMode('day')}
+                className={`px-3 py-2 text-sm border-l border-gray-200 dark:border-gray-700 transition-colors ${viewMode === 'day' ? 'bg-teal-500 text-white' : 'bg-white dark:bg-dark-card text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
+              >
+                日视图
+              </button>
+              <button
+                onClick={() => setViewMode('list')}
+                className={`px-3 py-2 text-sm border-l border-gray-200 dark:border-gray-700 transition-colors ${viewMode === 'list' ? 'bg-teal-500 text-white' : 'bg-white dark:bg-dark-card text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
+              >
+                清单
+              </button>
+            </div>
 
             <button
               onClick={() => setShowCreateDialog(true)}
@@ -144,7 +178,7 @@ export function ScheduleView() {
 
       {/* Content */}
       <div className="flex-1 overflow-auto px-6 pb-6">
-        {showMonthView ? (
+        {viewMode === 'month' ? (
           // Month Calendar View
           <div className="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
             <div className="grid grid-cols-7 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
@@ -198,7 +232,7 @@ export function ScheduleView() {
               })}
             </div>
           </div>
-        ) : (
+        ) : viewMode === 'day' ? (
           // Day View
           <div className="space-y-4">
             <div className="flex items-center gap-2">
@@ -234,6 +268,44 @@ export function ScheduleView() {
                   />
                 ))}
               </div>
+            )}
+          </div>
+        ) : (
+          // List View
+          <div className="space-y-5">
+            {listSchedules.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20">
+                <Calendar className="w-16 h-16 text-gray-300 dark:text-gray-600 mb-4" />
+                <p className="text-gray-500 dark:text-gray-400 mb-4">还没有任何日程</p>
+                <button
+                  onClick={() => setShowCreateDialog(true)}
+                  className="px-4 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition-colors"
+                >
+                  添加第一个日程
+                </button>
+              </div>
+            ) : (
+              groupedSchedules.map(group => (
+                <div key={group.date.format('YYYY-MM-DD')}>
+                  <div className="flex items-center gap-2 mb-2 -mx-1 px-1 py-1 sticky top-0 bg-light-bg dark:bg-dark-bg z-[1]">
+                    <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                      {group.date.format('YYYY年MM月DD日')}
+                    </span>
+                    <span className="text-xs text-gray-400">{weekDays[group.date.day()]}</span>
+                    <span className="text-xs text-gray-400 ml-auto">{group.items.length} 个</span>
+                  </div>
+                  <div className="space-y-3">
+                    {group.items.map((schedule) => (
+                      <ScheduleItem
+                        key={schedule.id}
+                        schedule={schedule}
+                        onDelete={handleDelete}
+                        onEdit={(s) => setEditingSchedule(s)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))
             )}
           </div>
         )}
