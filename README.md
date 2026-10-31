@@ -13,7 +13,7 @@
 **桌面端任务管理软件 - 让任务安全停靠、高效启航**
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.14.0-teal.svg)]()
+[![Version](https://img.shields.io/badge/version-1.14.1-teal.svg)]()
 [![Electron](https://img.shields.io/badge/Electron-28.3.3-blue.svg)](https://www.electronjs.org/)
 [![React](https://img.shields.io/badge/React-18-blue.svg)](https://reactjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue.svg)](https://www.typescriptlang.org/)
@@ -371,6 +371,7 @@ curl -X PUT http://127.0.0.1:18765/api/schedules/<日程ID> \
 
 | 版本 | 日期 | 一句话说明 |
 |---|---|---|
+| **1.14.1** | 2026-11-01 | 移动端真机修复：数据库连接单例（P0 初始化失败 already exists）、系统栏不再压住标题与底部 Tab（overlay:false + opt-out edge-to-edge）、初始化失败可一键重试/重置 |
 | **1.14.0** | 2026-10-31 | 移动端（Android / 小米）首版 + 双端局域网同步：共享内核 core/、Capacitor 8 工程、四 Tab UI、桌面端 Hub（18766，默认关闭）、二维码与配对码、冲突留档、小米保活引导 |
 | **1.13.0** | 2026-10-31 | 「数据复盘」新增「日程统计」独立 Tab（与「统计概览」并列）：今日 / 本周 / 总 / 已过期 / 已完成 五张统计卡，点击展开清单 |
 | **1.12.0** | 2026-10-31 | 「数据复盘 → 日程统计」新增「已完成」统计卡，按 `completed` 字段实时计数；在日程概览勾选完成后自动同步（依赖共享 store 响应式） |

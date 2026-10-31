@@ -14,6 +14,7 @@ import {
   createEngine,
   initRepository,
   loadPairing,
+  resetRepository,
   savePairing,
   type PairingInfo,
 } from '../platform/runtime';
@@ -38,6 +39,8 @@ interface MobileState {
   lastErrorHint: string | null;
 
   init(): Promise<void>;
+  /** 单次初始化（init 内重试用，UI 不直接调用） */
+  initOnce(): Promise<void>;
   refresh(): Promise<void>;
   syncNow(): Promise<void>;
   pair(baseUrl: string, pin: string): Promise<void>;
@@ -67,6 +70,22 @@ export const useMobileStore = create<MobileState>((set, get) => ({
   conflictList: [],
 
   async init() {
+    // v1.14.1：首次失败时丢弃连接缓存再重试一次（自愈「already exists」类残留）
+    try {
+      await get().initOnce();
+    } catch (e) {
+      console.warn('[mobile] init retry after reset', e);
+      try {
+        await resetRepository();
+        await get().initOnce();
+      } catch (e2) {
+        console.error('[mobile] init failed', e2);
+        set({ initError: e2 instanceof Error ? e2.message : String(e2), ready: true });
+      }
+    }
+  },
+
+  async initOnce() {
     try {
       const { repo, deviceId } = await initRepository();
       const pairing = await loadPairing();

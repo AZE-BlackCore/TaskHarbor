@@ -17,6 +17,10 @@ import { Capacitor } from '@capacitor/core';
 async function bootstrap() {
   if (Capacitor.isNativePlatform()) {
     try {
+      // 关键：不让 WebView 绘制到系统栏下方。
+      // Android Chrome 的 env(safe-area-inset-top) 只对「刘海/挖孔」返回非零值，
+      // 不返回状态栏高度 —— 之前标题被状态栏压住就是因为这个。
+      await StatusBar.setOverlaysWebView({ overlay: false });
       await StatusBar.setStyle({ style: Style.Light });
       await StatusBar.setBackgroundColor({ color: '#F7F9FC' });
     } catch {

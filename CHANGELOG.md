@@ -2,6 +2,22 @@
 
 本文件记录 TaskHarbor 各版本变更。（对外品牌名：**小湾清单 Cove**；内部技术标识仍沿用 `TaskHarbor`。）**版本号按语义化版本（SemVer）+ Conventional Commits 前缀维护**：`feat` 升 minor，`fix` 升 patch，`docs/test` 不升版但仍重新构建。
 
+## [1.14.1] - 2026-11-01
+
+### Fixed — 移动端首装必现的两类问题（真机反馈）
+
+- **P0 初始化失败 `CreateConnection: Connection taskharbor already exists`**
+  - 根因：`store.init()` 先调 `initRepository()` 再调 `createEngine()`，而 `createEngine()` 内部又调了一次 `initRepository()`；配对/解绑同样会再次 `createEngine()`。原生插件以库名为键维护连接池，同名重复 `createConnection` 直接抛错 → 首屏报红、本地数据读不出来。
+  - 修复：① `driver-capacitor` 增加模块级连接单例，并在打开前先 `isConnection` 探测、命中则 `retrieveConnection`（双重保险）；② `runtime.initRepository()` 改为记忆化 Promise，webview 生命周期内只建一次 Repository；③ `store.init()` 失败时丢弃缓存自动重试一次。
+  - 附带：初始化失败卡片新增「重试 / 重置本地缓存」两个按钮，无需卸载重装即可自愈（重置只清本机副本，不触碰电脑端数据）。
+- **系统栏压住界面（顶部标题被状态栏遮住、底部 Tab 被三键导航遮住）**
+  - 根因：Android Chrome 的 `env(safe-area-inset-*)` 只对「刘海/挖孔」返回非零值，**不返回系统状态栏/导航栏高度**，纯 CSS 兜不住；且 targetSdk 36 在 Android 15+ 被强制 edge-to-edge。
+  - 修复：启动改为 `StatusBar.setOverlaysWebView({ overlay: false })`（WebView 不再绘制到状态栏下方）；新增 `values-v35/styles.xml` 设置 `android:windowOptOutEdgeToEdgeEnforcement=true`，让系统导航栏不透明、内容布局在两栏之间。
+
+### Changed
+
+- 版本 1.14.0 → **1.14.1**（fix/patch）；移动端 versionName `0.1.0` → `0.1.1`、versionCode `1` → `2`。
+
 ## [1.14.0] - 2026-10-31
 
 ### Added — 移动端（Android / 小米机型）与双端同步（设计文档 M1–M3 首轮落地）

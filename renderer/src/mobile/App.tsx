@@ -1,6 +1,7 @@
 import { CheckSquare, CalendarDays, Calendar, User } from 'lucide-react';
 import { useState } from 'react';
 import { useMobileStore } from './store';
+import { resetRepository } from '../platform/runtime';
 import SyncBadge from './components/SyncBadge';
 import CreateSheet from './components/CreateSheet';
 import TodayView from './views/TodayView';
@@ -38,7 +39,30 @@ export default function App() {
           <div className="cove-card text-sm text-red-600">
             初始化失败：{initError}
             <div className="mt-1 text-xs text-slate-500">
-              请重启应用；若持续失败，请导出诊断包后重置本地数据。
+              本地数据仍完好，可先重试；连续失败再重置本地缓存（仅清本机副本，不影响电脑端数据）。
+            </div>
+            <div className="mt-3 flex gap-2">
+              <button
+                className="cove-btn ghost flex-1"
+                style={{ width: 'auto' }}
+                onClick={() => {
+                  useMobileStore.setState({ initError: null, ready: false });
+                  void useMobileStore.getState().init();
+                }}
+              >
+                重试
+              </button>
+              <button
+                className="cove-btn ghost flex-1"
+                style={{ width: 'auto' }}
+                onClick={async () => {
+                  await resetRepository();
+                  useMobileStore.setState({ initError: null, ready: false });
+                  void useMobileStore.getState().init();
+                }}
+              >
+                重置本地缓存
+              </button>
             </div>
           </div>
         )}
