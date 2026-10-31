@@ -13,7 +13,7 @@
 **桌面端任务管理软件 - 让任务安全停靠、高效启航**
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.13.0-teal.svg)]()
+[![Version](https://img.shields.io/badge/version-1.14.0-teal.svg)]()
 [![Electron](https://img.shields.io/badge/Electron-28.3.3-blue.svg)](https://www.electronjs.org/)
 [![React](https://img.shields.io/badge/React-18-blue.svg)](https://reactjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue.svg)](https://www.typescriptlang.org/)
@@ -177,6 +177,56 @@
 - ✅ **数据导出** - Excel/CSV/Markdown 格式
 - ✅ **数据备份** - 创建数据备份
 - ✅ **数据清理** - 清除所有数据（需谨慎）
+- ✅ **双端同步（1.14.0 新增）** - 桌面端作权威 Hub，手机端经局域网增量同步（详见下节）
+
+---
+
+## 📱 移动端（Android / 小米机型）与双端同步（1.14.0）
+
+> 设计文档：`docs/TaskHarbor-Mobile-软件设计文档.html`。形态：Capacitor 8 壳 + 复用现有 renderer，移动端 appId `com.taskharbor.mobile`，桌面端充当 **Sync Hub（权威源）**。
+
+### 设计要点
+| 维度 | 实现 |
+| --- | --- |
+| 本地优先 | 所有读写先落本地 SQLite 并即时刷新 UI；飞行模式下功能完整可用 |
+| 最小信任面 | Hub **默认关闭**，仅用户主动开启期间在局域网监听；只绑 WiFi/私有网卡地址，不绑 0.0.0.0 |
+| 内核共享 | `core/schema/schema.sql` 为 DDL 单一真源，`core/src/*` 为 OS 无关的同步内核（游标 / Outbox / 冲突 / 引擎 / Transport） |
+| 时钟权威 | 所有落库 `updatedAt` 由 Hub 生成（ADR-03），消除双端时钟漂移导致的静默覆盖 |
+| 冲突可追溯 | 记录级 LWW，被覆盖版本写入 `_sync_conflicts` 且 UI 可见；「删除 vs 修改」按 ADR-07 修改优先 |
+
+### 桌面端（Hub）用法
+1. 侧边栏进入「**同步与设备**」→ 选择网卡地址 → 点击「开启同步并生成配对码」。
+2. 手机端「我的 → 配对电脑」填写 `http://<电脑IP>:18766` 与 6 位配对码（配对码 10 分钟有效，错 3 次自动重生成）。
+3. 配对成功后自动完成首次全量基线拉取；此后回前台 / 连上 WiFi 自动合流，也可点标题栏状态徽标手动同步。
+
+### 移动端工程结构
+```
+core/                      共享内核（纯 TS，三端共用）
+  schema/schema.sql        DDL 单一真源 + migrations/001_sync_enable.sql
+  src/domain|repository|sync|transport
+renderer/src/mobile/       移动端 UI（四 Tab + 同步面板 + 保活引导）
+renderer/src/platform/     CapacitorDriver / schema 加载 / runtime 装配
+renderer/mobile/index.html 移动端入口  →  mobile-dist/  →  android/
+main/src/services/syncServer.ts        桌面端 Hub（端口 18766）
+```
+
+### 常用命令
+```bash
+npm run mobile:build   # 构建移动端前端产物到 mobile-dist/
+npm run cap:sync       # 构建并同步到 Android 工程
+npm run cap:open       # 用 Android Studio 打开工程（真机安装/调试）
+npm run apk:debug      # 命令行构建 debug APK（需 JDK 21 + Android SDK 36）
+```
+
+### 小米 / HyperOS 必做保活设置
+省电策略设为「无限制」→ 开启自启动 → 多任务加锁 → 允许通知。App 内「我的 → 小米保活自检」提供逐项说明与一键跳转。
+即使全部完成，系统 Doze 仍可能推迟后台同步，请以「上次同步时间」为准（UI 不隐藏延迟）。
+
+### 已知限制（1.14.0）
+- 二维码配对：桌面端已可展示二维码，**手机端当前为手动输入地址 + 配对码**（扫码插件待接入）。
+- 阶段一为局域网明文 HTTP：Android `network-security-config` 的 `<domain>` 不支持 CIDR，无法精确放行私有网段，故 `base-config` 放行明文，暴露面由「默认关闭 + 仅绑局域网 IP + token 鉴权」收敛；阶段二切换 HTTPS 后改回禁止。
+- token 当前存于 `@capacitor/preferences`（明文），Keystore 方案待接入。
+- 真机验证（冷启动、千条列表帧率、30 分钟保活、离线 200 条合流）尚未执行。
 
 ---
 
@@ -321,6 +371,7 @@ curl -X PUT http://127.0.0.1:18765/api/schedules/<日程ID> \
 
 | 版本 | 日期 | 一句话说明 |
 |---|---|---|
+| **1.14.0** | 2026-10-31 | 移动端（Android / 小米）首版 + 双端局域网同步：共享内核 core/、Capacitor 8 工程、四 Tab UI、桌面端 Hub（18766，默认关闭）、二维码与配对码、冲突留档、小米保活引导 |
 | **1.13.0** | 2026-10-31 | 「数据复盘」新增「日程统计」独立 Tab（与「统计概览」并列）：今日 / 本周 / 总 / 已过期 / 已完成 五张统计卡，点击展开清单 |
 | **1.12.0** | 2026-10-31 | 「数据复盘 → 日程统计」新增「已完成」统计卡，按 `completed` 字段实时计数；在日程概览勾选完成后自动同步（依赖共享 store 响应式） |
 | **1.11.0** | 2026-10-31 | 日程新增「完成标记」：每条日程带勾选框，勾选后标题置删除线、卡片降透明度；月历 / 清单视图同步呈现完成态（数据模型新增 `completed` 字段，HTTP API / MCP 可写） |

@@ -1,6 +1,6 @@
 {
   "name": "taskharbor",
-  "version": "1.13.0",
+  "version": "1.14.0",
   "description": "小湾清单 (Cove) - 桌面端任务管理软件，让任务安全停靠、高效启航",
   "main": "main/dist/index.js",
   "scripts": {
@@ -25,7 +25,12 @@
     "lint:fix": "cd renderer && npm run lint -- --fix",
     "format": "cd renderer && npx prettier --write \"src/**/*.{ts,tsx,js,jsx,json,css,md}\"",
     "format:check": "cd renderer && npx prettier --check \"src/**/*.{ts,tsx,js,jsx,json,css,md}\"",
-    "ci": "npm run typecheck:all && npm run lint && npm run test"
+    "ci": "npm run typecheck:all && npm run lint && npm run test",
+    "mobile:build": "cd renderer && npm run build:mobile",
+    "cap:sync": "npm run mobile:build && npx cap sync android",
+    "cap:open": "npx cap open android",
+    "apk:debug": "cd android && .\\gradlew.bat assembleDebug",
+    "apk:release": "cd android && .\\gradlew.bat assembleRelease"
   },
   "author": "AZE-BlackCore",
   "license": "MIT",
@@ -54,6 +59,18 @@
     "wait-on": "^7.2.0"
   },
   "dependencies": {
+    "@capacitor-community/sqlite": "^8.1.1",
+    "@capacitor/android": "^8.6.0",
+    "@capacitor/app": "^8.1.2",
+    "@capacitor/cli": "^8.6.0",
+    "@capacitor/core": "^8.6.0",
+    "@capacitor/device": "^8.0.3",
+    "@capacitor/haptics": "^8.0.2",
+    "@capacitor/keyboard": "^8.0.6",
+    "@capacitor/local-notifications": "^8.3.1",
+    "@capacitor/network": "^8.0.1",
+    "@capacitor/preferences": "^8.0.1",
+    "@capacitor/status-bar": "^8.0.4",
     "electron-store": "^8.1.0",
     "electron-window-state": "^5.0.3",
     "exceljs": "^4.4.0",
@@ -69,7 +86,8 @@
     },
     "files": [
       "main/dist/**/*",
-      "node_modules/sql.js/dist/**/*"
+      "node_modules/sql.js/dist/**/*",
+      "core/schema/**/*"
     ],
     "extraResources": [
       {
@@ -109,7 +127,9 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "icon": "renderer/public/icon.ico"

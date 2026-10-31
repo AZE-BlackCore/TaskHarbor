@@ -9,6 +9,7 @@ import { StatsView } from './views/StatsView'
 import { TagList } from './views/tag/TagList'
 import { AgentHub } from './views/AgentHub'
 import { BoardView } from './views/BoardView'
+import { SyncView } from './views/SyncView'
 import { ProjectBoardView } from './views/ProjectBoardView'
 import { FloatingWindow } from './views/FloatingWindow'
 import { TaskReminder } from './components/notification/TaskReminder'
@@ -43,6 +44,7 @@ function App() {
           <Route path="review" element={<StatsView />} />
           <Route path="tags" element={<TagList />} />
           <Route path="agent" element={<AgentHub />} />
+          <Route path="sync" element={<SyncView />} />
           <Route path="board" element={<BoardView />} />
           <Route path="board/:projectId" element={<ProjectBoardView />} />
           {/* Old route compatibility redirects */}

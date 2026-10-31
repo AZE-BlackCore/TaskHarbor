@@ -2,6 +2,36 @@
 
 本文件记录 TaskHarbor 各版本变更。（对外品牌名：**小湾清单 Cove**；内部技术标识仍沿用 `TaskHarbor`。）**版本号按语义化版本（SemVer）+ Conventional Commits 前缀维护**：`feat` 升 minor，`fix` 升 patch，`docs/test` 不升版但仍重新构建。
 
+## [1.14.0] - 2026-10-31
+
+### Added — 移动端（Android / 小米机型）与双端同步（设计文档 M1–M3 首轮落地）
+
+- **共享内核 `core/`（新增，三端共用）**
+  - `core/schema/schema.sql`：DDL 单一真源（10 张业务表 + 4 张同步元表 + 索引）；`core/schema/migrations/001_sync_enable.sql` 为存量库补齐软删除列与元表；`core/schema/version.json` 声明 schema 版本与同步表清单。
+  - `core/src/domain`、`core/src/repository`（`SqlRepository`：复合游标 / 幂等 upsert / 软删除 / Outbox / 冲突表）、`core/src/sync`（cursor / conflict / engine）、`core/src/transport`（base + `LanTransport`）—— 纯 TypeScript，OS 无关，可单测。
+  - 方言约束落地：禁用 CTE / RETURNING / 带冲突目标 UPSERT，upsert 一律「先 UPDATE，0 行再 INSERT」并包事务（`@capacitor-community/sqlite` 在 Android 侧按括号截断 SQL 的已知缺陷）。
+- **移动端 App（Capacitor 8 + 复用 renderer，appId `com.taskharbor.mobile`）**
+  - 双 build target：`renderer/mobile/index.html` + `vite.mobile.config.ts` → `mobile-dist/`，由 Capacitor 同步进 `android/`。
+  - 页面：底部四 Tab（今日 / 任务 / 日程 / 我的）+ 悬浮创建 + 底部半屏表单 + 全屏详情式列表。
+  - 「我的」：同步面板（连接状态 / 上次同步 / 待同步数 / 立即同步 / 冲突列表）、配对电脑（地址 + 6 位配对码）、小米 HyperOS 保活自检清单（省电策略 / 自启动 / 多任务加锁 / 通知）、关于与设备 ID。
+  - 同步状态常驻标题栏（绿=已同步 / 蓝=同步中 / 橙=离线含待同步数 / 灰=未配对），失败给出可执行修复建议（AP 隔离、升级版本等）。
+  - 本地通知提醒（24h 内日程，按 reminder 提前，上限 30 条）；自动同步触发（回前台 / WiFi 恢复 / 启动）。
+- **桌面端同步中枢 Hub（`main/src/services/syncServer.ts`）**
+  - 独立端口 `18766`（不改造既有 Agent API `18765`）；**默认关闭**，仅用户在「同步与设备」页主动开启时监听；只绑定所选私有网卡地址，不绑 `0.0.0.0`。
+  - 端点：`GET /api/sync/meta`、`POST /api/sync/pair`、`POST /api/sync/push`、`GET /api/sync/pull`、`POST /api/sync/verify`；Bearer token 鉴权，PIN 10 分钟有效、错误 3 次自动重生成。
+  - 所有落库 `updatedAt` 由 Hub 时钟生成（ADR-03，消除双端时钟漂移）；写入后 `saveDatabase()` 落盘。
+  - 新增「同步与设备」页面（侧边栏入口）：网卡地址下拉、开启/停止、二维码 + 配对码展示、已配对设备、安全与排障说明。
+  - IPC：`sync:start` / `sync:stop` / `sync:status` / `sync:rotatePin` / `sync:candidates`；preload 对应暴露 `startSync` / `stopSync` / `getSyncStatus` / `rotateSyncPin` / `getSyncCandidates`。
+
+### Changed
+- 桌面端现有 service / store 逻辑**未改动**（规避「内核抽取引入桌面端回归」风险），Hub 直接复用主进程既有 DB 实例；DDL 与同步语义由 `core/` 统一。
+- `renderer/tsconfig.app.json` 纳入 `core/src` 与 `core/schema/version.json`；Tailwind content 增加移动端入口。
+
+### Notes
+- 版本号 1.13.0 → 1.14.0（minor，`feat`）。移动端首版 0.1.0，schema v1。
+- **已知偏差（已登记）**：Android `network-security-config` 的 `<domain>` 不支持 CIDR 网段，无法精确放行私有网段；为保证局域网同步可用，`base-config` 放行明文，暴露面改由「Hub 默认关闭 + 仅绑局域网 IP + token 鉴权」收敛，阶段二切换 HTTPS 后改回 `false`。
+- **未完成项（后续里程碑）**：二维码扫码（当前为手动输入地址 + 配对码，桌面端已可显示二维码）、token 存入 Keystore（当前用 `@capacitor/preferences`）、JSON 导入导出兜底（FR-12）、一致性校验 UI（FR-11）、真机 30 分钟保活与千条列表帧率验证。
+
 ## [1.13.0] - 2026-10-31
 
 ### Changed

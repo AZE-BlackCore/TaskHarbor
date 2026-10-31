@@ -20,7 +20,11 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true
+    "noUncheckedSideEffectImports": true,
+
+    /* 共享内核（core 位于仓库顶层，三端共用，见 ADR-04） */
+    "resolveJsonModule": true,
+    "allowJs": false
   },
-  "include": ["src"]
+  "include": ["src", "../../core/src", "../../core/schema/version.json"]
 }

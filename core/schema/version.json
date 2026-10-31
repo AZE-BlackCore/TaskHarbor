@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "syncTables": [
+    "tasks",
+    "schedules",
+    "tags",
+    "task_tag_relations",
+    "subtasks",
+    "timelogs",
+    "task_dependencies",
+    "task_reminders"
+  ],
+  "localOnlyTables": [
+    "agent_conversations",
+    "agent_messages"
+  ],
+  "metaTables": [
+    "_sync_state",
+    "_outbox",
+    "_sync_conflicts",
+    "_sync_meta"
+  ],
+  "pageSize": 500,
+  "minDesktopVersion": "1.14.0",
+  "minMobileVersion": "0.1.0"
+}

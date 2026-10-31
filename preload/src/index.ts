@@ -299,6 +299,22 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getAppInfo: () =>
     ipcRenderer.invoke('get-app-info'),
 
+  // ========== 同步中枢（Hub） ==========
+  startSync: (host?: string) =>
+    ipcRenderer.invoke('sync:start', host),
+
+  stopSync: () =>
+    ipcRenderer.invoke('sync:stop'),
+
+  getSyncStatus: () =>
+    ipcRenderer.invoke('sync:status'),
+
+  rotateSyncPin: () =>
+    ipcRenderer.invoke('sync:rotatePin'),
+
+  getSyncCandidates: () =>
+    ipcRenderer.invoke('sync:candidates'),
+
   // ========== 数据库信息 ==========
   getDatabasePath: () =>
     ipcRenderer.invoke('window:getDatabasePath'),

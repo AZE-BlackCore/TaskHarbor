@@ -31,6 +31,7 @@ import {
   Tag,
   Bot,
   KanbanSquare,
+  Smartphone,
 } from 'lucide-react';
 import type { Tag as TagType } from '../types';
 
@@ -54,6 +55,7 @@ const MAIN_NAV: NavItem[] = [
   { id: 'review', label: '数据复盘', icon: <BarChart3 className="w-5 h-5" />, path: '/review' },
   { id: 'kanban', label: '计划看板', icon: <KanbanSquare className="w-5 h-5" />, path: '/board' },
   { id: 'agent', label: 'Agent 接入', icon: <Bot className="w-5 h-5" />, path: '/agent' },
+  { id: 'sync', label: '同步与设备', icon: <Smartphone className="w-5 h-5" />, path: '/sync' },
 ];
 
 export function Layout({ darkMode, toggleDarkMode }: LayoutProps) {

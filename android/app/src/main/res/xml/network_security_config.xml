@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  小湾清单（Cove）Android 网络安全配置
+
+  背景：自 Android 9（API 28）起默认禁止明文 HTTP。桌面端 Hub 阶段一为局域网明文服务。
+  约束：Android 的 network-security-config 的 <domain> 仅支持主机名或单个 IP，
+        不支持 CIDR 网段，因此无法用配置精确放行「192.168.0.0/16 这类私有网段」。
+
+  处置（对设计文档 4.6 的已知偏差，已在文档与 CHANGELOG 登记）：
+    为保证局域网同步可用，在 base-config 放行明文；
+    暴露面改由下列机制收敛：
+      1) Hub 默认关闭，仅用户主动开启期间监听（最小信任面）
+      2) Hub 只绑定 WiFi / 私有网卡地址，绝不绑 0.0.0.0
+      3) 必须配对态 + Bearer token 才可通信，PIN 三次错误即失效
+      4) 日志禁止输出任务正文
+    阶段二切换为 HTTPS（自签证书 + 指纹信任）后，此处应改回 cleartextTrafficPermitted="false"。
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+    <debug-overrides>
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </debug-overrides>
+</network-security-config>

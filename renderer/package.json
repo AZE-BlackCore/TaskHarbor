@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "dev:mobile": "vite --config vite.mobile.config.ts",
+    "build:mobile": "vite build --config vite.mobile.config.ts && node ../tools/mobile-postbuild.mjs",
     "lint": "eslint .",
     "preview": "vite preview"
   },
