@@ -2,6 +2,37 @@
 
 本文件记录 TaskHarbor 各版本变更。（对外品牌名：**小湾清单 Cove**；内部技术标识仍沿用 `TaskHarbor`。）**版本号按语义化版本（SemVer）+ Conventional Commits 前缀维护**：`feat` 升 minor，`fix` 升 patch，`docs/test` 不升版但仍重新构建。
 
+## [1.14.3] - 2026-11-01
+
+### Fixed — 升级安装卡死（覆盖/升级 1.14.2 必现）
+
+- **根因 1：旧程序关不掉，卡在「小湾清单 无法关闭。请手动关闭它，然后单击重试以继续。」**
+  - 原 `main/src/index.ts` 的 `mainWindow.on('close')` 会弹「确认退出」模态框并 `e.preventDefault()`，**拦截了安装器升级时发来的 `WM_CLOSE`**，导致旧程序无法被自动关闭、升级流程卡死。
+  - 修复：关闭窗口即干净退出（数据已在 `before-quit` 中保存），让安装器能自动关掉旧程序。同步删除 `preload/src/index.ts`、`renderer/src/vite-env.d.ts` 的 `onClosePreference`/`removeClosePreferenceListener` 桥接，以及 `renderer/src/components/settings/SettingsPanel.tsx` 的「关闭行为」设置项（最小化到托盘仍可通过托盘菜单「隐藏主窗口」实现）。
+- **根因 2：旧版卸载失败，卡在「Failed to uninstall old application files. Please try running the installer again.: 2」**
+  - 原 `uninstallOldVersion` 运行旧卸载程序返回非 0（常见：旧卸载程序被杀软实时扫描锁住 exe 删不掉文件、或旧安装目录已不完整），`handleUninstallResult` 直接弹窗 `Quit`，升级整体失败。
+  - 修复：新增 `installer.nsh` 并通过 `package.json` 的 `build.nsis.include` 注入，定义 electron-builder 预留钩子 `customUnInstallCheck` / `customUnInstallCheckCurrentUser`。旧卸载未成功时不再中止，而是强制 `RMDir /r` 旧安装目录 + 清理卸载注册表项与 NSIS 记忆键后**继续安装**。该宏在全新安装时同样安全（注册表项不存在则为空操作）。
+  - 验证：曾在宏内加 `!warning "COVE_UNINSTALL_HOOK_ACTIVE"` 探针，重建后 makensis 输出该 warning，确证钩子已进入生成脚本；随后移除探针干净重建。
+
+### Changed
+
+- 版本 1.14.2 → **1.14.3**（fix/patch）。
+
+## [1.14.2] - 2026-11-01
+
+### Fixed
+
+- **桌面端启动同步崩溃 `Error: no such table: _sync_meta`**
+  - 根因：`applySyncSchemaMigration()` 在打包态用 `process.resourcesPath`（`resources/` 根目录）拼迁移文件路径，但 `core/schema` 实际经 `files` 配置打进了 `app.asar`；打包版根本找不到迁移文件 → 同步元表（`_sync_meta` 等 4 张）从未创建 → 开启同步时 `sync:start` 查询 `_sync_meta` 抛错。
+  - 修复：迁移路径统一改用 `app.getAppPath()`（自动穿透 asar）；并增加启动前元表存在性校验，缺失时给出明确错误「同步元表初始化失败」而非裸奔的 `no such table`。
+- **移动端系统栏遮挡（真机复测 1.14.1 方案仍失败的根因）**
+  - 根因：Android Chrome 的 `env(safe-area-inset-*)` 对**非刘海屏返回 0**，且 `values-v35` 的 opt-out 仅在 API 35+ 生效（小米 HyperOS 为 API 34，不加载）→ 状态栏压标题、三键导航压 Tab。
+  - 修复（详见移动端 0.1.2）：`MainActivity` 用原生 `WindowInsets` 读取真实状态栏/导航栏高度并注入 CSS 变量 `--safe-top`/`--safe-bottom`，配合透明系统栏 edge-to-edge；`StatusBar` 改 `Style.Dark`（深色图标在浅色 header 可见）。附修两个编译错误：XML 注释非法 `--`（`mergeReleaseResources` 失败）、`MainActivity.onDestroy()` 需为 `public`。
+
+### Changed
+
+- 版本 1.14.1 → **1.14.2**（fix/patch）；移动端 versionName `0.1.1` → `0.1.2`、versionCode `2` → `3`（与本次桌面修复配套交付）。
+
 ## [1.14.1] - 2026-11-01
 
 ### Fixed — 移动端首装必现的两类问题（真机反馈）
@@ -13,6 +44,7 @@
 - **系统栏压住界面（顶部标题被状态栏遮住、底部 Tab 被三键导航遮住）**
   - 根因：Android Chrome 的 `env(safe-area-inset-*)` 只对「刘海/挖孔」返回非零值，**不返回系统状态栏/导航栏高度**，纯 CSS 兜不住；且 targetSdk 36 在 Android 15+ 被强制 edge-to-edge。
   - 修复：启动改为 `StatusBar.setOverlaysWebView({ overlay: false })`（WebView 不再绘制到状态栏下方）；新增 `values-v35/styles.xml` 设置 `android:windowOptOutEdgeToEdgeEnforcement=true`，让系统导航栏不透明、内容布局在两栏之间。
+  - ⚠️ **该方案在小米 HyperOS（Android 14 / API 34，三键导航）真机复测仍被系统栏压住**——`values-v35` opt-out 仅 API 35+ 生效、API 34 不加载，且 `env(safe-area-inset-*)` 对非刘海屏返回 0。已于 **1.14.2 / 移动端 0.1.2** 改用原生 `WindowInsets` 注入真实安全区 CSS 变量彻底修复（见上）。
 
 ### Changed
 

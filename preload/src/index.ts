@@ -83,15 +83,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   setWindowPosition: (x: number, y: number) => 
     ipcRenderer.invoke('window:setPosition', x, y),
-
-  // 监听关闭偏好设置
-  onClosePreference: (callback: (action: 'minimize' | 'exit') => void) => {
-    ipcRenderer.on('close-preference', (_event, action) => callback(action));
-  },
-
-  removeClosePreferenceListener: () => {
-    ipcRenderer.removeAllListeners('close-preference');
-  },
   
   // ========== 任务 CRUD ==========
   getTasks: (filters?: TaskFilters) => 

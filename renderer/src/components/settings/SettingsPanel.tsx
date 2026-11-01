@@ -43,7 +43,6 @@ export function SettingsPanel({ open, onClose, darkMode, toggleDarkMode }: Setti
   const [exporting, setExporting] = useState(false);
   const [showMenuBar, setShowMenuBar] = useState(false);
   const [alwaysOnTop, setAlwaysOnTop] = useState(false);
-  const [closeBehavior, setCloseBehavior] = useState<'minimize' | 'exit'>('minimize');
   const [appInfo, setAppInfo] = useState<{
     version: string;
     buildDate: string;
@@ -105,28 +104,6 @@ export function SettingsPanel({ open, onClose, darkMode, toggleDarkMode }: Setti
       // @ts-ignore - electronAPI 由 preload 注入
       window.electronAPI?.setAlwaysOnTop(value);
     }
-  }, []);
-
-  // 加载关闭行为设置
-  useEffect(() => {
-    const saved = localStorage.getItem('closeBehavior');
-    if (saved !== null) {
-      setCloseBehavior(JSON.parse(saved));
-    }
-
-    // 监听关闭偏好设置
-    // @ts-ignore
-    const handler = (action: 'minimize' | 'exit') => {
-      setCloseBehavior(action);
-      localStorage.setItem('closeBehavior', JSON.stringify(action));
-    };
-    // @ts-ignore
-    window.electronAPI?.onClosePreference(handler);
-
-    return () => {
-      // @ts-ignore
-      window.electronAPI?.removeClosePreferenceListener();
-    };
   }, []);
 
   // 切换菜单栏可见性
@@ -401,30 +378,6 @@ export function SettingsPanel({ open, onClose, darkMode, toggleDarkMode }: Setti
                   }`}
                 />
               </button>
-            </div>
-
-            <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-              <div className="flex items-center gap-3">
-                <Settings className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                <div>
-                  <p className="font-medium text-gray-900 dark:text-white">关闭行为</p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {closeBehavior === 'minimize' ? '点击关闭时最小化到托盘' : '点击关闭时直接退出'}
-                  </p>
-                </div>
-              </div>
-              <select
-                value={closeBehavior}
-                onChange={(e) => {
-                  const value = e.target.value as 'minimize' | 'exit';
-                  setCloseBehavior(value);
-                  localStorage.setItem('closeBehavior', JSON.stringify(value));
-                }}
-                className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-dark-bg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
-              >
-                <option value="minimize">最小化到托盘</option>
-                <option value="exit">退出程序</option>
-              </select>
             </div>
 
             </div>

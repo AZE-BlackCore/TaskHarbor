@@ -223,47 +223,18 @@ function createWindow() {
     updateTrayMenu();
   });
 
-  // 拦截窗口关闭事件，显示确认对话框
+  // 拦截窗口关闭事件：始终干净退出
+  // 注意：原先的「最小化到托盘/退出」确认框会拦截安装器升级时发来的 WM_CLOSE，
+  // 导致升级卡在「无法关闭」。改为关闭即退出（数据已在 before-quit 中保存），
+  // 让安装器能自动关闭旧程序；最小化到托盘仍可通过托盘菜单「隐藏主窗口」实现。
   mainWindow.on('close', (e) => {
-    // 如果是退出应用，直接关闭
     if (isQuiting) {
       console.log('[createWindow] Application quitting, closing window');
       return;
     }
-
     e.preventDefault();
-    
-    // 显示确认对话框
-    if (!mainWindow) return;
-    
-    dialog.showMessageBox(mainWindow, {
-      type: 'question',
-      buttons: ['最小化到托盘', '退出程序'],
-      defaultId: 0,
-      cancelId: 1,
-      title: '确认退出',
-      message: '您想要做什么？',
-      detail: '选择"最小化到托盘"将继续在后台运行，选择"退出程序"将完全退出应用。',
-      checkboxLabel: '记住我的选择',
-    }).then((result) => {
-      if (result.checkboxChecked) {
-        // 记住用户选择
-        const action = result.response === 0 ? 'minimize' : 'exit';
-        mainWindow?.webContents.send('close-preference', action);
-      }
-
-      if (result.response === 0) {
-        // 最小化到托盘
-        mainWindow?.minimize();
-        mainWindow?.hide();
-      } else {
-        // 退出应用
-        isQuiting = true;
-        app.quit();
-      }
-    }).catch((err) => {
-      console.error('[createWindow] Error showing dialog:', err);
-    });
+    isQuiting = true;
+    app.quit();
   });
 }
 

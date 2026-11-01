@@ -126,8 +126,6 @@ interface ElectronAPI {
   setAlwaysOnTop: (alwaysOnTop: boolean) => Promise<{ success: boolean }>;
   isAlwaysOnTop: () => Promise<{ success: boolean; alwaysOnTop: boolean }>;
   setWindowPosition: (x: number, y: number) => Promise<{ success: boolean }>;
-  onClosePreference: (callback: (action: 'minimize' | 'exit') => void) => void;
-  removeClosePreferenceListener: () => void;
 
   // 数据导出
   exportToMarkdown: (options?: {
