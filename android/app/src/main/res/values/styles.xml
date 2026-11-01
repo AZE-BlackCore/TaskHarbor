@@ -9,14 +9,23 @@
         <item name="colorAccent">@color/colorAccent</item>
     </style>
 
+    <!--
+      运行主题：edge-to-edge 模式 —— 系统栏（状态栏/导航栏）透明，
+      WebView 延伸到其下方。真实安全区由原生注入到 CSS 变量（顶部/底部安全区），
+      前端 header / tabbar 用 padding 避开，背景色透出。
+      windowLightStatusBar：状态栏图标为深色（浮在浅色 header 上）。
+    -->
     <style name="AppTheme.NoActionBar" parent="Theme.AppCompat.DayNight.NoActionBar">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="android:background">@null</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">true</item>
     </style>
 
-
-    <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
-        <item name="android:background">@drawable/splash</item>
+    <!-- 启动主题：复用 NoActionBar 的透明系统栏设定，仅替换窗口背景为 splash 色 -->
+    <style name="AppTheme.NoActionBarLaunch" parent="AppTheme.NoActionBar">
+        <item name="android:windowBackground">@drawable/splash</item>
     </style>
 </resources>

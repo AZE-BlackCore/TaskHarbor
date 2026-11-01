@@ -17,12 +17,14 @@ import { Capacitor } from '@capacitor/core';
 async function bootstrap() {
   if (Capacitor.isNativePlatform()) {
     try {
-      // 关键：不让 WebView 绘制到系统栏下方。
-      // Android Chrome 的 env(safe-area-inset-top) 只对「刘海/挖孔」返回非零值，
-      // 不返回状态栏高度 —— 之前标题被状态栏压住就是因为这个。
-      await StatusBar.setOverlaysWebView({ overlay: false });
-      await StatusBar.setStyle({ style: Style.Light });
-      await StatusBar.setBackgroundColor({ color: '#F7F9FC' });
+      // 关键：采用 edge-to-edge —— WebView 延伸到系统栏下方，系统栏透明，
+      // 由原生注入的真实安全区（--safe-top/--safe-bottom）把内容推开，避免被压住。
+      // Android 的 env(safe-area-inset-*) 在非刘海屏返回 0，不可靠，故改用原生注入。
+      await StatusBar.setOverlaysWebView({ overlay: true });
+      // 浅色 header 上需要「深色状态栏图标」（时间/电量可见）。
+      // Capacitor: Style.Dark = 设置 LIGHT_STATUS_BAR 标志 → 深色图标；
+      // Style.Light 会清除该标志 → 浅色图标在浅色 header 上不可见。
+      await StatusBar.setStyle({ style: Style.Dark });
     } catch {
       /* 忽略状态栏设置失败 */
     }

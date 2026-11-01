@@ -7,8 +7,8 @@ android {
         applicationId "com.taskharbor.mobile"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 2
-        versionName "0.1.1"
+        versionCode 3
+        versionName "0.1.2"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         // 仅打 arm64-v8a（设计文档 7.1：控制包体，目标机型为小米/红米 arm64）
         ndk {

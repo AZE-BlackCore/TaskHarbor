@@ -1,15 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!--
-      Android 15 (API 35) 起，targetSdk >= 35 的应用被强制 edge-to-edge：
-      内容会绘制到系统导航栏下方，导致底部 Tab 被系统三键导航（返回/主屏/最近任务）压住。
-      env(safe-area-inset-bottom) 在 Android 上不反映系统栏高度，纯 CSS 无法兜底。
-      因此显式 opt-out，让系统栏保持不透明、WebView 布局在两栏之间。
+      Android 15+ 强制 edge-to-edge，这里与低版本保持一致（透明系统栏 + 原生注入安全区），
+      不再 opt-out：注入方案已对任何 API 生效，opt-out 反而会制造双重留白。
     -->
     <style name="AppTheme.NoActionBar" parent="Theme.AppCompat.DayNight.NoActionBar">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="android:background">@null</item>
-        <item name="android:windowOptOutEdgeToEdgeEnforcement">true</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
+
+    <style name="AppTheme.NoActionBarLaunch" parent="AppTheme.NoActionBar">
+        <item name="android:windowBackground">@drawable/splash</item>
     </style>
 </resources>
