@@ -130,9 +130,11 @@ function runSql(sql: string, params: unknown[] = []): number {
  */
 export async function applySyncSchemaMigration(): Promise<void> {
   try {
-    const base = app.isPackaged
-      ? path.join(process.resourcesPath, 'core', 'schema')
-      : path.join(app.getAppPath(), 'core', 'schema');
+    // core/schema 在打包后位于 app.asar 内（electron-builder 的 files 配置），
+    // 必须经由 app.getAppPath() 解析（process.resourcesPath 指向 resources/ 根目录，
+    // 不含 asar 内的 core/schema），否则打包版会找不到迁移文件、同步元表不创建、
+    // 启动同步报 no such table: _sync_meta。
+    const base = path.join(app.getAppPath(), 'core', 'schema');
     const file = path.join(base, 'migrations', '001_sync_enable.sql');
     if (!fs.existsSync(file)) {
       log(`migration file not found: ${file}`);
@@ -300,6 +302,14 @@ export async function startHub(opts: StartHubOptions = {}): Promise<{
 
   dbRef = await getDatabase();
   await applySyncSchemaMigration();
+
+  // 防御：迁移后确认同步元表已就位，避免裸奔报 "no such table: _sync_meta"
+  const metaReady = queryAll(
+    "SELECT name FROM sqlite_master WHERE type='table' AND name='_sync_meta'"
+  );
+  if (!metaReady.length) {
+    throw new Error('同步元表初始化失败（_sync_meta 缺失）：core/schema 资源未随安装包分发或迁移未执行');
+  }
 
   const candidates = listCandidateAddresses();
   const host = opts.host && opts.host.length ? opts.host : candidates[0]?.address ?? '127.0.0.1';
