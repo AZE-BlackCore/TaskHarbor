@@ -8,6 +8,7 @@ import android.view.View;
 import android.view.ViewTreeObserver;
 import android.view.WindowInsets;
 import android.webkit.WebView;
+import android.webkit.WebSettings;
 
 /**
  * 小湾清单移动端 · 原生入口
@@ -30,6 +31,7 @@ public class MainActivity extends BridgeActivity {
     super.onCreate(savedInstanceState);
     // decor 创建后再注册，避免空引用；首屏也先注入一次
     getWindow().getDecorView().post(() -> {
+      allowMixedContent();
       getWindow().getDecorView().getViewTreeObserver().addOnGlobalLayoutListener(layoutListener);
       injectSafeArea();
     });
@@ -38,6 +40,7 @@ public class MainActivity extends BridgeActivity {
   @Override
   public void onResume() {
     super.onResume();
+    allowMixedContent();
     injectSafeArea();
   }
 
@@ -49,6 +52,16 @@ public class MainActivity extends BridgeActivity {
     } catch (Exception ignored) {
       // ignore
     }
+  }
+
+  /**
+   * 移动端以 https://localhost 加载，需跨源 fetch 局域网明文 Hub(http://<LAN IP>:18766)。
+   * 默认 WebView 混合内容策略会拦截 https 页访问 http 资源（先于 CORS），
+   * 此处显式放开，与 capacitor.config.ts 的 android.allowMixedContent 双保险。
+   */
+  private void allowMixedContent() {
+    if (bridge == null || bridge.getWebView() == null) return;
+    bridge.getWebView().getSettings().setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
   }
 
   private void injectSafeArea() {

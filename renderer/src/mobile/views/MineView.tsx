@@ -192,7 +192,7 @@ export default function MineView() {
 
       <div className="cove-card text-xs text-slate-500">
         <div className="mb-1 font-bold text-slate-800">关于</div>
-        <div>移动端 v0.1.4 · schema v{SCHEMA_VERSION}</div>
+        <div>移动端 v0.1.5 · schema v{SCHEMA_VERSION}</div>
         <div>要求桌面端 ≥ v{MIN_DESKTOP_VERSION}</div>
         <div>同步表：{SYNC_TABLES.length} 张</div>
         <div className="mt-1 break-all text-[11px] text-slate-400">设备 ID：{deviceId ?? '-'}</div>

@@ -337,6 +337,21 @@ export async function startHub(opts: StartHubOptions = {}): Promise<{
   hubState.pin = { pin: generatePin(), createdAt: Date.now(), failCount: 0 };
 
   const server = http.createServer(async (req, res) => {
+    // CORS：移动端 WebView 以 https://localhost 跨源访问局域网 Hub（不同主机），
+    // 浏览器会拦截跨源响应；需在每次响应显式放行，并对带 Authorization 的请求做 OPTIONS 预检。
+    const reqOrigin = String(req.headers['origin'] ?? '');
+    const allowOrigin = reqOrigin && reqOrigin !== 'null' ? reqOrigin : '*';
+    res.setHeader('Access-Control-Allow-Origin', allowOrigin);
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
+    if (allowOrigin !== '*') {
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+    }
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204);
+      res.end();
+      return;
+    }
     try {
       const url = new URL(req.url ?? '/', `http://${host}:${port}`);
       const pathname = url.pathname;

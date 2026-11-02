@@ -13,7 +13,10 @@ const config: CapacitorConfig = {
     buildOptions: {
       keystorePath: undefined,
     },
-    allowMixedContent: false,
+    // 移动端 WebView 以 https://localhost 加载，需跨源访问局域网明文 Hub(http://<LAN IP>:18766)。
+    // 放开混合内容后，浏览器才允许 https 页 fetch 明文地址（否则先于 CORS 被拦截）。
+    // CORS 头由桌面 Hub(syncServer.ts) 负责返回。
+    allowMixedContent: true,
   },
   server: {
     androidScheme: 'https',

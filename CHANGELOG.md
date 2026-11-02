@@ -2,6 +2,14 @@
 
 本文件记录 TaskHarbor 各版本变更。（对外品牌名：**小湾清单 Cove**；内部技术标识仍沿用 `TaskHarbor`。）**版本号按语义化版本（SemVer）+ Conventional Commits 前缀维护**：`feat` 升 minor，`fix` 升 patch，`docs/test` 不升版但仍重新构建。
 
+## [1.14.4] - 2026-11-02
+
+### Fixed — 局域网配对（Hub 跨域 / CORS）
+
+- **根因**：移动端 WebView 源为 `https://localhost`（`capacitor.config.ts` 的 `androidScheme: 'https'`），跨源 `fetch` 局域网明文 Hub（`http://<LAN IP>:18766`）时，桌面 Hub（`main/src/services/syncServer.ts`）**未返回任何 CORS 头**，浏览器拦截跨源响应，导致移动端「配对并同步」「扫码配对」均无法完成（表现为「无法配对局域网设备」）。
+- **修复**：桌面 Hub 增加 CORS 支持——对所有响应写入 `Access-Control-Allow-Origin`（回显请求来源）、`Allow-Methods: GET,POST,OPTIONS`、`Allow-Headers: Content-Type,Authorization`；并对携带 `Authorization` 的请求正确响应 `OPTIONS` 预检（204）。
+- 版本 1.14.3 → **1.14.4**（fix/patch）。需与移动端 v0.1.5 配套使用。
+
 ## 移动端 v0.1.4（2026-11-02）
 
 ### Fixed — 配对「点击无反应」
@@ -13,6 +21,16 @@
   - 反馈醒目化：成功/失败/提示用绿/红/蓝三色块展示；连接失败时明确提示「请确认桌面『同步与设备』页已点开启同步并生成配对码，且手机与电脑在同一 WiFi」。
   - `store.pair()` 透传 `deviceId` / `deviceName` 给桌面端 `/api/sync/pair`（对齐接口规范，设备正确登记）；连接不可达时给出针对性指引。
 - 版本 0.1.3 → **0.1.4**（fix/patch）。桌面端保持 1.14.3 不变。
+
+## 移动端 v0.1.5（2026-11-02）
+
+### Fixed — 局域网配对（混合内容拦截）
+
+- **根因**：移动端 WebView 以 `https://localhost` 加载（`androidScheme: 'https'`），跨源 `fetch` 局域网**明文** Hub（`http://<LAN IP>:18766`）时，Chrome 视为**混合内容**并在 CORS 之前直接拦截（即便桌面已返回 CORS 头也无济于事）。`capacitor.config.ts` 原 `android.allowMixedContent` 为 `false`。
+- **修复**：
+  - `capacitor.config.ts`：`android.allowMixedContent` 改为 `true`（Capacitor 官方放开混合内容的做法）。
+  - `android/app/src/main/java/com/taskharbor/mobile/MainActivity.java`：原生层显式 `WebView.getSettings().setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW)`（`onCreate`/`onResume` 双保险，确保该配置在本 Capacitor 版本一定生效）。
+- 版本 0.1.4 → **0.1.5**（fix/patch；versionCode 5 → 6）。需与桌面端 v1.14.4 配套使用。
 
 ## 移动端 v0.1.3（2026-11-02）
 
