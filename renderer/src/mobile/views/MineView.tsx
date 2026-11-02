@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useMobileStore } from '../store';
+import { scanPairQr } from '../scanPair';
 import { MIN_DESKTOP_VERSION, SCHEMA_VERSION, SYNC_TABLES } from '../../platform/schema';
 
 const KEEP_ALIVE_ITEMS = [
@@ -43,6 +44,26 @@ export default function MineView() {
     }
   };
 
+  const doScanPair = async () => {
+    setBusy(true);
+    setMsg(null);
+    try {
+      const { baseUrl: bu, pin: pn } = await scanPairQr();
+      setBaseUrl(bu);
+      setPin(pn);
+      if (!pn) {
+        setMsg('已识别电脑地址，请手动填写配对码');
+        return;
+      }
+      await pair(bu, pn);
+      setMsg('配对成功，已开始首次同步');
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const openAppSettings = () => {
     // 交由系统处理 intent：跳转到本应用的系统设置详情页
     const url =
@@ -75,6 +96,10 @@ export default function MineView() {
 
       <div className="cove-card">
         <div className="mb-2 text-sm font-bold text-slate-800">配对电脑</div>
+        <button className="cove-btn" onClick={() => void doScanPair()} disabled={busy}>
+          {busy ? '扫描中…' : '扫码配对（推荐）'}
+        </button>
+        <div className="my-2 text-center text-[11px] text-slate-400">或手动填写</div>
         <input
           className="cove-input"
           placeholder="电脑地址，如 http://192.168.1.23:18766"
@@ -87,7 +112,7 @@ export default function MineView() {
           value={pin}
           onChange={(e) => setPin(e.target.value)}
         />
-        <button className="cove-btn" onClick={doPair} disabled={busy}>
+        <button className="cove-btn ghost" onClick={() => void doPair()} disabled={busy}>
           {busy ? '配对中…' : '配对并同步'}
         </button>
         {pairing && (
@@ -142,7 +167,7 @@ export default function MineView() {
 
       <div className="cove-card text-xs text-slate-500">
         <div className="mb-1 font-bold text-slate-800">关于</div>
-        <div>移动端 v0.1.0 · schema v{SCHEMA_VERSION}</div>
+        <div>移动端 v0.1.3 · schema v{SCHEMA_VERSION}</div>
         <div>要求桌面端 ≥ v{MIN_DESKTOP_VERSION}</div>
         <div>同步表：{SYNC_TABLES.length} 张</div>
         <div className="mt-1 break-all text-[11px] text-slate-400">设备 ID：{deviceId ?? '-'}</div>

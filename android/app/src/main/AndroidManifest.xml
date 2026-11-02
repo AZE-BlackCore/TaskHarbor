@@ -45,4 +45,7 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- VIBRATE：提醒震动 -->
     <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- CAMERA：扫码配对电脑（@capacitor/barcode-scanner） -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
 </manifest>

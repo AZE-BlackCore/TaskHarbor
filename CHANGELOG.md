@@ -2,6 +2,23 @@
 
 本文件记录 TaskHarbor 各版本变更。（对外品牌名：**小湾清单 Cove**；内部技术标识仍沿用 `TaskHarbor`。）**版本号按语义化版本（SemVer）+ Conventional Commits 前缀维护**：`feat` 升 minor，`fix` 升 patch，`docs/test` 不升版但仍重新构建。
 
+## 移动端 v0.1.3（2026-11-02）
+
+### Added — 扫码配对电脑
+
+- **移动端「我的 → 配对电脑」新增「扫码配对（推荐）」按钮**：调用原生扫码插件 `@capacitor/barcode-scanner` 扫描桌面端「同步与设备」页生成的配对二维码，自动解析出电脑地址（`http://host:port`）与 6 位配对码并完成配对；手动填写入口保留。
+  - 桌面端**无需改动**：其二维码早已编码 `JSON.stringify({ h: host, p: port, n: pin, v: '1' })`（见 `renderer/src/views/SyncView.tsx`），移动端按此格式解析（新增 `renderer/src/mobile/scanPair.ts`）。
+  - 解析失败给出明确提示；非原生平台（Web）给出友好报错。
+- **Android 工程调整**
+  - 新增原生依赖 `@capacitor/barcode-scanner@^3.1.3`（Capacitor 8 对应版本，CapacitorBarcodeScanner 系 API）。
+  - `android/variables.gradle`：`minSdkVersion` 24 → **26**（插件要求）。
+  - `android/app/src/main/AndroidManifest.xml`：新增 `CAMERA` 权限与 `android.hardware.camera` feature（required=false）。
+  - `android/capacitor.settings.gradle` / `capacitor.build.gradle`：cap sync 自动注册扫码插件工程。
+
+### Changed
+
+- 移动端版本 0.1.2 → **0.1.3**（feat；versionCode 3 → 4）。桌面端保持 1.14.3 不变（本功能不改动桌面代码）。
+
 ## [1.14.3] - 2026-11-01
 
 ### Fixed — 升级安装卡死（覆盖/升级 1.14.2 必现）
