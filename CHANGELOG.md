@@ -2,6 +2,18 @@
 
 本文件记录 TaskHarbor 各版本变更。（对外品牌名：**小湾清单 Cove**；内部技术标识仍沿用 `TaskHarbor`。）**版本号按语义化版本（SemVer）+ Conventional Commits 前缀维护**：`feat` 升 minor，`fix` 升 patch，`docs/test` 不升版但仍重新构建。
 
+## 移动端 v0.1.4（2026-11-02）
+
+### Fixed — 配对「点击无反应」
+
+- **根因**：`MineView` 中「扫码配对」与「配对并同步」两按钮**共用同一个 `busy` 状态**。当原生扫码 `CapacitorBarcodeScanner.scanBarcode()` 在某些机型/权限异常下令 Promise 永久挂起（Web 视图被暂停后原生层未正确恢复）时，`busy` 一直为 `true`，导致「配对并同步」按钮被 `disabled`（灰色），点击无任何反应；且此前的错误提示是灰色小字、极易被忽略。
+- **修复**：
+  - 拆分状态：`busy` → `scanning`（仅扫码按钮）/ `pairing`（仅配对按钮），两者互不阻塞；扫码卡死不再禁用手动配对。
+  - `renderer/src/mobile/scanPair.ts` 的 `scanPairQr()` 增加 45s 超时保护（`Promise.race`），原生层异常时主动 reject，避免调用方永久等待。
+  - 反馈醒目化：成功/失败/提示用绿/红/蓝三色块展示；连接失败时明确提示「请确认桌面『同步与设备』页已点开启同步并生成配对码，且手机与电脑在同一 WiFi」。
+  - `store.pair()` 透传 `deviceId` / `deviceName` 给桌面端 `/api/sync/pair`（对齐接口规范，设备正确登记）；连接不可达时给出针对性指引。
+- 版本 0.1.3 → **0.1.4**（fix/patch）。桌面端保持 1.14.3 不变。
+
 ## 移动端 v0.1.3（2026-11-02）
 
 ### Added — 扫码配对电脑

@@ -8,6 +8,8 @@ import type { SqlRepository } from '../../../core/src/repository/sql-repository'
 import type { SyncEngine } from '../../../core/src/sync/engine';
 import type { SyncReport } from '../../../core/src/sync/engine';
 import { LanTransport } from '../../../core/src/transport/lan';
+import { TransportError } from '../../../core/src/transport/base';
+import type { HubMeta, PairResult } from '../../../core/src/transport/base';
 import { PAGE_SIZE, SYNC_TABLES } from '../platform/schema';
 import {
   clearPairing,
@@ -142,10 +144,32 @@ export const useMobileStore = create<MobileState>((set, get) => ({
   async pair(baseUrl, pin) {
     const base = baseUrl.trim().replace(/\/+$/, '');
     if (!base) throw new Error('请先填写电脑地址，例如 http://192.168.1.23:18766');
-    const transport = new LanTransport({ baseUrl: base });
-    const meta = await transport.meta(); // 握手：可达性与 schema 版本
-    const res = await transport.pair(pin.trim());
-    if (meta.schemaVersion !== undefined && res.schemaVersion !== meta.schemaVersion) {
+    const transport = new LanTransport({ baseUrl: base, timeoutMs: 6000 });
+    let meta: HubMeta | undefined;
+    let res: PairResult | undefined;
+    try {
+      meta = await transport.meta(); // 握手：可达性与 schema 版本
+      res = await transport.pair(pin.trim(), {
+        deviceId: get().deviceId ?? '',
+        deviceName: '小湾清单移动端',
+      });
+    } catch (e) {
+      // 连接不上 / 超时是最常见的失败：给出明确的桌面端操作指引
+      if (
+        e instanceof TransportError &&
+        (e.code === 'unreachable' || e.code === 'timeout')
+      ) {
+        throw new Error(
+          '无法连接电脑端：请确认桌面「同步与设备」页已点「开启同步并生成配对码」，且手机与电脑在同一 WiFi（路由器未开启 AP 隔离）'
+        );
+      }
+      throw e;
+    }
+    if (
+      meta.schemaVersion !== undefined &&
+      res.schemaVersion !== undefined &&
+      meta.schemaVersion !== res.schemaVersion
+    ) {
       throw new Error('两端数据版本不一致，请升级到匹配版本');
     }
     const info: PairingInfo = {

@@ -82,10 +82,17 @@ export class LanTransport implements SyncTransport {
     return this.request<HubMeta>('/api/sync/meta');
   }
 
-  async pair(pin: string): Promise<PairResult> {
+  async pair(
+    pin: string,
+    opts: { deviceId?: string; deviceName?: string } = {}
+  ): Promise<PairResult> {
     const r = await this.request<PairResult>('/api/sync/pair', {
       method: 'POST',
-      body: { pin },
+      body: {
+        pin,
+        deviceId: opts.deviceId ?? '',
+        deviceName: opts.deviceName ?? '移动端',
+      },
     });
     this.token = r.token;
     return r;

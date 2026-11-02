@@ -12,6 +12,8 @@ const KEEP_ALIVE_ITEMS = [
   { title: '允许通知', desc: '通知权限必须开启，否则提醒失效且后台存活概率显著下降' },
 ];
 
+type MsgType = 'info' | 'error' | 'success';
+
 export default function MineView() {
   const pairing = useMobileStore((s) => s.pairing);
   const pending = useMobileStore((s) => s.pending);
@@ -28,39 +30,53 @@ export default function MineView() {
 
   const [baseUrl, setBaseUrl] = useState('');
   const [pin, setPin] = useState('');
-  const [busy, setBusy] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [pairing_, setPairing] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [msgType, setMsgType] = useState<MsgType>('info');
+
+  const setFeedback = (text: string, type: MsgType) => {
+    setMsg(text);
+    setMsgType(type);
+  };
 
   const doPair = async () => {
-    setBusy(true);
+    if (!baseUrl.trim() || !pin.trim()) {
+      setFeedback('请填写电脑地址与 6 位配对码（或点「扫码配对」自动填入）', 'error');
+      return;
+    }
+    setPairing(true);
     setMsg(null);
     try {
       await pair(baseUrl, pin);
-      setMsg('配对成功，已开始首次同步');
+      setFeedback('配对成功，已开始首次同步', 'success');
     } catch (e) {
-      setMsg(e instanceof Error ? e.message : String(e));
+      setFeedback(e instanceof Error ? e.message : String(e), 'error');
     } finally {
-      setBusy(false);
+      setPairing(false);
     }
   };
 
   const doScanPair = async () => {
-    setBusy(true);
+    setScanning(true);
     setMsg(null);
     try {
       const { baseUrl: bu, pin: pn } = await scanPairQr();
       setBaseUrl(bu);
       setPin(pn);
       if (!pn) {
-        setMsg('已识别电脑地址，请手动填写配对码');
+        setFeedback('已识别电脑地址，请手动填写配对码', 'info');
         return;
       }
+      // 扫码成功后自动配对（与手动配对共用 pairing 状态）
+      setPairing(true);
       await pair(bu, pn);
-      setMsg('配对成功，已开始首次同步');
+      setFeedback('配对成功，已开始首次同步', 'success');
     } catch (e) {
-      setMsg(e instanceof Error ? e.message : String(e));
+      setFeedback(e instanceof Error ? e.message : String(e), 'error');
     } finally {
-      setBusy(false);
+      setScanning(false);
+      setPairing(false);
     }
   };
 
@@ -70,9 +86,16 @@ export default function MineView() {
       'intent:#Intent;action=android.settings.APPLICATION_DETAILS_SETTINGS;package=com.taskharbor.mobile;end';
     const win = window.open(url, '_system');
     if (!win) {
-      setMsg('无法自动跳转，请手动在「设置 → 应用设置 → 应用管理」中找到小湾清单');
+      setFeedback('无法自动跳转，请手动在「设置 → 应用设置 → 应用管理」中找到小湾清单', 'info');
     }
   };
+
+  const msgClass =
+    msgType === 'error'
+      ? 'bg-red-50 text-red-700'
+      : msgType === 'success'
+        ? 'bg-green-50 text-green-700'
+        : 'bg-blue-50 text-blue-700';
 
   return (
     <div>
@@ -96,8 +119,8 @@ export default function MineView() {
 
       <div className="cove-card">
         <div className="mb-2 text-sm font-bold text-slate-800">配对电脑</div>
-        <button className="cove-btn" onClick={() => void doScanPair()} disabled={busy}>
-          {busy ? '扫描中…' : '扫码配对（推荐）'}
+        <button className="cove-btn" onClick={() => void doScanPair()} disabled={scanning}>
+          {scanning ? '扫描中…' : '扫码配对（推荐）'}
         </button>
         <div className="my-2 text-center text-[11px] text-slate-400">或手动填写</div>
         <input
@@ -112,21 +135,23 @@ export default function MineView() {
           value={pin}
           onChange={(e) => setPin(e.target.value)}
         />
-        <button className="cove-btn ghost" onClick={() => void doPair()} disabled={busy}>
-          {busy ? '配对中…' : '配对并同步'}
+        <button className="cove-btn ghost" onClick={() => void doPair()} disabled={pairing_}>
+          {pairing_ ? '配对中…' : '配对并同步'}
         </button>
         {pairing && (
           <button
             className="cove-btn ghost mt-2"
             onClick={async () => {
               await unpair();
-              setMsg('已解除配对');
+              setFeedback('已解除配对', 'info');
             }}
           >
             解除配对
           </button>
         )}
-        {msg && <div className="mt-2 text-xs text-slate-600">{msg}</div>}
+        {msg && (
+          <div className={`mt-2 rounded-lg p-2 text-xs ${msgClass}`}>{msg}</div>
+        )}
         <div className="mt-2 text-[11px] text-slate-400">
           配对需在电脑端「同步与设备」页开启同步并生成配对码；两端须在同一 WiFi 且路由器未开启 AP 隔离。
         </div>
@@ -167,7 +192,7 @@ export default function MineView() {
 
       <div className="cove-card text-xs text-slate-500">
         <div className="mb-1 font-bold text-slate-800">关于</div>
-        <div>移动端 v0.1.3 · schema v{SCHEMA_VERSION}</div>
+        <div>移动端 v0.1.4 · schema v{SCHEMA_VERSION}</div>
         <div>要求桌面端 ≥ v{MIN_DESKTOP_VERSION}</div>
         <div>同步表：{SYNC_TABLES.length} 张</div>
         <div className="mt-1 break-all text-[11px] text-slate-400">设备 ID：{deviceId ?? '-'}</div>

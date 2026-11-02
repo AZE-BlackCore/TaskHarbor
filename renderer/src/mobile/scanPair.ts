@@ -5,7 +5,7 @@
  *   JSON.stringify({ h: host, p: port, n: pin, v: '1' })
  * 其中 h=电脑局域网 IP，p=Hub 端口(18766)，n=6 位配对码。
  *
- * 扫码插件：@capacitor/barcode-scanner@3（Capacitor 8 对应版本）
+ * 扫码插件：@capacitor/barcode-scanner@3（ionic-team，兼容 Capacitor 8）
  *   API: CapacitorBarcodeScanner.scanBarcode({ hint }) -> { ScanResult }
  */
 
@@ -48,16 +48,32 @@ export function parsePairQr(raw: string): ParsedPairPayload {
   throw new Error('无法识别的二维码：请使用小湾清单桌面端「同步与设备」页生成的配对二维码');
 }
 
-/** 调起原生扫码，返回解析后的配对信息 */
-export async function scanPairQr(): Promise<ParsedPairPayload> {
+/**
+ * 调起原生扫码，返回解析后的配对信息。
+ * 带超时保护：原生扫码层在个别机型/权限异常下可能令 Promise 永久挂起，
+ * 超时后主动 reject，避免调用方 UI 状态卡死（按钮永久禁用）。
+ */
+export async function scanPairQr(timeoutMs = 45000): Promise<ParsedPairPayload> {
   if (!Capacitor.isNativePlatform()) {
     throw new Error('扫码配对仅在安卓 App 内可用');
   }
-  const result = await CapacitorBarcodeScanner.scanBarcode({
+
+  const scanP = CapacitorBarcodeScanner.scanBarcode({
     hint: CapacitorBarcodeScannerTypeHint.QR_CODE,
     scanInstructions: '将电脑端「同步与设备」页的二维码放入取景框',
   });
-  const raw = result?.ScanResult;
+  // 避免原生层未 settle 导致调用方永远等待
+  scanP.catch(() => {});
+
+  const timeoutP = new Promise<never>((_, reject) =>
+    setTimeout(
+      () => reject(new Error('扫码超时（相机无响应），请改用手动填写或重试')),
+      timeoutMs
+    )
+  );
+
+  const result = await Promise.race([scanP, timeoutP]);
+  const raw = (result as { ScanResult?: string } | undefined)?.ScanResult;
   if (!raw) throw new Error('未扫描到内容，请重试');
   return parsePairQr(raw);
 }
