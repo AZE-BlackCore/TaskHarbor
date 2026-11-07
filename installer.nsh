@@ -31,3 +31,38 @@
 !macro customUnInstallCheckCurrentUser
   !insertmacro customUnInstallCheck
 !macroend
+
+; ============================================================================
+; customInit —— 安装开始前结束所有旧实例进程（.onInit 阶段，早于文件复制）
+;
+; 修复「半升级」：曾出现「新 renderer/preload + 旧 app.asar」的混合版本安装。
+;   根因：build.extraResources 把 renderer/dist、preload/dist 放在 resources/ 外部目录，
+;   可以被独立覆盖；而 app.asar 与主 exe 若被仍在运行的旧进程占用则替换失败，
+;   安装器却未中止 —— 最终 UI 是新版、主进程仍是旧版，表现为：
+;     Error invoking remote method 'sync:history': No handler registered for 'sync:history'
+;   同时残留的旧实例继续监听 18766，新实例开启同步报 EADDRINUSE。
+;
+; 解法：先优雅关闭（1.14.3 起窗口收到 WM_CLOSE 会干净退出并保存数据），
+; 再对托盘常驻 / 后台子进程等残留做强制结束，确保后续文件替换不被占用。
+; 说明：customInit 位于 installer.nsi 的非 BUILD_UNINSTALLER 分支内，生成卸载器时
+; 不会执行；全新安装时 FindProcess 返回非 0，整段为空操作。
+; ============================================================================
+
+!ifndef nsProcess::FindProcess
+  !include "nsProcess.nsh"
+!endif
+
+!macro customInit
+  DetailPrint "安装前检查：正在结束旧版本进程，避免安装文件被占用..."
+  ; 1) 优雅关闭：给 app 保存数据的机会
+  ${nsProcess::CloseProcess} "${APP_EXECUTABLE_FILENAME}" $R0
+  Sleep 1000
+  ; 2) 托盘常驻 / 后台子进程未退出时强制结束（FindProcess 返回 0 表示进程仍在）
+  ${nsProcess::FindProcess} "${APP_EXECUTABLE_FILENAME}" $R0
+  ${if} $R0 == 0
+    DetailPrint "检测到旧版本残留进程，强制结束后继续安装..."
+    ${nsProcess::KillProcess} "${APP_EXECUTABLE_FILENAME}" $R0
+    Sleep 800
+  ${endif}
+  ${nsProcess::Unload}
+!macroend

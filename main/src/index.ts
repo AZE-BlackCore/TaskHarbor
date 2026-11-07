@@ -484,7 +484,26 @@ export function createFloatingWindow(options?: {
   return floatingWin;
 }
 
+// ---------------------------------------------------------------- 单实例保护
+// 背景：曾出现多个实例并存，旧实例后台常驻继续监听 18766，
+// 新实例开启同步报 EADDRINUSE；且升级安装时文件被占用会造成「半升级」。
+// 单实例锁以 userData 路径为键，不同 --user-data-dir 的验证实例互不干扰。
+const gotSingleInstanceLock = app.requestSingleInstanceLock();
+if (!gotSingleInstanceLock) {
+  console.log('[App] Another instance already running, quitting this one');
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      if (!mainWindow.isVisible()) mainWindow.show();
+      mainWindow.focus();
+    }
+  });
+}
+
 app.whenReady().then(async () => {
+  if (!gotSingleInstanceLock) return;
   try {
     setupFileLogging();
     console.log('[App] App ready, initializing...');

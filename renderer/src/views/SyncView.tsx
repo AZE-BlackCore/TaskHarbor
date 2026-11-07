@@ -4,6 +4,7 @@
  *
  * v1.15.0：新增「同步历史」——按会话聚合每次同步，记录方向（上行/下行/配对）
  * 与内容摘要（表名、操作、条数、记录 ID）。脱敏红线：不记录任务标题与正文。
+ * v1.15.1：IPC 技术错误转成可操作指引（混合版本安装 / 端口占用）。
  */
 
 import { useCallback, useEffect, useState } from 'react';
@@ -88,6 +89,22 @@ const DIR_STYLE: Record<HistoryRow['direction'], { short: string; label: string;
     cls: 'bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-200',
   },
 };
+
+/**
+ * 把 IPC 层技术错误转成可操作指引。
+ * - 'No handler registered'：extraResources 的 renderer/preload 已更新，但
+ *   app.asar（主进程）因被运行中的旧进程占用未被替换 → 混合版本安装。
+ * - EADDRINUSE：旧实例后台残留仍占用 18766。
+ */
+function describeSyncError(raw: string): string {
+  if (/No handler registered/i.test(raw)) {
+    return '检测到安装不完整：界面已是新版，但主进程仍是旧版本（app.asar 未被替换）。请完全退出所有小湾清单进程后，重新运行最新版安装包。';
+  }
+  if (/EADDRINUSE|已被占用/i.test(raw)) {
+    return `${raw} 若为旧安装残留，重新运行最新安装包会自动结束残留进程并完整替换。`;
+  }
+  return raw;
+}
 
 function formatTime(iso: string): string {
   const d = new Date(iso);
@@ -206,7 +223,7 @@ export function SyncView() {
       setHistory(Array.isArray(rows) ? rows : []);
       setHistoryError(null);
     } catch (e) {
-      setHistoryError(e instanceof Error ? e.message : String(e));
+      setHistoryError(describeSyncError(e instanceof Error ? e.message : String(e)));
     }
   }, []);
 
@@ -245,7 +262,7 @@ export function SyncView() {
       await api.startSync(host || undefined);
       await refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(describeSyncError(e instanceof Error ? e.message : String(e)));
     } finally {
       setBusy(false);
     }
@@ -288,7 +305,7 @@ export function SyncView() {
       await api.clearSyncHistory();
       await loadHistory();
     } catch (e) {
-      setHistoryError(e instanceof Error ? e.message : String(e));
+      setHistoryError(describeSyncError(e instanceof Error ? e.message : String(e)));
     } finally {
       setHistoryBusy(false);
     }
@@ -443,8 +460,8 @@ export function SyncView() {
         </div>
 
         {historyError && (
-          <div className="mb-2 rounded-lg bg-red-50 p-2 text-xs text-red-700 dark:bg-red-950 dark:text-red-200">
-            读取历史失败：{historyError}
+          <div className="mb-2 rounded-lg bg-amber-50 p-2 text-xs leading-relaxed text-amber-800 dark:bg-amber-950 dark:text-amber-200">
+            {historyError}
           </div>
         )}
         {groups.length === 0 ? (

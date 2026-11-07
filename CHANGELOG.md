@@ -2,6 +2,19 @@
 
 本文件记录 TaskHarbor 各版本变更。（对外品牌名：**小湾清单 Cove**；内部技术标识仍沿用 `TaskHarbor`。）**版本号按语义化版本（SemVer）+ Conventional Commits 前缀维护**：`feat` 升 minor，`fix` 升 patch，`docs/test` 不升版但仍重新构建。
 
+## [1.15.1] - 2026-11-07
+
+### Fixed — 升级后「新界面 + 旧主进程」混合版本（同步历史不可用 / 端口被占用）
+
+- **现象**：安装 1.15.0 后，「同步与设备」页出现 `No handler registered for 'sync:history'`，同时「开启同步」报 `listen EADDRINUSE: address already in use 192.168.1.3:18766`。
+- **根因**：`build.extraResources` 把 `renderer/dist`、`preload/dist` 放在 `resources/` 外部目录（可独立覆盖），而主进程代码在 `app.asar` 内。升级时若旧实例仍在后台运行（托盘常驻 / 子进程残留），`app.asar` 与主 exe 被占用而**未被替换**，安装器却未中止，最终形成「新版 UI + 旧版主进程」的混合安装：新 preload 调用 `sync:history`，旧主进程没有该 handler；残留旧实例继续监听 18766，新实例开启同步即端口冲突。实测本机安装目录 `app.asar` 时间戳仍为 11/2 且不含 `sync:history`，同时有 16 个残留进程、其中 1 个正 Listen 18766。
+- **修复（治本）**：`installer.nsh` 新增 `customInit` 宏（NSIS `.onInit`，早于 `CHECK_APP_RUNNING` 与文件复制），用 `nsProcess` 先优雅关闭、再强制结束所有 `小湾清单.exe` 残留进程，确保 `app.asar` / 主 exe 能被完整替换；全新安装时为空操作，生成卸载器时不执行。
+- **修复（预防）**：
+  - `main/src/index.ts` 增加 Electron 单实例锁（`requestSingleInstanceLock` + `second-instance` 聚焦已有窗口），避免多实例并存抢 18766；锁以 userData 路径为键，不影响 `--user-data-dir` 的干净库验证。
+  - `syncServer.ts` 的 `startHub` 捕获 `EADDRINUSE`，返回可操作中文指引，而非 Node 原始错误。
+  - `SyncView` 把 `No handler registered` / `EADDRINUSE` 技术错误转成醒目可操作提示（「检测到安装不完整…重新运行最新版安装包」），历史错误块改琥珀色提示样式。
+- 版本 1.15.0 → **1.15.1**（fix/patch）。**已装过 1.15.0 且出现上述报错的用户，直接重新运行 1.15.1 安装包即可**（安装器会自动结束残留进程并完整替换旧文件），无需手工清理。
+
 ## [1.15.0] - 2026-11-07
 
 ### Added — 「同步与设备」页新增同步历史

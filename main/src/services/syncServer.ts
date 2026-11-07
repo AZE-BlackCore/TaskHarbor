@@ -615,10 +615,22 @@ export async function startHub(opts: StartHubOptions = {}): Promise<{
     }
   });
 
-  await new Promise<void>((resolve, reject) => {
-    server.once('error', reject);
-    server.listen(port, host, () => resolve());
-  });
+  try {
+    await new Promise<void>((resolve, reject) => {
+      server.once('error', reject);
+      server.listen(port, host, () => resolve());
+    });
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException)?.code === 'EADDRINUSE') {
+      // 最常见：旧版本进程（托盘常驻 / 后台残留）仍在监听 18766。
+      // 转换成可操作指引，而不是把 Node 原始错误直接抛到 UI。
+      throw new Error(
+        `同步端口 ${host}:${port} 已被占用，通常是另一个小湾清单实例或旧版本后台进程仍在运行。` +
+          '请完全退出所有「小湾清单.exe」进程（可在任务管理器结束），或直接重新运行最新安装包后重试。'
+      );
+    }
+    throw e;
+  }
 
   hubState.server = server;
   hubState.running = true;
