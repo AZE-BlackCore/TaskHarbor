@@ -18,7 +18,13 @@ const PRIORITY_COLOR: Record<string, string> = {
   low: '#0e9f6e',
 };
 
-export default function TodayView() {
+export default function TodayView({
+  onOpenTask,
+  onOpenSchedule,
+}: {
+  onOpenTask: (id: string) => void;
+  onOpenSchedule: (id: string) => void;
+}) {
   const tasks = useMobileStore((s) => s.tasks);
   const schedules = useMobileStore((s) => s.schedules);
   const setTaskStatus = useMobileStore((s) => s.setTaskStatus);
@@ -40,7 +46,11 @@ export default function TodayView() {
         <div className="cove-card text-sm text-slate-400">今天没有日程，去「日程」页添加一条。</div>
       )}
       {todaySchedules.map((s) => (
-        <div key={s.id} className="cove-card">
+        <div
+          key={s.id}
+          className="cove-card cursor-pointer"
+          onClick={() => onOpenSchedule(s.id)}
+        >
           <div className="text-sm font-semibold text-slate-800">
             {new Date(s.startTime).toTimeString().slice(0, 5)} {s.title}
             {s.completed ? <span className="ml-1 text-xs text-green-600">·已完成</span> : null}
@@ -57,9 +67,24 @@ export default function TodayView() {
           </div>
           {overdue.map((t) => (
             <div key={t.id} className="cove-card border-red-200 bg-red-50">
-              <div className="text-sm text-slate-800">{t.description}</div>
-              <div className="mt-1 text-[11px] text-red-500">
-                原定 {t.estimatedEndDate?.slice(0, 10)} · 已逾期
+              <div className="flex items-start gap-3">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void setTaskStatus(t.id, t.status === 'done' ? 'todo' : 'done');
+                  }}
+                  className="mt-0.5 h-5 w-5 shrink-0 rounded-full border-2 border-red-300"
+                  aria-label="切换完成"
+                />
+                <div
+                  className="min-w-0 flex-1 cursor-pointer"
+                  onClick={() => onOpenTask(t.id)}
+                >
+                  <div className="text-sm text-slate-800">{t.description}</div>
+                  <div className="mt-1 text-[11px] text-red-500">
+                    原定 {t.estimatedEndDate?.slice(0, 10)} · 已逾期
+                  </div>
+                </div>
               </div>
             </div>
           ))}
@@ -73,12 +98,15 @@ export default function TodayView() {
       {todo.map((t) => (
         <div key={t.id} className="cove-card flex items-center gap-3">
           <button
-            onClick={() => void setTaskStatus(t.id, t.status === 'done' ? 'todo' : 'done')}
+            onClick={(e) => {
+              e.stopPropagation();
+              void setTaskStatus(t.id, t.status === 'done' ? 'todo' : 'done');
+            }}
             className="h-5 w-5 shrink-0 rounded-full border-2"
             style={{ borderColor: PRIORITY_COLOR[t.priority] ?? '#d97706' }}
             aria-label="切换完成"
           />
-          <div className="min-w-0 flex-1">
+          <div className="min-w-0 flex-1 cursor-pointer" onClick={() => onOpenTask(t.id)}>
             <div className="truncate text-sm text-slate-800">{t.description}</div>
             <div className="mt-0.5 text-[11px] text-slate-400">
               {{ high: '高优先级', medium: '中优先级', low: '低优先级' }[t.priority]}

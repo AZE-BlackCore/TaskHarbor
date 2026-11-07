@@ -5,9 +5,10 @@ import { useMobileStore } from '../store';
 
 interface Props {
   onQuickCreate: () => void;
+  onOpenSchedule: (id: string) => void;
 }
 
-export default function ScheduleView({ onQuickCreate }: Props) {
+export default function ScheduleView({ onQuickCreate, onOpenSchedule }: Props) {
   const schedules = useMobileStore((s) => s.schedules);
 
   const groups = schedules.reduce<Record<string, typeof schedules>>((acc, s) => {
@@ -33,7 +34,11 @@ export default function ScheduleView({ onQuickCreate }: Props) {
         <div key={day}>
           <div className="cove-section-title">{day}</div>
           {groups[day].map((s) => (
-            <div key={s.id} className="cove-card">
+            <div
+              key={s.id}
+              className="cove-card cursor-pointer"
+              onClick={() => onOpenSchedule(s.id)}
+            >
               <div className="flex items-center gap-2">
                 <span
                   className="cove-status-dot"

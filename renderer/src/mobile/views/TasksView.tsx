@@ -1,8 +1,9 @@
-/** 任务：列表 + 状态筛选 + 勾选完成（移动端为单列，长按多选为后续增强） */
+/** 任务：列表 + 状态筛选 + 勾选完成 + 状态选择器（移动端为单列） */
 
 import { useMemo, useState } from 'react';
 import { useMobileStore } from '../store';
 import type { Task } from '../../../../core/src/domain/types';
+import { STATUS_OPTIONS } from '../constants';
 
 const FILTERS: Array<{ key: string; label: string; match: (t: Task) => boolean }> = [
   { key: 'all', label: '全部', match: () => true },
@@ -11,11 +12,12 @@ const FILTERS: Array<{ key: string; label: string; match: (t: Task) => boolean }
   { key: 'done', label: '已完成', match: (t) => t.status === 'done' },
 ];
 
-export default function TasksView() {
+export default function TasksView({ onOpenTask }: { onOpenTask: (id: string) => void }) {
   const tasks = useMobileStore((s) => s.tasks);
   const setTaskStatus = useMobileStore((s) => s.setTaskStatus);
   const [filter, setFilter] = useState('all');
   const [keyword, setKeyword] = useState('');
+  const [pickerId, setPickerId] = useState<string | null>(null);
 
   const list = useMemo(() => {
     const f = FILTERS.find((x) => x.key === filter) ?? FILTERS[0];
@@ -54,21 +56,31 @@ export default function TasksView() {
         <div key={t.id} className="cove-card">
           <div className="flex items-start gap-3">
             <button
-              onClick={() => void setTaskStatus(t.id, t.status === 'done' ? 'todo' : 'done')}
+              onClick={(e) => {
+                e.stopPropagation();
+                void setTaskStatus(t.id, t.status === 'done' ? 'todo' : 'done');
+              }}
               className={`mt-0.5 h-5 w-5 shrink-0 rounded-full border-2 ${
                 t.status === 'done' ? 'border-green-500 bg-green-500' : 'border-slate-300'
               }`}
               aria-label="切换完成"
             />
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0 flex-1 cursor-pointer" onClick={() => onOpenTask(t.id)}>
               <div
                 className={`text-sm ${t.status === 'done' ? 'text-slate-400 line-through' : 'text-slate-800'}`}
               >
                 {t.description}
               </div>
               <div className="mt-1 flex flex-wrap gap-2 text-[11px] text-slate-400">
-                <span className="cove-badge bg-slate-100">
-                  {{ todo: '待办', 'in-progress': '进行中', review: '评审', done: '已完成', blocked: '阻塞' }[t.status]}
+                <span
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPickerId(t.id);
+                  }}
+                  className="cove-badge cursor-pointer select-none bg-slate-100"
+                >
+                  {STATUS_OPTIONS.find((o) => o.value === t.status)?.label ?? t.status}
+                  <span className="ml-0.5 text-[9px]">▾</span>
                 </span>
                 <span>{t.progress}%</span>
                 {t.estimatedEndDate && <span>截止 {t.estimatedEndDate.slice(0, 10)}</span>}
@@ -77,6 +89,38 @@ export default function TasksView() {
           </div>
         </div>
       ))}
+
+      {pickerId && (
+        <div className="cove-sheet-mask" onClick={() => setPickerId(null)}>
+          <div className="cove-sheet" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-3 text-base font-bold text-slate-800">设置任务状态</div>
+            {STATUS_OPTIONS.map((opt) => {
+              const current = tasks.find((t) => t.id === pickerId)?.status;
+              const active = current === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  className={`cove-btn mb-2 ${active ? '' : 'ghost'}`}
+                  onClick={() =>
+                    void setTaskStatus(pickerId, opt.value).finally(() => setPickerId(null))
+                  }
+                >
+                  {opt.label}
+                  {active ? ' ✓' : ''}
+                </button>
+              );
+            })}
+            <button
+              type="button"
+              className="cove-btn ghost mt-1"
+              onClick={() => setPickerId(null)}
+            >
+              取消
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

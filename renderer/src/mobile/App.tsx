@@ -8,6 +8,8 @@ import TodayView from './views/TodayView';
 import TasksView from './views/TasksView';
 import ScheduleView from './views/ScheduleView';
 import MineView from './views/MineView';
+import TaskDetail from './views/TaskDetail';
+import ScheduleDetail from './views/ScheduleDetail';
 
 export type TabKey = 'today' | 'tasks' | 'schedule' | 'mine';
 
@@ -21,6 +23,7 @@ const TABS: Array<{ key: TabKey; label: string; icon: typeof CheckSquare }> = [
 export default function App() {
   const [tab, setTab] = useState<TabKey>('today');
   const [sheet, setSheet] = useState<'task' | 'schedule' | null>(null);
+  const [detail, setDetail] = useState<{ type: 'task' | 'schedule'; id: string } | null>(null);
   const ready = useMobileStore((s) => s.ready);
   const initError = useMobileStore((s) => s.initError);
 
@@ -66,9 +69,21 @@ export default function App() {
             </div>
           </div>
         )}
-        {ready && tab === 'today' && <TodayView />}
-        {ready && tab === 'tasks' && <TasksView />}
-        {ready && tab === 'schedule' && <ScheduleView onQuickCreate={() => setSheet('schedule')} />}
+        {ready && tab === 'today' && (
+          <TodayView
+            onOpenTask={(id) => setDetail({ type: 'task', id })}
+            onOpenSchedule={(id) => setDetail({ type: 'schedule', id })}
+          />
+        )}
+        {ready && tab === 'tasks' && (
+          <TasksView onOpenTask={(id) => setDetail({ type: 'task', id })} />
+        )}
+        {ready && tab === 'schedule' && (
+          <ScheduleView
+            onQuickCreate={() => setSheet('schedule')}
+            onOpenSchedule={(id) => setDetail({ type: 'schedule', id })}
+          />
+        )}
         {ready && tab === 'mine' && <MineView />}
       </main>
 
@@ -96,6 +111,13 @@ export default function App() {
       </nav>
 
       {sheet && <CreateSheet kind={sheet} onClose={() => setSheet(null)} />}
+
+      {detail?.type === 'task' && (
+        <TaskDetail taskId={detail.id} onClose={() => setDetail(null)} />
+      )}
+      {detail?.type === 'schedule' && (
+        <ScheduleDetail scheduleId={detail.id} onClose={() => setDetail(null)} />
+      )}
     </div>
   );
 }

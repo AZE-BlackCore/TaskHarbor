@@ -2,6 +2,17 @@
 
 本文件记录 TaskHarbor 各版本变更。（对外品牌名：**小湾清单 Cove**；内部技术标识仍沿用 `TaskHarbor`。）**版本号按语义化版本（SemVer）+ Conventional Commits 前缀维护**：`feat` 升 minor，`fix` 升 patch，`docs/test` 不升版但仍重新构建。
 
+## [1.16.0] - 2026-11-07
+
+### Added — 移动端（Cove 手机版）任务/计划详情页 + 五状态选择器（M3-1 收口）
+
+- **任务/计划详情页**：新增全屏 `TaskDetail` / `ScheduleDetail`，可编辑状态、优先级、进度、责任人、截止日、备注等字段，经 `updateTask` / `updateSchedule` 落库并触发 outbox 同步。
+- **五状态选择器**：移动端任务卡片状态徽章可点击，底部 Sheet 提供 `todo / in-progress / review / done / blocked` 五状态切换（底层 `setTaskStatus` 早已支持，本次补齐 UI 缺口）；保留圆形勾选做 `done ↔ todo` 快捷切换。
+- **共享常量**：新增 `renderer/src/mobile/constants.ts`，集中 `STATUS_OPTIONS` / `PRIORITY_OPTIONS`，避免各视图重复定义。
+- **入口贯通**：`App.tsx` 新增 `detail` 状态层，Today / Tasks / Schedule 三处卡片均可点开对应详情页（`stopPropagation` 防误触）；`store.ts` 新增 `updateTask(id, patch)` / `updateSchedule(id, patch)`。
+- **安全区适配**：`mobile.css` 补充 `.cove-detail*` 全屏样式，适配 Android 状态栏/导航栏安全区。
+- 桌面版 1.15.1 → **1.16.0**（feat/minor）；移动端 0.1.5 → **0.1.6**（versionCode 6 → 7）。配套「小湾清单 Cove」移动端 APK 需重构建。
+
 ## [1.15.1] - 2026-11-07
 
 ### Fixed — 升级后「新界面 + 旧主进程」混合版本（同步历史不可用 / 端口被占用）

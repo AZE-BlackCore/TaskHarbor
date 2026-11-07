@@ -49,7 +49,9 @@ interface MobileState {
   unpair(): Promise<void>;
   createTask(input: Partial<Task>): Promise<void>;
   setTaskStatus(id: string, status: Task['status']): Promise<void>;
+  updateTask(id: string, patch: Partial<Task>): Promise<void>;
   createSchedule(input: Partial<Schedule>): Promise<void>;
+  updateSchedule(id: string, patch: Partial<Schedule>): Promise<void>;
   listConflicts(): Promise<void>;
   conflictList: Array<{ id: string; tableName: string; recordId: string; remoteUpdatedAt: string | null }>;
 }
@@ -221,6 +223,15 @@ export const useMobileStore = create<MobileState>((set, get) => ({
     await get().refresh();
   },
 
+  async updateTask(id, patch) {
+    const { repo } = get();
+    if (!repo) return;
+    await repo.getDriver().transaction(async () => {
+      await repo.entities.update('tasks', id, patch);
+    });
+    await get().refresh();
+  },
+
   async createSchedule(input) {
     const { repo } = get();
     if (!repo) return;
@@ -241,6 +252,15 @@ export const useMobileStore = create<MobileState>((set, get) => ({
         createdAt: now,
         updatedAt: now,
       });
+    });
+    await get().refresh();
+  },
+
+  async updateSchedule(id, patch) {
+    const { repo } = get();
+    if (!repo) return;
+    await repo.getDriver().transaction(async () => {
+      await repo.entities.update('schedules', id, patch);
     });
     await get().refresh();
   },

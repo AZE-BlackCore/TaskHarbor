@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TaskHarbor Mobile 软件设计文档</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230b5fd9'/%3E%3Cpath d='M10 8h12v3H14v3h7v3h-7v3h8v3H10z' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=Noto+Sans+SC:wght@400;500;700;900&display=swap">
+<style>
+:root{
+  --bg:#f4f6fa; --card:#ffffff; --line:#dfe5ee; --line-strong:#c9d3e0;
+  --ink:#16232e; --ink-2:#33424f; --muted:#6b7a90;
+  --accent:#0b5fd9; --accent-soft:#e8f0fd; --accent-ink:#0846a8;
+  --ok:#0e9f6e; --ok-soft:#e6f7f0; --warn:#d97706; --warn-soft:#fdf3e3;
+  --bad:#dc2626; --bad-soft:#fdecec; --violet:#7c5cd6; --violet-soft:#f0ebfc;
+  --mono:ui-monospace,"SF Mono",Consolas,"Cascadia Mono","Courier New",monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--ink-2);font-family:"Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,-apple-system,sans-serif;font-size:15px;line-height:1.75;-webkit-font-smoothing:antialiased}
+code,.mono{font-family:var(--mono);font-size:.9em}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+.wrap{max-width:1080px;margin:0 auto;padding:0 22px}
+.hero{background:linear-gradient(135deg,#0d2b52 0%,#0b5fd9 130%);color:#fff;padding:52px 0 40px;position:relative;overflow:hidden}
+.hero::after{content:"";position:absolute;right:-80px;top:-80px;width:340px;height:340px;border-radius:50%;background:rgba(255,255,255,.06)}
+.hero::before{content:"";position:absolute;right:120px;bottom:-140px;width:260px;height:260px;border-radius:50%;background:rgba(255,255,255,.05)}
+.hero .kicker{font-size:12.5px;letter-spacing:.22em;text-transform:uppercase;color:#9fc1f5;font-weight:700;margin-bottom:14px}
+.hero h1{font-size:30px;font-weight:900;letter-spacing:.01em;margin-bottom:14px;line-height:1.3}
+.hero .sub{color:#c9dcf8;font-size:14px;max-width:880px;margin-bottom:22px}
+.hero .meta{display:flex;flex-wrap:wrap;gap:10px}
+.chip{display:inline-flex;align-items:center;gap:7px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);border-radius:999px;padding:5px 14px;font-size:12.5px;color:#e8f1fd}
+.chip b{color:#fff;font-weight:700}
+.chip .dot{width:7px;height:7px;border-radius:50%;background:#4ade80;display:inline-block}
+.toc{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:24px 26px;margin:26px 0 8px}
+.toc h2{font-size:16px;color:var(--ink);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.toc-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px 34px}
+.toc-grid a{display:block;color:var(--ink-2);font-size:13.5px;padding:3px 0;border-bottom:1px dashed transparent}
+.toc-grid a:hover{color:var(--accent);text-decoration:none}
+.toc-grid a .n{color:var(--accent);font-weight:700;margin-right:8px;font-family:var(--mono);font-size:12px}
+.toc-grid a.lv2{padding-left:26px;color:var(--muted);font-size:13px}
+@media (max-width:760px){.toc-grid{grid-template-columns:1fr}}
+section{padding:38px 0 6px}
+h2.sec{display:flex;align-items:center;gap:12px;font-size:23px;font-weight:900;color:var(--ink);margin-bottom:6px;scroll-margin-top:16px}
+h2.sec .no{flex:none;width:42px;height:42px;border-radius:11px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;font-family:var(--mono)}
+h3{font-size:17px;font-weight:700;color:var(--ink);margin:30px 0 10px;display:flex;align-items:center;gap:8px}
+h3 .t-no{color:var(--accent);font-family:var(--mono);font-size:13px;font-weight:700}
+p.lead{color:var(--ink-2);margin:8px 0 14px;max-width:86ch}
+p+p{margin-top:8px}
+.small{font-size:13px;color:var(--muted)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px 24px;margin:14px 0 20px}
+.card-title{display:flex;align-items:center;gap:9px;font-size:15px;font-weight:700;color:var(--ink);margin-bottom:10px}
+.card-title .ic{width:30px;height:30px;border-radius:9px;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;flex:none}
+table{width:100%;border-collapse:collapse;font-size:13.5px;table-layout:fixed}
+thead th{background:#f0f4fa;color:var(--ink);font-weight:700;text-align:left;padding:9px 12px;border-bottom:2px solid var(--line-strong);font-size:12.5px;letter-spacing:.03em}
+tbody td{padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top;word-break:break-word}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:#f8fafd}
+td.mono{font-family:var(--mono);font-size:12.5px;color:var(--accent-ink);font-weight:600;white-space:nowrap}
+code.inline{background:#eef2f8;border:1px solid #dfe6f0;border-radius:5px;padding:1px 6px;font-size:12.5px;color:#33424f}
+.note{border-left:3px solid var(--accent);background:var(--accent-soft);border-radius:0 10px 10px 0;padding:11px 16px;font-size:13.5px;margin:14px 0;color:#1f3a63}
+.note.ok{border-color:var(--ok);background:var(--ok-soft);color:#155e43}
+.note.warn{border-color:var(--warn);background:var(--warn-soft);color:#7c4a03}
+.note.bad{border-color:var(--bad);background:var(--bad-soft);color:#7f1d1d}
+.note b{font-weight:700}
+.tag{display:inline-block;padding:2px 10px;border-radius:999px;font-size:11.5px;font-weight:700;letter-spacing:.04em}
+.tag.p0{background:var(--bad-soft);color:var(--bad)}
+.tag.p1{background:var(--warn-soft);color:var(--warn)}
+.tag.p2{background:#eef1f5;color:var(--muted)}
+.tag.ok{background:var(--ok-soft);color:var(--ok)}
+.tag.accent{background:var(--accent-soft);color:var(--accent-ink)}
+.tag.violet{background:var(--violet-soft);color:var(--violet)}
+.svg-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px 18px 14px;margin:16px 0}
+.fig-cap{text-align:center;color:var(--muted);font-size:12.5px;margin-top:10px}
+.svg-card svg{width:100%;height:auto;display:block}
+.tl{display:grid;gap:0}
+.tl-row{display:grid;grid-template-columns:150px 40px minmax(0,1fr);gap:0;align-items:center;position:relative}
+.tl-node{display:flex;flex-direction:column;align-items:flex-end;padding-right:18px;text-align:right}
+.tl-dot{width:14px;height:14px;border-radius:50%;background:var(--accent);border:3px solid #fff;box-shadow:0 0 0 2px var(--accent);position:absolute;right:150px;top:50%;transform:translateY(-50%)}
+.tl-track{width:1px;background:var(--line-strong);align-self:stretch;position:relative;margin:0 auto}
+.tl-body{padding:16px 0 16px 22px}
+.tl-body b{font-size:15px}
+.tl-body p{margin-top:4px;color:var(--ink-2);font-size:13.5px;max-width:74ch}
+.tl-date{font-size:12.5px;color:var(--muted);font-weight:700;margin-top:4px}
+.tl-tag{margin-top:2px;display:inline-block;width:max-content;align-self:flex-end}
+@media (max-width:640px){.tl-row{grid-template-columns:1fr}.tl-node{align-items:flex-start;text-align:left;padding-right:0}.tl-dot{display:none}.tl-track{display:none}.tl-body{padding-left:0}}
+ul.tight{list-style:none;margin:6px 0}
+ul.tight li{padding:4px 0 4px 22px;position:relative;font-size:14px}
+ul.tight li::before{content:"";position:absolute;left:6px;top:13px;width:6px;height:6px;border-radius:2px;background:var(--accent)}
+ol.steps{counter-reset:st;list-style:none;margin:6px 0}
+ol.steps li{counter-increment:st;padding:5px 0 5px 30px;position:relative;font-size:14px}
+ol.steps li::before{content:counter(st);position:absolute;left:0;top:6px;width:20px;height:20px;border-radius:6px;background:var(--accent-soft);color:var(--accent);font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center;font-family:var(--mono)}
+footer{border-top:1px solid var(--line);margin-top:50px;padding:22px 0 40px;color:var(--muted);font-size:12.5px;text-align:center}
+@media (max-width:760px){.hero h1{font-size:24px}.wrap{padding:0 14px}section{padding:28px 0 2px}}
+@media (max-width:760px){.card{overflow-x:auto}table{min-width:560px}}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="wrap">
+    <div class="kicker">软件设计文档 · SOFTWARE DESIGN SPEC</div>
+    <h1>TaskHarbor Mobile 与双端数据同步系统</h1>
+    <p class="sub">把 TaskHarbor 桌面端（Electron 28 + sql.js 本地库）延伸到 Android 手机：复用同一份数据 schema 与业务内核，由 Capacitor 8 打包可安装 APK，通过「局域网直连 + 单人自用」的同步链路实现双端数据合流。阶段一无需公网服务器，架构上预留自建同步服务的接入位。</p>
+    <div class="meta">
+      <span class="chip"><b>版本</b> v0.1（草案）</span>
+      <span class="chip"><b>日期</b> 2026-10-27</span>
+      <span class="chip"><b>状态</b> <span class="dot"></span>起草待评审</span>
+      <span class="chip"><b>技术栈</b> Capacitor 8 + React 18 + Vite 5 + 原生 SQLite</span>
+      <span class="chip"><b>基线</b> 桌面端 v1.6.0</span>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== TOC ===================== -->
+<div class="wrap">
+  <nav class="toc">
+    <h2>目录 CONTENTS</h2>
+    <div class="toc-grid">
+      <a href="#s1"><span class="n">01</span>项目概述</a>
+      <a href="#s11" class="lv2">1.1 背景与问题</a>
+      <a href="#s12" class="lv2">1.2 产品定位</a>
+      <a href="#s13" class="lv2">1.3 目标用户与场景</a>
+      <a href="#s2"><span class="n">02</span>需求分析</a>
+      <a href="#s21" class="lv2">2.1 功能需求</a>
+      <a href="#s22" class="lv2">2.2 非功能需求</a>
+      <a href="#s23" class="lv2">2.3 核心用例</a>
+      <a href="#s3"><span class="n">03</span>总体架构设计</a>
+      <a href="#s31" class="lv2">3.1 架构分层</a>
+      <a href="#s32" class="lv2">3.2 技术选型</a>
+      <a href="#s33" class="lv2">3.3 模块划分</a>
+      <a href="#s34" class="lv2">3.4 关键架构决策（ADR）</a>
+      <a href="#s35" class="lv2">3.5 备选形态</a>
+      <a href="#s4"><span class="n">04</span>关键技术设计</a>
+      <a href="#s41" class="lv2">4.1 共享内核与双 target 构建</a>
+      <a href="#s42" class="lv2">4.2 数据模型改造</a>
+      <a href="#s43" class="lv2">4.3 增量同步协议</a>
+      <a href="#s44" class="lv2">4.4 冲突解决</a>
+      <a href="#s45" class="lv2">4.5 设备发现与配对</a>
+      <a href="#s46" class="lv2">4.6 Android 网络与安全策略</a>
+      <a href="#s47" class="lv2">4.7 小米机型适配</a>
+      <a href="#s48" class="lv2">4.8 SQL 方言约束</a>
+      <a href="#s5"><span class="n">05</span>界面设计</a>
+      <a href="#s6"><span class="n">06</span>异常与恢复</a>
+      <a href="#s7"><span class="n">07</span>非功能细化</a>
+      <a href="#s8"><span class="n">08</span>测试与验收</a>
+      <a href="#s9"><span class="n">09</span>实施计划</a>
+      <a href="#s10"><span class="n">10</span>附录</a>
+    </div>
+  </nav>
+</div>
+
+<!-- ===================== S1 ===================== -->
+<div class="wrap">
+<section id="s1">
+  <h2 class="sec"><span class="no">01</span>项目概述</h2>
+
+  <h3 id="s11"><span class="t-no">1.1</span>背景与问题</h3>
+  <p>TaskHarbor 桌面端当前版本 v1.6.0，是一个<b>纯本地</b> Electron 桌面应用：数据 100% 落在本机 SQLite 文件 <code class="inline">%APPDATA%\taskharbor\todolist.db</code>（经 sql.js 读写），没有服务端、没有账号体系、没有任何出口到设备的网络通道——唯一的 HTTP 面是 Agent 接入用的本地 API，绑定在 <code class="inline">127.0.0.1:18765</code>，回环地址本身不具备跨设备可达性。</p>
+  <p>这意味着「手机上也能用」并不是一次简单的打包，而是要把一条完整的同步链路从零建起来。经核查当前代码库（<code class="inline">main/src/services/database.ts</code>、<code class="inline">main/src/server/apiServer.ts</code>、<code class="inline">main/src/services/database-migration.ts</code>），存在四类必须先解决的原始阻碍：</p>
+  <div class="card">
+    <table>
+      <colgroup><col style="width:20%"><col style="width:80%"></colgroup>
+      <thead><tr><th>痛点</th><th>表现（源自当前代码实况）</th></tr></thead>
+      <tbody>
+        <tr><td><b>① 移动场景断档</b></td><td>离开工位后无法查看/推进任务与日程，回公司后靠记忆补录。桌面端的今日待办、提醒弹窗、悬浮窗全部随 PC 关机失效，任务的「时效连续性」在手机上彻底断裂。</td></tr>
+        <tr><td><b>② 现有 API 不足以承载同步</b></td><td>本地 API 仅覆盖 <code class="inline">tasks</code> / <code class="inline">schedules</code> 两个资源的 CRUD，缺失 <code class="inline">tags</code>、<code class="inline">subtasks</code>、<code class="inline">timelogs</code>、<code class="inline">task_dependencies</code>、<code class="inline">task_tag_relations</code>、<code class="inline">task_reminders</code>；且<b>无</b>软删除变更通道、<b>无</b>增量游标、<b>无</b>冲突元数据，只能做全量拉取——不构成同步协议。</td></tr>
+        <tr><td><b>③ 渲染层与 Electron 强耦合</b></td><td>renderer 的 store 直接调用 preload 暴露的 <code class="inline">window.api.*</code>（IPC 通道），业务逻辑与 IPC 面绑死；WebView 内没有 <code class="inline">window.api</code>，现有 UI 代码无法直接复用到手机。</td></tr>
+        <tr><td><b>④ 删除操作在同步链路上会「假消失」</b></td><td>软删除字段 <code class="inline">deletedAt</code> 目前只迁移到了 <code class="inline">tasks</code> / <code class="inline">projects</code> / <code class="inline">subtasks</code> 三张表；<code class="inline">tags</code>、<code class="inline">schedules</code>、<code class="inline">timelogs</code> 等表的删除仍是物理 <code class="inline">DELETE</code>，对端永远收不到「这条被删了」这条信息。</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note warn"><b>关键判断：</b>真正的难点不在「打包 APK」，而在「让两端的数据能合得上」。打包只是交付形态，同步才是这个项目的技术主体，实施计划中超过 60% 的工作量应分配给数据层改造与同步链路。</div>
+
+  <h3 id="s12"><span class="t-no">1.2</span>产品定位</h3>
+  <p class="lead">离线优先、局域网自同步、可平滑升级到自建服务的 TaskHarbor 移动端伴侣。</p>
+  <ul class="tight">
+    <li><b>本地优先（Local-First）</b>：所有读写先落本地 SQLite 并即时刷新 UI，网络只是后台异步合流通道。<b>验收口径</b>：飞行模式下 App 全部读写功能可用，无加载态阻塞。</li>
+    <li><b>最小信任面</b>：不强制上云。同步服务<b>默认关闭</b>，仅在用户主动开启配对会话期间在局域网监听；配对关系与 token 由用户显式建立与解除。不接受「默认拉起常驻服务」。<b>验收口径</b>：默认安装后无任何监听端口。</li>
+    <li><b>内核共享</b>：桌面与移动共用同一份数据 schema（DDL）、同一套 TypeScript 类型、同一个同步引擎。差异仅存在于「SQLite 驱动实现」与「UI 布局」。<b>验收口径</b>：<code class="inline">core/schema</code> 为单一真源，两端由同一份 DDL 建库。</li>
+    <li><b>渐进增强</b>：阶段一 LAN 直连（无需公网服务器），阶段二替换为一个自建同步服务即可上公网——上层业务代码零改动。<b>验收口径</b>：Transport 接口抽象稳定，两种实现通过同一套引擎测试。</li>
+  </ul>
+  <div class="note"><b>不做什么：</b>不做多人协作与权限体系；不做 iOS（本轮）；不做云端服务的完整实现（仅预留接口，不在阶段一交付）；不把桌面的多窗口/悬浮窗/鼠标穿透移植到手机；移动端首版不移植甘特图（Gantt）与统计报表。</div>
+  <div class="note ok"><b>形态决策：</b>主推 <b>Android APK（Capacitor 壳 + 现有 renderer 复用）</b>；桌面端在其中扮演 <b>Sync Hub（权威源）</b>。备选形态「PWA + Trusted Web Activity」因离线能力依赖 WebView 存储、易被系统清理，不推荐作为长期数据载体。</div>
+
+  <h3 id="s13"><span class="t-no">1.3</span>目标用户与场景</h3>
+  <p>目标用户是<b>单人自用</b>场景的你自己：桌面端是主战场（重量级编辑、看板、统计），手机是随身携带的「采集 + 查阅 + 提醒」终端。</p>
+  <div class="card">
+    <table>
+      <colgroup><col style="width:17%"><col style="width:56%"><col style="width:27%"></colgroup>
+      <thead><tr><th>场景</th><th>用户故事</th><th>关键需求支撑</th></tr></thead>
+      <tbody>
+        <tr><td><b>外出速记</b></td><td>作为使用者，我在通勤路上想到一个待办，希望几秒内把它记进 TaskHarbor，以便回到工位时它已经在同步队列里等着。</td><td>FR-01 / FR-02 / FR-09</td></tr>
+        <tr><td><b>回工位合流</b></td><td>作为使用者，我回到家连上 WiFi 打开手机 App，希望刚才在外记录的改动自动合进桌面库，而不需要手动点「导出」。</td><td>FR-03 / FR-04</td></tr>
+        <tr><td><b>日程提醒</b></td><td>作为使用者，我希望日程在手机上按设定时间弹本地通知提醒，即使此刻没联网也能提示。</td><td>FR-08</td></tr>
+        <tr><td><b>冲突可追溯</b></td><td>作为使用者，当某条任务在手机和电脑上都被改过，我希望系统不要静默丢掉其中一份，而是明确告诉我并让我决定。</td><td>FR-05 / FR-11</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ===================== S2 ===================== -->
+<section id="s2">
+  <h2 class="sec"><span class="no">02</span>需求分析</h2>
+
+  <h3 id="s21"><span class="t-no">2.1</span>功能需求</h3>
+  <p>功能需求按优先级编号（<span class="tag p0">P0</span> 核心闭环 / <span class="tag p1">P1</span> 重要 / <span class="tag p2">P2</span> 增强），编号在后续章节与用例、验收清单中交叉引用。</p>
+  <div class="card">
+    <table>
+      <colgroup><col style="width:11%"><col style="width:16%"><col style="width:60%"><col style="width:13%"></colgroup>
+      <thead><tr><th>编号</th><th>名称</th><th>需求描述</th><th>优先级</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">FR-01</td><td>Android APK 交付</td><td>产出可签名的 arm64-v8a Android 安装包，安装在小米/红米机型上可正常运行。<b>验收</b>：真机安装成功、冷启动 &lt; 2s、连续使用 5 分钟无 WebView 崩溃。</td><td><span class="tag p0">P0</span></td></tr>
+        <tr><td class="mono">FR-02</td><td>本地数据完整镜像</td><td>移动端以原生 SQLite 建立与桌面端一致的数据结构（10 张业务表 + 4 张同步元表）。<b>验收</b>：两端执行同一份 DDL 后，<code class="inline">sqlite_master</code> 结果集一致。</td><td><span class="tag p0">P0</span></td></tr>
+        <tr><td class="mono">FR-03</td><td>二维码配对</td><td>桌面端生成含 LAN IP、端口、PIN 的二维码；手机扫码 + 输入 PIN 完成配对并交换长期 token。<b>验收</b>：首次配对全流程 &lt; 30s；token 存入系统安全存储。</td><td><span class="tag p0">P0</span></td></tr>
+        <tr><td class="mono">FR-04</td><td>双向增量同步</td><td>支持 push（本地变更出队上传）与 pull（按游标拉取对端增量）的协议。<b>验收</b>：500 条变更增量同步 &lt; 1.5s；重复同步幂等。</td><td><span class="tag p0">P0</span></td></tr>
+        <tr><td class="mono">FR-05</td><td>冲突检测与副本保留</td><td>冲突不被静默覆盖，被覆盖的一侧写入 <code class="inline">_sync_conflicts</code> 并在 UI 可见。<b>验收</b>：构造双改场景，冲突 100% 被记录且可查看/恢复。</td><td><span class="tag p0">P0</span></td></tr>
+        <tr><td class="mono">FR-06</td><td>移动端今日视图</td><td>落地页面：今日日程 + 待办 + 逾期提醒聚合。<b>验收</b>：千条数据滚动 ≥ 50fps。</td><td><span class="tag p0">P0</span></td></tr>
+        <tr><td class="mono">FR-07</td><td>任务 CRUD</td><td>任务的增删改查、状态流转、优先级、截止日期、标签挂载。<b>验收</b>：与桌面端同字段口径。</td><td><span class="tag p0">P0</span></td></tr>
+        <tr><td class="mono">FR-08</td><td>本地通知提醒</td><td>日程按 reminder 分钟提前触发本地通知，离线可用。<b>验收</b>：App 进程被杀后仍能按时提醒（依赖小米保活白名单）。</td><td><span class="tag p1">P1</span></td></tr>
+        <tr><td class="mono">FR-09</td><td>离线 outbox</td><td>本地所有写操作入 outbox 队列，网络不可用时持久化，恢复后自动 flush，支持失败重试与退避。<b>验收</b>：断网写入 200 条后恢复，全部送达且顺序正确。</td><td><span class="tag p0">P0</span></td></tr>
+        <tr><td class="mono">FR-10</td><td>同步状态可视化</td><td>UI 常驻展示「上次同步时间」+「待同步条目数」+「是否连接 Hub」，不隐藏延迟。<b>验收</b>：任一状态异常肉眼可辨。</td><td><span class="tag p1">P1</span></td></tr>
+        <tr><td class="mono">FR-11</td><td>全量校验与修复</td><td>提供手动「一致性校验」，比对两端摘要，发现漂移可强制以 Hub 为准修复。<b>验收</b>：人为篡改一端数据后可检出并一键修复。</td><td><span class="tag p1">P1</span></td></tr>
+        <tr><td class="mono">FR-12</td><td>JSON 导入导出兜底</td><td>当 LAN 不可用（公网/AP 隔离）时，通过文件导出导入完成数据搬运。<b>验收</b>：导出文件可被另一端正确合入。</td><td><span class="tag p1">P1</span></td></tr>
+        <tr><td class="mono">FR-13</td><td>小米机型保活引导</td><td>App 内提供一键跳转系统设置的自检引导页（省电策略/自启动/通知/安装未知来源）。<b>验收</b>：HyperOS 真机完成全部引导后，后台同步 30 分钟内存活。</td><td><span class="tag p1">P1</span></td></tr>
+        <tr><td class="mono">FR-14</td><td>Transport 抽象预留</td><td>同步协议与传输通道解耦，后续替换为 HTTP 云端客户端时上层零改动。<b>验收</b>：两种 Transport 共用同一套 SyncEngine 单元测试。</td><td><span class="tag p2">P2</span></td></tr>
+        <tr><td class="mono">FR-15</td><td>移动端日程视图</td><td>日/周视图的日程查看与创建。<b>验收</b>：与桌面端调度口径一致。</td><td><span class="tag p1">P1</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 id="s22"><span class="t-no">2.2</span>非功能需求</h3>
+  <div class="card">
+    <table>
+      <colgroup><col style="width:13%"><col style="width:40%"><col style="width:47%"></colgroup>
+      <thead><tr><th>类别</th><th>要求</th><th>量化指标 / 验收口径</th></tr></thead>
+      <tbody>
+        <tr><td><b>性能</b></td><td>冷启动快、列表流畅、同步不阻塞 UI</td><td>冷启动 ≤ 2s（中端机型）；首屏可交互 ≤ 1.5s；千条列表滚动 ≥ 50fps；单表单次操作 ≤ 50ms；同步全程异步执行，UI 零阻塞。</td></tr>
+        <tr><td><b>可靠性</b></td><td>数据不丢、重复同步不出脏数据</td><td>任意一端断电/杀进程，已写本地数据零丢失；同一批变更重复推送 3 次，结果幂等（最终态一致）；Outbox 重试采用指数退避，最大间隔 15min。</td></tr>
+        <tr><td><b>安全</b></td><td>局域网环境下的隐私与最小暴露</td><td>同步服务默认关闭；仅绑定 WiFi 网卡地址而非 0.0.0.0；必须配对态才可通信；token 存系统安全存储（Keystore），不落 <code class="inline">localStorage</code>；网络放行策略限定局域网网段（禁止全局明文放行）；日志禁止输出任务标题/描述正文。</td></tr>
+        <tr><td><b>兼容性</b></td><td>覆盖目标真机与 API 级别</td><td>Android 10–16（API 29–36）；小米 MIUI 13+ / HyperOS 1.0+ / HyperOS 2.0 真机通过；arm64-v8a 架构优先；与桌面端 v1.6.0 数据库结构对齐。</td></tr>
+        <tr><td><b>可用性</b></td><td>不依赖说明书即可完成配对</td><td>首次配对引导 ≤ 4 步；同步结果始终可见（成功/失败/待同步数）；失败态必须给出可执行修复动作，而非「同步失败」。</td></tr>
+        <tr><td><b>可维护性</b></td><td>共享内核可单测，双端差异收敛</td><td>SyncEngine / ConflictResolver / DDL 全部 OS 无关，Vitest 单测覆盖率 ≥ 80%；UI 与 platform 代码严格分层，禁止 UI 层直接 import platform。</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 id="s23"><span class="t-no">2.3</span>核心用例</h3>
+  <div class="card">
+    <table>
+      <colgroup><col style="width:16%"><col style="width:50%"><col style="width:34%"></colgroup>
+      <thead><tr><th>用例</th><th>主流程（Happy Path）</th><th>备选流与异常</th></tr></thead>
+      <tbody>
+        <tr><td><b>UC-01<br>首次配对</b></td><td>桌面开启同步 → 显示二维码 + 6 位 PIN → 手机扫码 → 输入 PIN → 校验通过 → 交换长期 token → 手机首次全量基线拉取 → 完成。</td><td>扫码失败 → 支持手动输入 IP:Port；PIN 错 3 次 → 桌面端重新生成；IP 不通 → 提示检查同 WiFi / AP 隔离。</td></tr>
+        <tr><td><b>UC-02<br>离线速记</b></td><td>手机断网 → 新建任务 → 本地 SQLite 立即写入并 UI 刷新 → 同时入 Outbox 队列（state=pending）。</td><td>App 被杀 → Outbox 已持久化，重启后仍可重放；连续创建 200 条 → 批量合并推送。</td></tr>
+        <tr><td><b>UC-03<br>回工位合流</b></td><td>连 WiFi → App 前台/周期任务唤醒 → 探测 Hub 可达 → 先 push Outbox → 再 pull 增量 → 更新游标 → UI 更新上次同步时间。</td><td>Hub 不可达 → 静默退避，UI 显示「离线，N 条待同步」；部分推送失败 → 成功的清出队列，失败的保留并按指数退避重试。</td></tr>
+        <tr><td><b>UC-04<br>双端同改冲突</b></td><td>同一任务两端各自修改 → 后到达 Hub 的一侧写入成功 → 先到的那一版本被检出 → 写入 <code class="inline">_sync_conflicts</code> → UI 显示冲突标记 → 用户查看并决定采用哪一份。</td><td>用户长期不处理 → 冲突记录保留 30 天后提示（不自动删除）；「删除 vs 修改」冲突按 ADR-07 处理：修改优先。</td></tr>
+        <tr><td><b>UC-05<br>Schema 升级</b></td><td>新版本 App 携带新 DDL → 本地打开 DB 时执行增量 migration → migration 在事务中完成 → 成功后标记版本号。</td><td>migration 失败 → 回滚事务并保留原库快照，禁止半升级状态继续跑；提示用户导出数据后重置。</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+<!-- ===================== S3 ===================== -->
+<section id="s3">
+  <h2 class="sec"><span class="no">03</span>总体架构设计</h2>
+
+  <h3 id="s31"><span class="t-no">3.1</span>架构分层</h3>
+  <p class="lead">双端对等 + 中枢权威：两端各自是一套完整的「UI → Service → Repository → SQLite」本地闭环，中间由一层可替换的 Transport 连接，底部由不依赖 OS 的共享内核统一数据与同步语义。</p>
+  <div class="svg-card">
+    <svg viewBox="0 0 860 500" xmlns="http://www.w3.org/2000/svg" font-family="'Noto Sans SC','Microsoft YaHei',sans-serif">
+      <defs>
+        <marker id="ar" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#7d8ea6"/></marker>
+        <marker id="arm" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#0b5fd9"/></marker>
+      </defs>
+
+      <!-- 左侧：桌面端 -->
+      <rect x="14" y="16" width="316" height="256" rx="12" fill="#fff" stroke="#c9d3e0"/>
+      <text x="28" y="38" font-size="12" font-weight="700" fill="#6b7a90">桌面端 · DESKTOP（Electron 28）</text>
+      <rect x="28" y="48" width="288" height="30" rx="8" fill="#fdf3e3" stroke="#efd9ae"/><text x="172" y="68" font-size="11" fill="#7c4a03" text-anchor="middle">现有 renderer（React 18 + Zustand）</text>
+      <rect x="28" y="84" width="288" height="30" rx="8" fill="#f0ebfc" stroke="#d2c5f0"/><text x="172" y="104" font-size="11" fill="#5b3db8" text-anchor="middle">main 进程 Service 层（task / schedule / tag…）</text>
+      <rect x="28" y="120" width="288" height="30" rx="8" fill="#e8f0fd" stroke="#b9d2f4"/><text x="172" y="140" font-size="11" fill="#0846a8" text-anchor="middle">Repository：ElectronDriver（IPC → sql.js）</text>
+      <rect x="28" y="156" width="288" height="30" rx="8" fill="#e6f7f0" stroke="#a8ddc4"/><text x="172" y="176" font-size="11" fill="#155e43" text-anchor="middle">本地 SQLite 文件 todolist.db</text>
+      <rect x="28" y="196" width="288" height="62" rx="9" fill="#0b5fd9" stroke="#0b5fd9"/>
+      <text x="172" y="218" font-size="11.5" font-weight="700" fill="#ffffff" text-anchor="middle">Sync Hub（权威源 · 仅配对会话内监听）</text>
+      <text x="172" y="236" font-size="10.5" fill="#dbe8fb" text-anchor="middle">写入时钟以此为准 · own the truth</text>
+      <text x="172" y="251" font-size="10.5" fill="#dbe8fb" text-anchor="middle">绑定 WiFi 网卡 IP，不绑 0.0.0.0</text>
+
+      <!-- 右侧：移动端 -->
+      <rect x="530" y="16" width="316" height="256" rx="12" fill="#fff" stroke="#c9d3e0"/>
+      <text x="544" y="38" font-size="12" font-weight="700" fill="#6b7a90">移动端 · ANDROID APK（Capacitor 8）</text>
+      <rect x="544" y="48" width="288" height="30" rx="8" fill="#fdf3e3" stroke="#efd9ae"/><text x="688" y="68" font-size="11" fill="#7c4a03" text-anchor="middle">移动 UI（底部 Tab + 全屏 Detail）</text>
+      <rect x="544" y="84" width="288" height="30" rx="8" fill="#f0ebfc" stroke="#d2c5f0"/><text x="688" y="104" font-size="11" fill="#5b3db8" text-anchor="middle">同一套 core Domain Service（复用）</text>
+      <rect x="544" y="120" width="288" height="30" rx="8" fill="#e8f0fd" stroke="#b9d2f4"/><text x="688" y="140" font-size="11" fill="#0846a8" text-anchor="middle">Repository：CapacitorDriver（原生 SQLite）</text>
+      <rect x="544" y="156" width="288" height="30" rx="8" fill="#e6f7f0" stroke="#a8ddc4"/><text x="688" y="176" font-size="11" fill="#155e43" text-anchor="middle">@capacitor-community/sqlite v8</text>
+      <rect x="544" y="196" width="288" height="62" rx="9" fill="#7c5cd6" stroke="#7c5cd6"/>
+      <text x="688" y="218" font-size="11.5" font-weight="700" fill="#ffffff" text-anchor="middle">Sync Client（本地优先 · 离线可用）</text>
+      <text x="688" y="236" font-size="10.5" fill="#eee8fb" text-anchor="middle">Outbox 持久化 · 本地先写 UI 先响应</text>
+      <text x="688" y="251" font-size="10.5" fill="#eee8fb" text-anchor="middle">读取永不等网络</text>
+
+      <!-- 中间：Transport -->
+      <rect x="342" y="150" width="176" height="86" rx="10" fill="#eef2f8" stroke="#7d8ea6"/>
+      <text x="430" y="170" font-size="12" font-weight="700" fill="#33424f" text-anchor="middle">SyncTransport（抽象）</text>
+      <text x="430" y="190" font-size="11" fill="#33424f" text-anchor="middle">LanTransport — P0</text>
+      <text x="430" y="207" font-size="11" fill="#6b7a90" text-anchor="middle">HttpTransport — P2 预留</text>
+      <text x="430" y="226" font-size="10.5" fill="#6b7a90" text-anchor="middle">pull / push / pair / verify</text>
+
+      <line x1="330" y1="193" x2="342" y2="193" stroke="#0b5fd9" stroke-width="1.8" marker-end="url(#arm)"/>
+      <line x1="518" y1="193" x2="530" y2="193" stroke="#0b5fd9" stroke-width="1.8" marker-end="url(#arm)"/>
+      <text x="430" y="256" font-size="10.5" fill="#7d8ea6" text-anchor="middle">局域网 WiFi（可替换为公网 HTTPS）</text>
+
+      <!-- 底部：共享内核 -->
+      <rect x="14" y="300" width="832" height="130" rx="12" fill="#fff" stroke="#0b5fd9" stroke-dasharray="6 4"/>
+      <text x="28" y="322" font-size="12" font-weight="700" fill="#0846a8">共享内核 · SHARED CORE（纯 TypeScript，无 DOM / 无 Electron / 无 Capacitor 依赖，可单测）</text>
+      <g font-size="11" text-anchor="middle">
+        <rect x="28" y="332" width="190" height="34" rx="8" fill="#e8f0fd" stroke="#b9d2f4"/><text x="123" y="347" fill="#0846a8">core/domain</text><text x="123" y="361" font-size="10" fill="#6b7a90">Task/Schedule/Tag 类型与校验</text>
+        <rect x="230" y="332" width="190" height="34" rx="8" fill="#e8f0fd" stroke="#b9d2f4"/><text x="325" y="347" fill="#0846a8">core/schema</text><text x="325" y="361" font-size="10" fill="#6b7a90">DDL 单一真源 + migration</text>
+        <rect x="432" y="332" width="190" height="34" rx="8" fill="#e8f0fd" stroke="#b9d2f4"/><text x="527" y="347" fill="#0846a8">core/sync</text><text x="527" y="361" font-size="10" fill="#6b7a90">SyncEngine / Outbox / 游标</text>
+        <rect x="634" y="332" width="190" height="34" rx="8" fill="#e8f0fd" stroke="#b9d2f4"/><text x="729" y="347" fill="#0846a8">core/sync/conflict</text><text x="729" y="361" font-size="10" fill="#6b7a90">LWW 裁决 + 冲突副本</text>
+      </g>
+      <rect x="28" y="376" width="796" height="40" rx="9" fill="#e6f7f0" stroke="#a8ddc4"/>
+      <text x="426" y="393" font-size="11" fill="#155e43" text-anchor="middle">同一份 DDL 在两端建库 · 同一套引擎跑同步 · 同一套裁决判冲突</text>
+      <text x="426" y="409" font-size="10.5" fill="#155e43" text-anchor="middle">→ 差异只存在于 UI 层与 SQLite 驱动实现</text>
+
+      <line x1="172" y1="272" x2="172" y2="300" stroke="#0846a8" stroke-width="1.4" stroke-dasharray="4 3" marker-end="url(#ar)"/>
+      <line x1="688" y1="272" x2="688" y2="300" stroke="#0846a8" stroke-width="1.4" stroke-dasharray="4 3" marker-end="url(#ar)"/>
+
+      <text x="430" y="462" font-size="12.5" fill="#33424f" text-anchor="middle">调用方向：UI → Domain Service → Repository（Driver）→ SQLite　　横向：Client ↔ Transport ↔ Hub</text>
+      <text x="430" y="484" font-size="11.5" fill="#6b7a90" text-anchor="middle">时钟基准：所有落库的 updatedAt 一律由 Hub 侧时钟生成，消除双端时钟漂移</text>
+    </svg>
+    <div class="fig-cap">图 3-1 总体架构分层：双端对等闭环 + 可替换 Transport + 共享内核</div>
+  </div>
+
+  <h3 id="s32"><span class="t-no">3.2</span>技术选型</h3>
+  <div class="card">
+    <div class="card-title"><span class="ic">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 17l6-6-6-6M12 19h8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </span>Capacitor 8 + 复用现有 renderer —— 复用率最高的务实路径</div>
+    <p><b>选型理由要点：</b>① 现有 renderer 已是 Vite + React 18 + TypeScript + Tailwind 的技术组合，Capacitor 原生支持任意现代 Web 前端，<b>无需更换框架</b>即可获得 React 组件与 Tailwind 样式的直接复用；② 桌面端数据是 SQLite，<code class="inline">@capacitor-community/sqlite</code> 提供真原生 SQLite，<b>DDL 可直接复用</b>，避免二次建模；③ Capacitor 8 是当前稳定版（8.5.x），社区插件生态成熟，官方明确 Capacitor 9 仍处 next/alpha、不建议用于生产，因此锁 8；④ 对比引入 Flutter / RN 需要几乎全量重写 UI，双端逻辑极易漂移。</p>
+    <table style="margin-top:14px">
+      <colgroup><col style="width:19%"><col style="width:16%"><col style="width:16%"><col style="width:13%"><col style="width:18%"><col style="width:18%"></colgroup>
+      <thead><tr><th>候选</th><th>代码复用率</th><th>数据层契合度</th><th>构建成本</th><th>移动端体验</th><th>主要风险</th></tr></thead>
+      <tbody>
+        <tr><td><b>Capacitor 8</b>（推荐）</td><td><span class="tag ok">高</span> UI 结构 + Tailwind + 类型可直接复用</td><td><span class="tag ok">高</span> 原生 SQLite，DDL 复用</td><td><span class="tag ok">低</span> 单仓双 build target</td><td>WebView 渲染，接近原生；重列表需虚化</td><td>SQLite 插件的 SQL 解析 Bug（见 4.8）；小米后台限制（见 4.7）</td></tr>
+        <tr><td>React Native / Expo</td><td><span class="tag p1">中</span> TS 类型可复用，UI 全重写</td><td><span class="tag p1">中</span> 需换成 op-sqlite / expo-sqlite</td><td><span class="tag p1">中</span> 独立工程 + 桥接</td><td><span class="tag ok">高</span> 原生组件</td><td>两套代码库并存，逻辑漂移风险最高</td></tr>
+        <tr><td>Flutter 重写</td><td><span class="tag p2">低</span> 几乎全重写</td><td><span class="tag p1">中</span> sqflite 需重新建模</td><td><span class="tag p0">高</span> 全新工程与技能栈</td><td><span class="tag ok">高</span> 原生性能最佳</td><td>工作量成倍；与桌面端长期割裂</td></tr>
+        <tr><td>PWA + TWA</td><td><span class="tag ok">高</span> 几乎零改造</td><td><span class="tag p0">差</span> 落 IndexedDB 易被系统清理</td><td><span class="tag ok">极低</span></td><td><span class="tag p1">中</span> 依赖浏览器内核</td><td>离线可靠性不满足「数据载体」定位，否决</td></tr>
+      </tbody>
+    </table>
+    <div class="note"><b>部署形态：</b>桌面端维持 Electron-builder NSIS 安装包（<code class="inline">appId: com.taskharbor.desktop</code>）；移动端新增 Capacitor Android 工程（建议 <code class="inline">appId: com.taskharbor.mobile</code>），产出 arm64-v8a 签名 APK。<b>工具链硬性要求</b>：Node.js 22+、JDK 21、Android Studio Otter 2025.2.1+、Android Gradle Plugin 8.13.0、Gradle 8.14.3、compileSdk / targetSdk 36、minSdk 24。</div>
+    <div class="note warn"><b>版本对齐红线：</b><code class="inline">@capacitor/core</code> / <code class="inline">cli</code> / <code class="inline">android</code> 必须同一大版本；社区 SQLite 插件主版本必须与 Capacitor 主版本一致——<b>Capacitor 8 必须配 <code class="inline">@capacitor-community/sqlite@^8</code></b>，混用 7.x 会在安装期报 peer 冲突并可能在运行期出现驱动异常。</div>
+  </div>
+
+  <h3 id="s33"><span class="t-no">3.3</span>模块划分</h3>
+  <div class="card">
+    <table>
+      <colgroup><col style="width:24%"><col style="width:53%"><col style="width:23%"></colgroup>
+      <thead><tr><th>模块</th><th>职责</th><th>主要依赖</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">core/domain</td><td>任务 / 日程 / 标签等领域模型、TypeScript 类型、字段校验规则。由现有 <code class="inline">renderer/src/types</code> 抽取升级。</td><td>zod（复用现有）</td></tr>
+        <tr><td class="mono">core/schema</td><td>DDL 单一真源（10 张业务表 + 4 张同步元表）与按版本递增的 migration 脚本。</td><td>无（纯字符串 + 版本号）</td></tr>
+        <tr><td class="mono">core/repository</td><td>定义 Repository 接口（CRUD + query + softDelete），不含任何实现。</td><td>core/domain</td></tr>
+        <tr><td class="mono">core/sync</td><td>SyncEngine：编排 push / pull、Outbox 队列、游标推进、重试退避。</td><td>core/repository, SyncTransport</td></tr>
+        <tr><td class="mono">core/sync/conflict</td><td>冲突裁决（LWW）与冲突副本落库策略。</td><td>core/schema</td></tr>
+        <tr><td class="mono">transport/base</td><td>SyncTransport 抽象接口：pair / pull / push / verify。</td><td>无</td></tr>
+        <tr><td class="mono">transport/lan</td><td>局域网实现：Hub HTTP 端点调用、连接探测、网段与 TLS 策略。</td><td>transport/base</td></tr>
+        <tr><td class="mono">transport/http</td><td>（P2 预留）公网自建同步服务的同名实现，接口与 LAN 一致。</td><td>transport/base</td></tr>
+        <tr><td class="mono">platform/driver-electron</td><td>Repository 的 Electron 实现：转发 IPC 到主进程 sql.js。</td><td>core/repository, window.api</td></tr>
+        <tr><td class="mono">platform/driver-capacitor</td><td>Repository 的 Capacitor 实现：原生 SQLite 执行（受 4.8 方言约束）。</td><td>core/repository, sqlite v8</td></tr>
+        <tr><td class="mono">hub/syncServer</td><td>桌面主进程内的 Hub 服务端：配对、端点、写入裁决。作为独立 service，不改造现有 Agent API。</td><td>core/schema, main/services</td></tr>
+        <tr><td class="mono">app/mobile-shell</td><td>Capacitor 配置、原生工程、权限声明、网络安全配置、小米适配引导。</td><td>@capacitor/*</td></tr>
+        <tr><td class="mono">ui/mobile</td><td>移动端 UI：底部 Tab、今日视图、任务 CRUD、日程、同步面板。</td><td>core/domain, ui 组件库</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 id="s34"><span class="t-no">3.4</span>关键架构决策（ADR）</h3>
+  <div class="card">
+    <table>
+      <colgroup><col style="width:9%"><col style="width:25%"><col style="width:66%"></colgroup>
+      <thead><tr><th>编号</th><th>决策</th><th>理由与影响</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">ADR-01</td><td><b>同一份 DDL + 分别实现的 Driver，而非统一用 sql.js</b></td><td>桌面端现用 sql.js（SQLite 编译到 WebAssembly，自身不负责持久化，靠整库导出落盘）。若在 Android 沿用 sql.js，必须自行实现周期性落盘，且丢掉了原生引擎的性能与 SQLCipher 加密能力。改为「<b>schema 统一、driver 各异</b>」：DDL 是同一份，桌面端仍走 sql.js（不改动现有逻辑），移动端走 <code class="inline">@capacitor-community/sqlite</code> 原生引擎。<b>代价</b>：必须认可两端 SQL 方言的细微差异并做收口（见 4.8）。<b>收益</b>：桌面端零迁移风险，移动端拿到可靠持久化与加密能力。</td></tr>
+        <tr><td class="mono">ADR-02</td><td><b>引入 SyncTransport 抽象：LAN 与未来云端共用同一个 SyncEngine</b></td><td>本轮先做局域网，后续大概率要上公网服务。若把 HTTP 调用写死进同步逻辑，届时等于重写。抽出 <code class="inline">pair / pull / push / verify</code> 四个动词作为稳定接口后，阶段二只需新增一个 Transport 实现。<b>影响面</b>：所有上层代码依赖接口而非具体实现，禁止任何地方硬编码地址直接请求。</td></tr>
+        <tr><td class="mono">ADR-03</td><td><b>桌面端作为权威 Hub，所有 updatedAt 由 Hub 时钟生成</b></td><td>这是最容易被低估的翻车点：手机与 PC 的系统时钟可能相差数秒甚至更久，若各自用自己的时间戳做「最后写入胜出」，会导致新数据被旧数据静默覆盖。<b>决策</b>：任何写库动作的时间戳一律由 Hub 侧产生并回传给客户端，客户端本地不做 LWW 裁决。<b>代价</b>：纯离线期间创建的记录缺少 Hub 时间戳，需在合流时补写。<b>收益</b>：彻底消除时钟漂移导致的数据丢失。</td></tr>
+        <tr><td class="mono">ADR-04</td><td><b>单仓双 build target，不做 monorepo 拆分</b></td><td>理想态是抽 packages/core 的 monorepo，但改造现有工程成本高、风险大且阻塞交付。改为在现有 renderer 内建立 <code class="inline">src/core/</code>（OS 无关）与 <code class="inline">src/platform/</code>（适配器），再增加第二套 Vite 构建入口产出移动端产物。<b>代价</b>：短期内桌面与移动代码仍在同一 package，需靠 lint 规则强制分层。<b>收益</b>：立即可落地，不阻塞；若后续确有必要升级为 monorepo，目录已是现成的切分口径。</td></tr>
+        <tr><td class="mono">ADR-05</td><td><b>记录级 LWW + 冲突副本保留，不做 CRDT</b></td><td>单人自用场景下真实并发极低，引入 CRDT / 墓碑 / 因果向量的复杂度远超收益。采用记录级最后写入胜出即可覆盖绝大多数情况；剩余情况通过「被覆盖版本写入冲突表 + UI 可见」兜底，把决策权交给人而不是算法。<b>红线</b>：任何情况下不允许静默丢弃数据。</td></tr>
+        <tr><td class="mono">ADR-06</td><td><b>阶段一走局域网 HTTP，TLS 后置到阶段二</b></td><td>明文 HTTP 在共享 WiFi 下存在被嗅探的理论风险（任务数据属个人隐私），但自建 CA + 证书固定会显著抬高阶段一复杂度。折中：<b>以最小攻击面换取可达性</b>——同步服务默认关闭、仅在配对会话内监听、只绑定 WiFi 网卡 IP、Android 网络安全策略只放行局域网网段（禁止全局明文放行）。同时把访问地址设计成 http / https 可切换，TLS 升级时 URI 层面无需返工。<b>待办</b>：若后续在家庭/公司公共 WiFi 高频使用，应提前启动 TLS 改造。</td></tr>
+        <tr><td class="mono">ADR-07</td><td><b>「删除 vs 修改」冲突时，修改优先</b></td><td>当一端删除、另一端修改同一条记录时有两种策略。选择「修改优先」即保留被修改的那份（记录不被删除）。<b>理由</b>：误删后的内容不可再生，而多余的删除意图在 UI 上重新勾一下即可。<b>不对称的代价</b>决定了这个选择。</td></tr>
+        <tr><td class="mono">ADR-08</td><td><b>软删除必须覆盖全部同步表</b></td><td>当前只有 tasks / projects / subtasks 三张表有 <code class="inline">deletedAt</code>，其余表用物理 DELETE。物理删除意味着「这条记录消失」这个事实无法同步给对端（对端会保留幽灵数据）。参与同步的表必须<b>全部</b>补齐软删除并改为逻辑删除。<b>影响面</b>：桌面端需同步调整相关查询（追加 <code class="inline">deletedAt IS NULL</code>），这是一次跨版本的数据层变更。</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 id="s35"><span class="t-no">3.5</span>备选形态</h3>
+  <div class="card">
+    <div class="card-title"><span class="ic">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18" stroke-linecap="round"/></svg>
+    </span>同步后端形态取舍（LAN 直连 vs 自建服务）</div>
+    <table>
+      <colgroup><col style="width:18%"><col style="width:41%"><col style="width:41%"></colgroup>
+      <thead><tr><th>维度</th><th>LAN 直连（阶段一 · 本轮交付）</th><th>自建轻量服务（阶段二 · 预留）</th></tr></thead>
+      <tbody>
+        <tr><td><b>部署形态</b></td><td>桌面端进程内起 Hub 服务，无额外部署</td><td>Node + Fastify + SQLite/Postgres，部署到云服务器</td></tr>
+        <tr><td><b>前提条件</b></td><td>两端必须同一 WiFi，且 AP 未开启客户端隔离</td><td>两端只需各自联网，无需同网</td></tr>
+        <tr><td><b>成本</b></td><td>零服务器成本</td><td>服务器 + 域名 + 证书 + 运维</td></tr>
+        <tr><td><b>适用局限</b></td><td>离开局域网只能离线积攒，不可实时同步</td><td>随时随地同步，可拓展多设备</td></tr>
+        <tr><td><b>安全面</b></td><td>暴露面限于内网；依赖 ADR-06 的最小面策略</td><td>公网暴露，必须上 TLS + 鉴权加固</td></tr>
+        <tr><td><b>升级路径</b></td><td colspan="2">上层 SyncEngine 与 Transport 接口保持一致，阶段二新增 <code class="inline">HttpTransport</code> 即可切换，业务代码零改动（ADR-02）。</td></tr>
+      </tbody>
+    </table>
+    <div class="note ok"><b>结论：</b>本轮按 LAN 直连交付；Transport 抽象的设计目标就是让「有条件了上服务器」变成一次替换而非一次重构。</div>
+  </div>
+</section>
+<!-- ===================== S4 ===================== -->
+<section id="s4">
+  <h2 class="sec"><span class="no">04</span>关键技术设计</h2>
+
+  <h3 id="s41"><span class="t-no">4.1</span>共享内核抽取与双 target 构建</h3>
+  <p class="lead">把「与平台无关的部分」从现有 renderer 里剥离出来，让同一个仓库产出桌面端与移动端两套前端产物。</p>
+  <div class="card">
+    <div class="card-title"><span class="ic">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v4H4zM4 10h16v4H4zM4 16h10v4H4z" stroke-linejoin="round"/></svg>
+    </span>抽取与构建流程</div>
+    <ol class="steps">
+      <li><b>抽取 core</b>：将现有 <code class="inline">renderer/src/types/index.ts</code> 提升为 <code class="inline">renderer/src/core/domain</code>；新建 <code class="inline">core/schema</code>（DDL 单一真源）与 <code class="inline">core/sync</code>。此步不改 UI，只做目录移动与 import 调整，是一次可独立验证的重构。</li>
+      <li><b>定义 Repository 接口</b>：按现有 IPC 面（task / tag / project / schedule / subtask / timelog / dependency / reminder）的方法签名定义接口，字段口径与现有 <code class="inline">preload/src/index.ts</code> 完全对齐。</li>
+      <li><b>桌面端 Driver 适配</b>：实现 <code class="inline">ElectronDriver</code>——内部转调既有 <code class="inline">window.api.*</code>，把现有 store 的直接 IPC 调用替换为走 Repository。<b>此步完成后桌面端行为必须与改造前完全一致</b>，用现有集成测试作为回归基线。</li>
+      <li><b>移动端 Driver 实现</b>：实现 <code class="inline">CapacitorDriver</code>——用同一份 DDL 建库，SQL 执行走原生 SQLite 插件。</li>
+      <li><b>双 target 构建</b>：在现有 Vite 项目内新增移动端入口与专用构建配置，产出移动端静态产物；再由 Capacitor 复制到 Android 工程并打包。</li>
+    </ol>
+    <div class="note"><b>健壮性：</b>每一次抽取都必须保持桌面端可完整运行，不允许出现「为了移动端重构导致桌面端暂时不可用」的中间态。抽取分为多次小提交，每次提交桌面端都能通过现有 <code class="inline">npm run typecheck:all</code>。</div>
+    <div class="note warn"><b>约束：</b>UI 层不得直接 import <code class="inline">platform/*</code>，只能依赖 <code class="inline">core/*</code> 的抽象；这条边界需要用 lint 规则强制，否则抽象会在两周内被绕过而失效。</div>
+  </div>
+
+  <h3 id="s42"><span class="t-no">4.2</span>数据模型改造</h3>
+  <p>同步能力依赖三类元数据：① 变更时间（决定先后）；② 删除标记（ADR-08）；③ 游标与队列（决定同步到哪、还有哪些没发）。现有库的 <code class="inline">updatedAt</code> 已存在，但删除标记覆盖不全，后两者完全没有。</p>
+  <div class="card">
+    <table>
+      <colgroup><col style="width:16%"><col style="width:58%"><col style="width:26%"></colgroup>
+      <thead><tr><th>机制</th><th>设计</th><th>参数 / 口径</th></tr></thead>
+      <tbody>
+        <tr><td><b>软删除补齐</b></td><td>为全部参与同步的业务表增加 <code class="inline">deletedAt</code>（现有 tasks / projects / subtasks 已有，需新增 tags、schedules、timelogs、task_dependencies、task_tag_relations、task_reminders），所有删除改为逻辑删除，查询一律追加 <code class="inline">AND deletedAt IS NULL</code>。</td><td>默认 NULL；清理周期 30 天</td></tr>
+        <tr><td><b>变更来源标记</b></td><td>增加 <code class="inline">originDeviceId</code>，记录最后一次修改来自哪个设备，便于排查「哪台机器改的」。</td><td>UUID，安装时生成并持久化</td></tr>
+        <tr><td><b>同步元表 · _sync_state</b></td><td>记录每张表的游标位置（上次同步到的更新时间与 ID），以及 Hub 侧的校验用摘要。</td><td>每张同步表一行</td></tr>
+        <tr><td><b>同步元表 · _outbox</b></td><td>本地写操作立即落队列，含目标表、操作类型、变更载荷、重试次数、最后错误。</td><td>操作类型：upsert / delete</td></tr>
+        <tr><td><b>同步元表 · _sync_conflicts</b></td><td>被 LWW 覆盖掉的版本在此完整留档，供 UI 展示与一键恢复。</td><td>保留 30 天后提示清理</td></tr>
+        <tr><td><b>同步元表 · _sync_meta</b></td><td>记录 schema 版本、设备 ID、Hub 配对信息、最后同步时间。</td><td>schema 版本随 DDL 递增</td></tr>
+      </tbody>
+    </table>
+    <div class="note bad"><b>红线：</b>DDL 必须有<b>单一真源</b>。禁止在桌面端和移动端各写一份建表语句——一旦漂移，同步语义立刻失控。两端都必须由同一份 <code class="inline">core/schema</code> 产出。</div>
+  </div>
+
+  <h3 id="s43"><span class="t-no">4.3</span>增量同步协议</h3>
+  <p class="lead">四条动词覆盖全部场景：pair 建立信任、push 上传本地变更、pull 拉取对端增量、verify 全量校验兜底。</p>
+  <div class="svg-card">
+    <svg viewBox="0 0 860 430" xmlns="http://www.w3.org/2000/svg" font-family="'Noto Sans SC','Microsoft YaHei',sans-serif">
+      <defs>
+        <marker id="sb" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#0b5fd9"/></marker>
+      </defs>
+      <rect x="150" y="14" width="180" height="34" rx="9" fill="#7c5cd6" stroke="#7c5cd6"/>
+      <text x="240" y="36" font-size="12.5" font-weight="700" fill="#fff" text-anchor="middle">移动端 Client</text>
+      <rect x="560" y="14" width="180" height="34" rx="9" fill="#0b5fd9" stroke="#0b5fd9"/>
+      <text x="650" y="36" font-size="12.5" font-weight="700" fill="#fff" text-anchor="middle">桌面端 Hub（权威时钟）</text>
+      <line x1="240" y1="48" x2="240" y2="404" stroke="#dfe5ee" stroke-width="1"/>
+      <line x1="650" y1="48" x2="650" y2="404" stroke="#dfe5ee" stroke-width="1"/>
+
+      <line x1="240" y1="70" x2="650" y2="70" stroke="#0b5fd9" stroke-width="1.6" marker-end="url(#sb)"/>
+      <text x="445" y="62" font-size="11" fill="#0846a8" text-anchor="middle">① push：Outbox 待发变更（含主键与载荷）</text>
+      <text x="234" y="88" font-size="11" fill="#33424f" text-anchor="end">出队 pending 项，批量打包</text>
+      <text x="656" y="88" font-size="11" fill="#33424f">校验 token → 逐条落库</text>
+
+      <line x1="650" y1="118" x2="240" y2="118" stroke="#0b5fd9" stroke-width="1.6" marker-end="url(#sb)"/>
+      <text x="445" y="110" font-size="11" fill="#0846a8" text-anchor="middle">② push ack：写入结果 + Hub 时间戳回填</text>
+      <text x="656" y="136" font-size="11" fill="#155e43">以 Hub 时钟生成 updatedAt（ADR-03）</text>
+      <text x="234" y="136" font-size="11" fill="#33424f" text-anchor="end">成功出队；失败退避重试</text>
+
+      <line x1="240" y1="166" x2="650" y2="166" stroke="#0b5fd9" stroke-width="1.6" marker-end="url(#sb)"/>
+      <text x="445" y="158" font-size="11" fill="#0846a8" text-anchor="middle">③ pull：携带 _sync_state 游标，请求对端增量</text>
+      <text x="234" y="184" font-size="11" fill="#33424f" text-anchor="end">cursor = 上次同步到的位置</text>
+      <text x="656" y="184" font-size="11" fill="#33424f">按游标筛选增量，分页返回</text>
+
+      <line x1="650" y1="214" x2="240" y2="214" stroke="#0b5fd9" stroke-width="1.6" marker-end="url(#sb)"/>
+      <text x="445" y="206" font-size="11" fill="#0846a8" text-anchor="middle">④ pull ack：变更集 + nextCursor + serverTs</text>
+      <text x="656" y="232" font-size="11" fill="#33424f">含已转为软删除的记录</text>
+      <text x="234" y="232" font-size="11" fill="#33424f" text-anchor="end">落本地库 → 推进游标</text>
+
+      <rect x="150" y="252" width="180" height="42" rx="9" fill="#e8f0fd" stroke="#b9d2f4"/>
+      <text x="240" y="270" font-size="11" fill="#0846a8" text-anchor="middle">⑤ 冲突检查</text>
+      <text x="240" y="285" font-size="10.5" fill="#6b7a90" text-anchor="middle">被覆盖版本 → _sync_conflicts</text>
+      <line x1="240" y1="294" x2="240" y2="314" stroke="#7d8ea6" stroke-width="1.4" marker-end="url(#sb)"/>
+
+      <rect x="150" y="314" width="180" height="42" rx="9" fill="#e6f7f0" stroke="#a8ddc4"/>
+      <text x="240" y="332" font-size="11" fill="#155e43" text-anchor="middle">⑥ 提交本地事务</text>
+      <text x="240" y="347" font-size="10.5" fill="#6b7a90" text-anchor="middle">原子提交，更新 lastSyncAt</text>
+
+      <rect x="560" y="252" width="180" height="104" rx="9" fill="#fff" stroke="#c9d3e0"/>
+      <text x="650" y="272" font-size="11" font-weight="700" fill="#33424f" text-anchor="middle">幂等保证</text>
+      <text x="650" y="290" font-size="10.5" fill="#6b7a90" text-anchor="middle">同一变更重复送达 3 次</text>
+      <text x="650" y="305" font-size="10.5" fill="#6b7a90" text-anchor="middle">最终状态一致</text>
+      <text x="650" y="326" font-size="10.5" fill="#6b7a90" text-anchor="middle">以记录主键为幂等键</text>
+      <text x="650" y="341" font-size="10.5" fill="#6b7a90" text-anchor="middle">非追加累加</text>
+
+      <rect x="14" y="374" width="832" height="44" rx="9" fill="#fdf3e3" stroke="#efd9ae"/>
+      <text x="430" y="392" font-size="11.5" fill="#7c4a03" text-anchor="middle">游标采用「更新时间 + 记录 ID」复合游标：仅用时间戳会因同一毫秒内多条记录而在边界丢失数据</text>
+      <text x="430" y="409" font-size="11" fill="#7c4a03" text-anchor="middle">单页容量默认 500 条，超出自动翻页；任一步失败则整体回滚，绝不留下半同步状态</text>
+    </svg>
+    <div class="fig-cap">图 4-1 双向增量同步时序（push → ack → pull → ack → 冲突 → 提交）</div>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="ic">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v4H4zM4 10h16v4H4zM4 16h10v4H4z" stroke-linejoin="round"/></svg>
+    </span>同步端点契约</div>
+    <table>
+      <colgroup><col style="width:12%"><col style="width:24%"><col style="width:64%"></colgroup>
+      <thead><tr><th>方法</th><th>端点</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">GET</td><td class="mono">/api/sync/meta</td><td>返回 Hub 版本、schema 版本、支持的同步表清单、Hub 当前时间。<b>作用</b>：配对前的兼容性握手，schema 不一致时明确拒绝而非产生脏数据。</td></tr>
+        <tr><td class="mono">POST</td><td class="mono">/api/sync/pair</td><td>入：PIN；出：长期 token + Hub ID。<b>作用</b>：一次性凭据交换，PIN 错误三次即失效。</td></tr>
+        <tr><td class="mono">POST</td><td class="mono">/api/sync/push</td><td>入：变更数组（表、操作、主键、载荷）；出：每条的处理结果与 Hub 生成的 updatedAt。<b>作用</b>：客户端 → Hub。</td></tr>
+        <tr><td class="mono">GET</td><td class="mono">/api/sync/pull</td><td>入：每表游标 + 分页大小；出：增量变更集、下一页游标、服务时间。<b>作用</b>：Hub → 客户端。</td></tr>
+        <tr><td class="mono">POST</td><td class="mono">/api/sync/verify</td><td>入：客户端各表摘要；出：差异清单。<b>作用</b>：手动全量校验，用于兜底排查漂移（FR-11）。</td></tr>
+      </tbody>
+    </table>
+    <div class="note warn"><b>与现有 API 的关系：</b>桌面端现已有 <code class="inline">127.0.0.1:18765</code> 的 Agent 本地服务（覆盖 tasks/schedules）。同步 Hub 应作为<b>独立服务</b>并在<b>独立端口</b>运行，不去改造现有 Agent API——两者定位不同（Agent 是回环内的工具接口，Hub 是局域网内的设备接口），混在一个服务里会让「同步服务默认关闭」这条安全策略难以执行。</div>
+  </div>
+
+  <h3 id="s44"><span class="t-no">4.4</span>冲突解决</h3>
+  <p class="lead">单人自用场景下不做复杂算法：记录级 LWW 覆盖绝大多数情况，剩余情况「留档 + 交给人」。</p>
+  <div class="card">
+    <table>
+      <colgroup><col style="width:20%"><col style="width:52%"><col style="width:28%"></colgroup>
+      <thead><tr><th>冲突类型</th><th>裁决策略</th><th>兜底动作</th></tr></thead>
+      <tbody>
+        <tr><td><b>双端均修改同一记录</b></td><td>记录级 LWW：以 Hub 侧 updatedAt 较大者胜出。不做字段级合并（复杂度与收益不成比例）。</td><td>被覆盖版本完整写入 <code class="inline">_sync_conflicts</code>，UI 显示冲突标记，支持「采用此版本」一键恢复。</td></tr>
+        <tr><td><b>一端删除 / 一端修改</b></td><td><b>修改优先</b>（ADR-07）：记录不被删除，保留修改后版本。</td><td>在冲突表登记「删除意图 vs 修改内容」，由用户决定最终保留或删除。</td></tr>
+        <tr><td><b>两端均删除</b></td><td>直接收敛为删除。</td><td>无需人工介入。</td></tr>
+        <tr><td><b>外键悬挂</b>（父记录未同步到）</td><td>先同步父记录；子记录在本地暂存为「待悬挂处理」。<b>禁止</b>因外键失败而丢弃数据。</td><td>下一轮同步自动补全；UI 提示依赖未就绪。</td></tr>
+        <tr><td><b>Schema 版本不一致</b></td><td>握手阶段直接拒绝同步（见 4.3 的 meta 端点），不产生半同步。</td><td>提示用户升级 App 或桌面端到匹配的 schema 版本。</td></tr>
+      </tbody>
+    </table>
+    <div class="note bad"><b>红线：</b>冲突不能被「自动悄悄解决掉」。任何裁决都必须留下可追溯的痕迹（要么正常出队，要么进冲突表），静默丢数据是这个系统里最严重的缺陷。</div>
+  </div>
+</section>
+  <h3 id="s45"><span class="t-no">4.5</span>设备发现与配对</h3>
+  <div class="card">
+    <div class="card-title"><span class="ic">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h7v7h-7z" stroke-linejoin="round"/></svg>
+    </span>二维码配网而非 mDNS 自动发现</div>
+    <ol class="steps">
+      <li><b>桌面端生成二维码</b>：内容包含本机 WiFi 网卡 IP、Hub 端口、一次性 PIN、Hub 版本。<b>注意</b>：PC 常有多个网卡（以太网 / WiFi / 虚拟机 / VPN），必须只取正在联网的那个 WiFi 网卡地址，并提供下拉让用户切换候选 IP。</li>
+      <li><b>手机扫码</b>：解析出地址与 PIN，先请求 meta 端点握手，确认版本与可达性。</li>
+      <li><b>PIN 确认</b>：用户在手机确认桌面端显示的同一组 PIN（防止误扫到隔壁机器的 Hub）。</li>
+      <li><b>交换长期 token</b>：配对成功后写入手机侧安全存储，之后连接无需重复配对。</li>
+    </ol>
+    <div class="note"><b>为什么不用 mDNS / NSD 自动发现：</b>一方面需要额外插件；另一方面大量家用路由器开启了「AP 隔离（客户端隔离）」，WiFi 内设备互不可见，mDNS 广播会被直接丢弃。二维码配网不依赖广播，成功率显著更高，且天然包含一次<b>用户显式确认</b>，安全性更好。</div>
+    <div class="note warn"><b>已知限制：</b>路由器的 DHCP 可能给电脑分配新 IP，导致下次连接失效。<b>应对</b>：配对信息中保存多个候选地址并在连接失败时自动轮换；同时在 UI 提示「建议在路由器为电脑设置静态 IP / DHCP 地址保留」。</div>
+  </div>
+
+  <h3 id="s46"><span class="t-no">4.6</span>Android 网络与安全策略</h3>
+  <p>这是局域网方案必须实际解决的第一个硬约束：自 Android 9（API 28）起，系统默认禁止明文 HTTP 传输。若不做处理，手机访问 <code class="inline">http://192.168.x.x:port</code> 会被网络安全策略直接拒绝，表现为「连不上但拿不到任何有效错误」——排查成本极高。</p>
+  <div class="card">
+    <table>
+      <colgroup><col style="width:22%"><col style="width:78%"></colgroup>
+      <thead><tr><th>配置项</th><th>说明与要求</th></tr></thead>
+      <tbody>
+        <tr><td><b>网络安全配置</b></td><td>在 Android 工程中提供网络安全配置文件，<b>仅对局域网网段放行明文</b>。<span class="tag bad">禁止</span>使用全局 <code class="inline">usesCleartextTraffic="true"</code>——那会让 App 的所有流量都可能走明文，属于无谓扩大攻击面。白名单限定为家庭 / 办公私有网段。</td></tr>
+        <tr><td><b>权限声明</b></td><td>需声明 INTERNET 与 ACCESS_NETWORK_STATE（后者用于判断网络是否计量/受限，避免在计量网络上自动同步）。</td></tr>
+        <tr><td><b>绑定地址</b></td><td>桌面端 Hub 只绑定 WiFi 网卡 IP，<b>不绑 0.0.0.0</b>；避免在公共网络被同网其他人发现。</td></tr>
+        <tr><td><b>凭据存储</b></td><td>配对 token 必须存入系统安全存储（Android Keystore 体系），不得落 <code class="inline">localStorage</code> / 明文 Preferences。</td></tr>
+        <tr><td><b>日志脱敏</b></td><td>日志禁止输出任务标题、描述、备注正文；只记录 ID、表、时间戳、错误码。</td></tr>
+      </tbody>
+    </table>
+    <div class="note warn"><b>TLS 升级预留：</b>ADR-06 选择阶段一走明文 HTTP。由于访问地址已抽象为可配置项，后续切换到 HTTPS 时 URI 层无需改造，仅需增加证书信任处理（推荐采用自签证书 + 首次信任指纹的方案，避免商业证书成本）。</div>
+  </div>
+
+  <h3 id="s47"><span class="t-no">4.7</span>小米（HyperOS / MIUI）机型适配</h3>
+  <p>「能装上去」和「能用起来」是两件事。小米对第三方安装包的拦截与对后台进程的清理都远比原生 Android 激进，这两块必须在设计和测试用例里显式覆盖。</p>
+  <div class="card">
+    <div class="card-title"><span class="ic">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l7 4v6c0 4.4-3 8.2-7 10-4-1.8-7-5.6-7-10V6z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </span>安装环节</div>
+    <ul class="tight">
+      <li><b>未知来源授权</b>：需在系统「特殊权限 → 安装未知应用」中对相应来源放行；首次触发时系统会弹限时确认（存在读秒倒计时），需按提示完成「已知晓风险」确认。</li>
+      <li><b>安装拦截</b>：安全扫描可能标记为未知应用，需选择「继续安装 / 了解风险」继续；部分机型还会要求账号密码或生物识别以确认机主身份。</li>
+      <li><b>交付建议</b>：务必关闭系统的「安装后自动删除安装包」选项，保留 APK 以便快速重装；优先提供 arm64-v8a 包。</li>
+    </ul>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="ic">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z" stroke-linejoin="round"/></svg>
+    </span>后台保活（决定同步能否自动发生）</div>
+    <ul class="tight">
+      <li><b>电池策略</b>：应用信息中把省电策略由默认的智能限制改为「无限制」。这是最关键的一步，否则息屏数分钟后进程即被回收。</li>
+      <li><b>自启动</b>：需显式开启，保证进程在系统回收后能自行恢复。</li>
+      <li><b>多任务锁定</b>：在多任务列表中给应用加锁，防止被一键清理。</li>
+      <li><b>通知权限</b>：必须允许通知。前台服务的存活优先级与通知强相关，关闭通知会显著降低保活概率（同时 FR-08 的提醒也将失效）。</li>
+      <li><b>App 内引导</b>：小米不同机型 / 版本的设置入口路径不完全一致，UI 需提供「一键前往设置」的自检清单页，逐项引导用户在正确的系统界面完成授权。</li>
+    </ul>
+    <div class="note warn"><b>必须向用户如实呈现的限制：</b>即使完成上述全部设置，系统的 Doze 与无线休眠仍可能把后台同步推迟到下一个系统窗口。<b>因此本方案的同步不是硬实时</b>，UI 必须常驻展示「上次同步时间」与「待同步条目数」，让用户始终知道数据处在什么状态——绝不能用静默失败掩盖延迟。</div>
+  </div>
+
+  <h3 id="s48"><span class="t-no">4.8</span>SQL 方言约束（移动端 Driver 的硬约束）</h3>
+  <p class="lead">这是一条会直接影响代码怎么写的具体约束，而非一般性建议。</p>
+  <div class="card">
+    <div class="card-title"><span class="ic">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v4H4zM4 10h16v4H4zM4 16h10v4H4z" stroke-linejoin="round"/></svg>
+    </span>已知：社区 SQLite 插件在 Android 侧会错误拆分复杂语句</div>
+    <p>该插件为了让旧版 Android 上的 SQLite 保持兼容，会在 Java 层对传入的 SQL 做文本处理。已知问题包括：</p>
+    <ul class="tight">
+      <li><b>UPSERT 陷阱</b>：带有冲突目标的 upsert 语句（本方案同步写库的主力写法）可能被按括号错误截断，导致执行失败。</li>
+      <li><b>CTE 被忽略</b>：公共表表达式（WITH 子句）在部分执行路径中会被丢弃，生成无效 SQL。</li>
+      <li><b>RETURNING 支持不稳定</b>：返回子句的处理存在缺陷。</li>
+    </ul>
+    <p><b>规避策略（须写入团队编码规范）：</b></p>
+    <ol class="steps">
+      <li><b>禁止</b>在单条语句中使用 CTE 与 RETURNING 子句。</li>
+      <li>upsert 一律拆成两条显式执行：<b>先执行 UPDATE，受影响行数为 0 时再执行 INSERT</b>，用人工逻辑替代数据库层的冲突处理。</li>
+      <li>所有写操作包在本地事务中，保证上述「先更新后插入」的原子性。</li>
+      <li>为每张表建立最小 SQL 用例集，在真机通过后才允许合入。</li>
+    </ol>
+    <div class="note"><b>影响面提示：</b>这条约束只在移动端 Driver 生效。由于桌面端仍走 sql.js（SQLite 真实引擎，完整支持上述语法），<b>两端 Driver 的代码不会完全一致</b>——这正是 ADR-01 承认并接受的成本，影响范围已被收口在 <code class="inline">platform/driver-capacitor</code> 内部。</div>
+  </div>
+</section>
+<!-- ===================== S5 ===================== -->
+<section id="s5">
+  <h2 class="sec"><span class="no">05</span>界面设计</h2>
+
+  <h3 id="s51"><span class="t-no">5.1</span>信息架构</h3>
+  <p class="lead">移动端形态：标题栏 + 底部 Tab 导航 + 全屏内容页；同步状态常驻标题栏右侧，任何时刻可见。</p>
+  <div class="card">
+    <table>
+      <colgroup><col style="width:15%"><col style="width:85%"></colgroup>
+      <thead><tr><th>模块</th><th>设计要点</th></tr></thead>
+      <tbody>
+        <tr><td><b>今日</b></td><td>默认落地页。聚合今日日程（按时序）+ 今日待办 + 逾期高亮三段式。不做多栏，单列纵向流，符合单手持握。</td></tr>
+        <tr><td><b>任务</b></td><td>列表 + 筛选（状态 / 优先级 / 标签）。看板由桌面端的横向多栏改为<b>左右滑动切换列</b>的泳道形态，保留拖拽语义但改为长按拖动。</td></tr>
+        <tr><td><b>日程</b></td><td>日视图为主（FR-15），周视图作为可选切换。创建用底部半屏表单。</td></tr>
+        <tr><td><b>我的</b></td><td>同步面板（Hub 连接 / 上次同步 / 待同步数 / 立即同步 / 一致性校验）、小米保活自检清单、导出导入、设置。</td></tr>
+        <tr><td><b>任务详情</b></td><td>桌面端是侧边 inspector 面板，移动端改为<b>全屏独立页面</b>，支持右滑返回。</td></tr>
+      </tbody>
+    </table>
+    <div class="note"><b>形态复用说明：</b>共享的是<b>数据模型与业务语义</b>（core 层），不共享具体布局。桌面端专属的甘特图、多窗口、悬浮窗、鼠标穿透不在移动端复现；移动端的保活引导为移动端专属。强行共用同一套 UI 布局会导致两头都不好用。</div>
+  </div>
+
+  <h3 id="s52"><span class="t-no">5.2</span>页面设计</h3>
+  <div class="card">
+    <div class="card-title"><span class="ic">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 9h16M9 4v16" stroke-linecap="round"/></svg>
+    </span>移动端「今日」页线框</div>
+    <div class="svg-card" style="margin:6px 0 0;border:1px solid var(--line-strong)">
+      <svg viewBox="0 0 300 470" xmlns="http://www.w3.org/2000/svg" font-family="'Noto Sans SC','Microsoft YaHei',sans-serif">
+        <rect x="90" y="6" width="120" height="452" rx="16" fill="#fff" stroke="#c9d3e0" stroke-width="1.5"/>
+        <rect x="98" y="14" width="104" height="436" rx="12" fill="#f7f9fc"/>
+        <text x="108" y="32" font-size="7.5" fill="#6b7a90">9:41</text>
+        <circle cx="182" cy="28" r="3.5" fill="#0e9f6e"/>
+        <text x="188" y="31" font-size="6" fill="#155e43">已同步</text>
+        <text x="108" y="48" font-size="9.5" font-weight="700" fill="#16232e">今日</text>
+        <text x="108" y="66" font-size="7" fill="#6b7a90">今日日程</text>
+        <rect x="108" y="72" width="84" height="42" rx="7" fill="#e8f0fd" stroke="#b9d2f4"/>
+        <text x="115" y="86" font-size="7.5" font-weight="700" fill="#0846a8">10:00 硬件评审</text>
+        <text x="115" y="97" font-size="6.5" fill="#6b7a90">会议室 A · 30min 前提醒</text>
+        <text x="115" y="108" font-size="6.5" fill="#6b7a90">关联：【待确认】</text>
+        <text x="108" y="130" font-size="7" fill="#6b7a90">今日待办</text>
+        <rect x="108" y="136" width="84" height="26" rx="6" fill="#fff" stroke="#dfe5ee"/>
+        <rect x="112" y="144" width="6" height="6" rx="2" fill="#dc2626"/>
+        <text x="122" y="150" font-size="7" fill="#16232e">整理 ECN 变更清单</text>
+        <text x="122" y="158" font-size="6" fill="#6b7a90">高优先级 · 逾期</text>
+        <rect x="108" y="166" width="84" height="26" rx="6" fill="#fff" stroke="#dfe5ee"/>
+        <rect x="112" y="174" width="6" height="6" rx="2" fill="#d97706"/>
+        <text x="122" y="180" font-size="7" fill="#16232e">确认贴片坐标来源</text>
+        <text x="122" y="188" font-size="6" fill="#6b7a90">中优先级</text>
+        <rect x="108" y="196" width="84" height="26" rx="6" fill="#fff" stroke="#dfe5ee"/>
+        <rect x="112" y="204" width="6" height="6" rx="2" fill="#0e9f6e"/>
+        <text x="122" y="210" font-size="7" fill="#16232e">同步 jitter 校准结果</text>
+        <text x="122" y="218" font-size="6" fill="#6b7a90">低优先级</text>
+        <circle cx="176" cy="410" r="13" fill="#0b5fd9"/>
+        <path d="M176 405v10M171 410h10" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/>
+        <rect x="98" y="428" width="104" height="22" fill="#fff" stroke="#dfe5ee" stroke-width="0.8"/>
+        <g font-size="6" text-anchor="middle">
+          <text x="117" y="442" fill="#0b5fd9" font-weight="700">今日</text>
+          <text x="141" y="442" fill="#6b7a90">任务</text>
+          <text x="165" y="442" fill="#6b7a90">日程</text>
+          <text x="189" y="442" fill="#6b7a90">我的</text>
+        </g>
+      </svg>
+      <div class="fig-cap">图 5-1 移动端「今日」页线框示意</div>
+    </div>
+  </div>
+
+  <h3 id="s53"><span class="t-no">5.3</span>关键交互设计</h3>
+  <ul class="tight">
+    <li><b>创建主路径</b>：右下悬浮按钮 → 底部半屏表单 → 保存后立即本地落库并出现在列表（不等网络）→ 顶部出现「1 条待同步」状态。</li>
+    <li><b>同步状态表达</b>：标题栏右侧常驻状态点。绿＝已同步并显示时间；蓝＝同步中；橙＝离线且含待同步数。<b>点击可展开详情</b>（上次同步时间 / 各表待同步数 / 失败原因 / 立即重试）。</li>
+    <li><b>批量操作</b>：长按进入多选态，底部动作条出现操作项，执行后给出汇总结果（成功 n 条，失败 m 条及原因）。</li>
+    <li><b>空态与失败态</b>：空列表给出明确动作引导（而非空泛文案）；同步失败必须给出<b>可执行修复动作</b>（例如「检查是否连接同一 WiFi」「前往允许后台运行」「Hub 版本过低，请升级」），不允许只写「同步失败」。</li>
+    <li><b>冲突处理</b>：冲突条目在列表显示冲突标记，详情页提供「查看被覆盖版本 / 采用此版本 / 保留当前」三选一的明确决策入口。</li>
+    <li><b>离线与后台</b>：所有写操作本地即时生效；自动同步仅在 WiFi 非计量网络下触发；App 退到后台不中断已开始的同步事务（在本地事务保护下完成当前批次）。</li>
+  </ul>
+</section>
+
+<!-- ===================== S6 ===================== -->
+<section id="s6">
+  <h2 class="sec"><span class="no">06</span>异常与恢复</h2>
+  <div class="card">
+    <table>
+      <colgroup><col style="width:17%"><col style="width:25%"><col style="width:23%"><col style="width:35%"></colgroup>
+      <thead><tr><th>异常场景</th><th>检测方式</th><th>用户提示</th><th>恢复策略</th></tr></thead>
+      <tbody>
+        <tr><td><b>AP 隔离导致连不上 Hub</b></td><td>meta 端点连接超时 / 拒绝</td><td>「连不上电脑，可能路由器开启了客户端隔离」</td><td>引导：改用手机热点由电脑连接；或在路由器关闭 AP 隔离；或改用 JSON 导入导出（FR-12）</td></tr>
+        <tr><td><b>电脑 IP 变更（DHCP 重分配）</b></td><td>按已存地址连续连接失败</td><td>「电脑地址可能已变更」</td><td>自动轮换候选地址；仍失败则引导重新扫码配对；建议路由器设置静态 IP 保留</td></tr>
+        <tr><td><b>Hub 未开启 / 电脑关机</b></td><td>连接被拒或超时</td><td>「未连上电脑，当前离线可用」</td><td>不报错打扰；UI 显示待同步数；恢复后自动合流</td></tr>
+        <tr><td><b>Schema 版本不一致</b></td><td>meta 握手返回版本不符</td><td>「两端数据版本不一致，请升级到匹配版本」</td><td>拒绝同步，避免脏数据；明确指向升级动作，不做降级兼容</td></tr>
+        <tr><td><b>PIN 多次错误</b></td><td>pair 端点返回失败计数</td><td>「配对码错误，请重新获取」</td><td>错误 3 次后桌面端 PIN 自动失效并重新生成，防暴力破解</td></tr>
+        <tr><td><b>同步中途网络断开</b></td><td>请求异常 / 本端事务未完成</td><td>「本次未完成，下次自动继续」</td><td>整体回滚本批事务；Outbox 未出队；下次自动重试，保证不产生半同步</td></tr>
+        <tr><td><b>移动端 DB migration 失败</b></td><td>事务抛错并回滚</td><td>「数据升级失败，请先导出备份」</td><td>回滚并保留原库快照；禁止半升级状态下继续运行；提供重置入口</td></tr>
+        <tr><td><b>后台进程被系统回收</b></td><td>同步心跳超期 / 保活自检未通过</td><td>「后台受限，同步可能延迟」+ 一键前往设置</td><td>引导完成小米保活三项配置（FR-13）；未完成时使用手动同步与前台同步兜底</td></tr>
+        <tr><td><b>数据漂移（双端摘要不一致）</b></td><td>verify 端点比对摘要</td><td>「检出 N 处不一致」</td><td>支持以 Hub 为准一键修复；修复前后均写日志，修复前提示先导出备份</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ===================== S7 ===================== -->
+<section id="s7">
+  <h2 class="sec"><span class="no">07</span>非功能细化</h2>
+
+  <h3 id="s71"><span class="t-no">7.1</span>性能预算</h3>
+  <div class="card">
+    <table>
+      <colgroup><col style="width:24%"><col style="width:17%"><col style="width:59%"></colgroup>
+      <thead><tr><th>场景</th><th>目标</th><th>实现手段</th></tr></thead>
+      <tbody>
+        <tr><td>App 冷启动</td><td>≤ 2s</td><td>延迟初始化同步模块；首屏只加载今日视图所需数据；不在启动路径上做任何网络探测</td></tr>
+        <tr><td>千条任务列表滚动</td><td>≥ 50fps</td><td>复用现有虚拟列表组件（renderer 已引入 react-window）；行组件 memo 化，避免重渲染</td></tr>
+        <tr><td>单条记录读写</td><td>≤ 50ms</td><td>走原生 SQLite 预编译路径；避免逐条插入，批量操作合并为单事务</td></tr>
+        <tr><td>500 条增量同步</td><td>≤ 1.5s</td><td>分页拉取（默认 500/页）；批量事务写入；不在主线程做 JSON 大对象解析</td></tr>
+        <tr><td>UI 响应性</td><td>零阻塞</td><td>所有同步动作在 UI 之外执行，本地写入先行；网络永不参与读路径</td></tr>
+        <tr><td>安装包体积</td><td>【待确认：按实测填写】</td><td>仅打 arm64-v8a；Tailwind 生产裁剪；不引入桌面端专属依赖（exceljs / pdfkit 等）</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 id="s72"><span class="t-no">7.2</span>兼容性矩阵</h3>
+  <div class="card">
+    <table>
+      <colgroup><col style="width:24%"><col style="width:76%"></colgroup>
+      <thead><tr><th>对象</th><th>兼容要求</th></tr></thead>
+      <tbody>
+        <tr><td><b>操作系统 / API</b></td><td>Android 10–16（API 29–36）；因 Capacitor 8 要求 minSdk 24、目标 SDK 36，低于 API 29 的版本不在支持范围内。</td></tr>
+        <tr><td><b>机型</b></td><td>小米 / 红米：MIUI 13+ 与 HyperOS 1.0+ / 2.0 必须通过真机验证；架构 arm64-v8a。</td></tr>
+        <tr><td><b>数据 schema</b></td><td>必须与桌面端 v1.6.0 的 10 张业务表结构对齐，并叠加 4 张同步元表；DDL 单一真源。</td></tr>
+        <tr><td><b>桌面端版本</b></td><td>Hub 能力需桌面端升级（建议 v1.7.0）承载；握手阶段校验版本，不匹配即拒绝同步。</td></tr>
+        <tr><td><b>网络环境</b></td><td>同一 WiFi、AP 未开启客户端隔离；明文放行网段限定为私有网段；不支持蜂窝网络自动同步。</td></tr>
+        <tr><td><b>构建工具链</b></td><td>Node.js 22+、JDK 21、Android Studio Otter 2025.2.1+、AGP 8.13.0、Gradle 8.14.3。</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 id="s73"><span class="t-no">7.3</span>日志与诊断</h3>
+  <p>日志策略：本地滚动文件 + 内存环形缓冲，默认保留 7 天，用户可一键导出诊断包。<b>脱敏规则：</b>不得记录任务标题、描述、备注、参与者姓名等业务正文；日志中仅出现记录 ID、表名、时间戳、操作类型、错误码。<b>诊断包含：</b>设备型号 / 系统版本 / App 版本 / Hub 版本 / schema 版本 / 同步各阶段耗时 / 最近 N 次失败的错误码 / Outbox 积压统计（不含载荷）。<span class="tag bad">红线</span>：导出诊断包前必须在 UI 明示「将不包含任务内容」，取得用户确认。</p>
+</section>
+
+<!-- ===================== S8 ===================== -->
+<section id="s8">
+  <h2 class="sec"><span class="no">08</span>测试与验收</h2>
+  <div class="card">
+    <div class="card-title"><span class="ic">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" stroke-linecap="round"/></svg>
+    </span>测试分层与策略</div>
+    <table>
+      <colgroup><col style="width:18%"><col style="width:38%"><col style="width:44%"></colgroup>
+      <thead><tr><th>层级</th><th>覆盖对象</th><th>关键用例</th></tr></thead>
+      <tbody>
+        <tr><td><b>单元测试</b></td><td>core/sync、core/sync/conflict、core/schema（Vitest，现有项目已具备）</td><td>游标边界（同一毫秒多条记录不得丢失）；幂等（重复推送 3 次结果一致）；LWW 裁决；删除 vs 修改优先；字段校验边界</td></tr>
+        <tr><td><b>集成测试</b></td><td>Repository × Driver × SQLite</td><td>两个 Driver 对同一份 DDL 的建库一致性；事务回滚；迁移脚本前向/失败回滚</td></tr>
+        <tr><td><b>协议测试</b></td><td>Hub 端点 × Transport</td><td>pair / push / pull / verify 全流程；token 失效；schema 不匹配拒绝；分页游标连续性</td></tr>
+        <tr><td><b>真机测试（必做）</b></td><td>小米 / 红米 HyperOS 实机</td><td>安装流程；冷启动耗时；千条列表帧率；后台 30 分钟保活；离线 200 条写入后断网恢复合流；通知触发</td></tr>
+        <tr><td><b>回归测试</b></td><td>桌面端现有功能</td><td>内核抽取每一步都必须跑通现有集成测试，确保桌面端行为与改造前完全一致</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="ic">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.1V12a10 10 0 1 1-5.93-9.14" stroke-linecap="round"/><path d="M22 4L12 14l-3-3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </span>验收标准（DoD 清单）</div>
+    <ul class="tight">
+      <li>签名 APK 可在目标小米机型安装并稳定运行 30 分钟无崩溃（FR-01）。</li>
+      <li>飞行模式下任务的全部读写功能可用，无加载态阻塞（本地优先）。</li>
+      <li>首次配对从扫码到完成基线拉取全流程 &lt; 30s（FR-03）。</li>
+      <li>离线写入 200 条后联网恢复，全部正确合入 Hub 且顺序无误（FR-09）。</li>
+      <li>同一批变更重复推送 3 次，双端最终状态完全一致（幂等）。</li>
+      <li>构造「双端同改」场景，冲突 100% 进冲突表且可在 UI 查看与恢复（FR-05）。</li>
+      <li>构造「一端删除另一端修改」场景，结果符合修改优先（ADR-07）。</li>
+      <li>同步过程中强制断网，恢复后无半同步状态、无重复数据。</li>
+      <li>默认安装后桌面端无任何对外监听端口（安全默认关闭）。</li>
+      <li>Android 网络安全配置仅对私有网段放行，全局明文为关闭态（4.6）。</li>
+      <li>桌面端现有全部功能通过回归测试，行为与内核抽取前一致（FR-04 的隐含前提）。</li>
+      <li>core 层 Vitest 单测覆盖率 ≥ 80%（可维护性）。</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ===================== S9 ===================== -->
+<section id="s9">
+  <h2 class="sec"><span class="no">09</span>实施计划</h2>
+
+  <h3 id="s91"><span class="t-no">9.1</span>里程碑</h3>
+  <div class="card" style="padding:10px 24px">
+    <div class="tl">
+      <div class="tl-row">
+        <div class="tl-node"><span class="tl-dot"></span><div class="tl-date">第 1 周</div><div class="tl-tag tag accent">M1</div></div>
+        <div class="tl-track"><span class="tl-line"></span></div>
+        <div class="tl-body"><b>地基：内核抽取 + 双 target 跑通</b><p>抽出 core/domain 与 core/schema（DDL 单一真源），定义 Repository 接口，实现 ElectronDriver 并替换现有 IPC 直接调用。同时搭出 Capacitor Android 工程与移动端 Vite 构建入口。<b>验收点</b>：桌面端现有功能回归全通过；移动端能在模拟器里启动并读到空库。<b>此阶段不碰同步逻辑。</b></p></div>
+      </div>
+      <div class="tl-row">
+        <div class="tl-node"><span class="tl-dot"></span><div class="tl-date">第 2–3 周</div><div class="tl-tag tag p1">M2</div></div>
+        <div class="tl-track"><span class="tl-line"></span></div>
+        <div class="tl-body"><b>主干：数据模型改造 + Hub 与同步协议</b><p>补齐全部同步表的软删除（ADR-08）与 4 张同步元表；实现桌面端独立 Hub 服务（meta/pair/push/pull/verify）；实现 CapacitorDriver 并<b>在真机上验证 SQL 方言约束（4.8）</b>；跑通 Transport 抽象与 SyncEngine。<b>验收点</b>：CLI 脚本可完成一次完整的双向同步，双端数据一致。</p></div>
+      </div>
+      <div class="tl-row">
+        <div class="tl-node"><span class="tl-dot"></span><div class="tl-date">第 4–5 周</div><div class="tl-tag tag accent">M3</div></div>
+        <div class="tl-track"><span class="tl-line"></span></div>
+        <div class="tl-body"><b>体验：移动端 UI + 二维码配对 + 真机验证</b><p>落地今日 / 任务 / 日程 / 我的四个 Tab 与同步面板；实现二维码配网与 PIN 交换；配置网络安全策略与凭据安全存储；小米机型安装与保活引导（FR-13）。<b>验收点</b>：真机安装成功，完成配对并自动同步，DoD 清单逐条通过。</p></div>
+      </div>
+      <div class="tl-row">
+        <div class="tl-node"><span class="tl-dot"></span><div class="tl-date">第 6 周</div><div class="tl-tag tag ok">M4</div></div>
+        <div class="tl-track"><span class="tl-line"></span></div>
+        <div class="tl-body"><b>加固：离线 / 提醒 / 兜底 / 发布</b><p>Outbox 离线队列与退避重试（FR-09）；本地通知提醒（FR-08）；一致性校验与修复（FR-11）；JSON 导入导出兜底（FR-12）；产物签名与发布说明。<b>验收点</b>：异常与恢复章节的全部场景验证通过；输出发布版 APK 与版本说明。</p></div>
+      </div>
+    </div>
+    <p class="fig-cap" style="margin:8px 0 4px">图 9-1 实施里程碑（约 6 周 · 单人主力投入；含桌面端 v1.7.0 与移动端 v0.1.0 两个版本发布）</p>
+  </div>
+  <div class="note"><b>实施顺序的关键取舍：</b>M1 先把「内核抽取」单独做完并锁住桌面端回归，绝不同时推进重构与同步开发。否则一旦桌面端出现回归，将无法判断是抽取引入的还是同步引入的，排查成本会成倍上升。</div>
+
+  <h3 id="s92"><span class="t-no">9.2</span>风险登记</h3>
+  <div class="card">
+    <table>
+      <colgroup><col style="width:26%"><col style="width:30%"><col style="width:12%"><col style="width:32%"></colgroup>
+      <thead><tr><th>风险</th><th>影响</th><th>概率 × 等级</th><th>应对</th></tr></thead>
+      <tbody>
+        <tr><td><b>SQLite 插件的 SQL 解析缺陷</b></td><td>upsert / CTE 语句执行失败，同步写库不可用</td><td>高 × 严重</td><td>M2 首日即在真机做 SQL 语法探针（而非等到联调）；按 4.8 拆为先 UPDATE 后 INSERT；建立最小 SQL 用例集作为回归门禁。备选：评估其他 SQLite 方案。</td></tr>
+        <tr><td><b>小米后台限制导致同步失效</b></td><td>后台自动同步不触发，只能手动拉</td><td>高 × 中</td><td>FR-13 保活自检引导为必做项；UI 如实呈现延迟而非掩盖；保留手动同步与前台触发兜底；必要时用前台服务 + 常驻通知提升优先级。</td></tr>
+        <tr><td><b>路由器 AP 隔离</b></td><td>手机找不到桌面端，配对阶段即失败</td><td>中 × 中</td><td>连接失败提示明确指向该原因并提供「改用手机热点」的具体操作；FR-12 文件兜底通道保证数据始终能搬运。</td></tr>
+        <tr><td><b>内核抽取引入桌面端回归</b></td><td>主力工具变砖，直接影响日常使用</td><td>中 × 严重</td><td>严格 M1 → M2 串行；每次抽取小步提交并跑现有测试；保留可回滚的分支；抽取期间不改动任何业务逻辑。</td></tr>
+        <tr><td><b>双端时钟漂移导致数据覆盖</b></td><td>新编辑被旧版本静默覆盖，属于静默数据丢失</td><td>中 × 严重</td><td>ADR-03 已规定由 Hub 侧统一生成时间戳；通过强制单测覆盖「客户端时钟故意拨慢」场景验证。</td></tr>
+        <tr><td><b>DDL 双写漂移</b></td><td>两端表结构不一致，同步语义失控</td><td>中 × 严重</td><td>DDL 单一真源硬约束；握手阶段校验 schema 版本，不匹配直接拒绝；在集成测试中断言两端 sqlite_master 一致。</td></tr>
+        <tr><td><b>Capacitor / 插件版本升级断链</b></td><td>升级后构建失败或运行异常</td><td>中 × 中</td><td>锁定 Capacitor 8 系列；Core / CLI / Android / SQLite 插件大版本必须一致；升级前先读官方迁移指引并在分支验证。</td></tr>
+        <tr><td><b>局域网明文传输的隐私暴露</b></td><td>公共 WiFi 下存在被嗅探的理论风险</td><td>低 × 中</td><td>ADR-06 的最小攻击面策略；访问地址可切换为 https；若在公共网络高频使用，提前启动自签证书 + 指纹信任的 TLS 改造。</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ===================== S10 ===================== -->
+<section id="s10">
+  <h2 class="sec"><span class="no">10</span>附录</h2>
+
+  <h3 id="s101"><span class="t-no">10.1</span>参考规范与资料</h3>
+  <div class="card">
+    <table>
+      <colgroup><col style="width:52%"><col style="width:48%"></colgroup>
+      <thead><tr><th>资料</th><th>用途</th></tr></thead>
+      <tbody>
+        <tr><td><a href="https://capacitorjs.com/" target="_blank" rel="noopener">Capacitor 官方文档</a></td><td>框架能力、生命周期、配置与原生工程说明</td></tr>
+        <tr><td><a href="https://capacitorjs.com/docs/android" target="_blank" rel="noopener">Capacitor Android 平台文档</a></td><td>Android 工程配置、权限、构建要求</td></tr>
+        <tr><td><a href="https://developer.android.com/privacy-and-security/security-config" target="_blank" rel="noopener">Android 网络安全配置（Network Security Configuration）</a></td><td>明文放行与网段白名单配置依据（见 4.6）</td></tr>
+        <tr><td><a href="https://developer.android.com/reference/android/app/NetworkSecurityPolicy" target="_blank" rel="noopener">Android Cleartext 明文流量策略说明</a></td><td>Android 9+ 明文限制的行为与排查</td></tr>
+        <tr><td><a href="https://github.com/capacitor-community/sqlite" target="_blank" rel="noopener">@capacitor-community/sqlite 仓库</a></td><td>版本对应关系、已知 SQL 解析问题与 Android 构建注意项（见 4.8）</td></tr>
+        <tr><td>桌面端现有代码：<code class="inline">main/src/services/database.ts</code>、<code class="inline">database-migration.ts</code>、<code class="inline">server/apiServer.ts</code>、<code class="inline">preload/src/index.ts</code></td><td>本设计的现状基线来源（表结构、IPC 面、现有 API 覆盖范围）</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 id="s102"><span class="t-no">10.2</span>术语表</h3>
+  <div class="card">
+    <table>
+      <colgroup><col style="width:24%"><col style="width:76%"></colgroup>
+      <thead><tr><th>术语</th><th>含义</th></tr></thead>
+      <tbody>
+        <tr><td><b>Hub</b></td><td>桌面端进程内运行的同步服务端，同时充当时间戳权威源（ADR-03）。</td></tr>
+        <tr><td><b>Client</b></td><td>移动端 App 中的同步客户端，本地优先、可离线。</td></tr>
+        <tr><td><b>Transport</b></td><td>传输通道抽象层，定义 pair / pull / push / verify 四个动词；本轮实现 LanTransport。</td></tr>
+        <tr><td><b>Driver</b></td><td>Repository 接口的具体 SQLite 实现；桌面为 ElectronDriver，移动为 CapacitorDriver。</td></tr>
+        <tr><td><b>Outbox</b></td><td>本地写操作的持久化待发队列，断网期间积压，恢复后自动重放。</td></tr>
+        <tr><td><b>复合游标（cursor）</b></td><td>由「更新时间 + 记录 ID」组成的增量拉取位置标记，避免同一毫秒边界丢数据。</td></tr>
+        <tr><td><b>LWW</b></td><td>Last-Write-Wins，最后写入胜出。本方案采用记录级而非字段级。</td></tr>
+        <tr><td><b>AP 隔离</b></td><td>路由器的客户端隔离功能，开启后同一 WiFi 下设备互不可达，会导致局域网同步失败。</td></tr>
+        <tr><td><b>软删除</b></td><td>以 deletedAt 字段标记删除而非物理 DELETE，使「删除」这一事实可被同步。</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 id="s103"><span class="t-no">10.3</span>运行与交付</h3>
+  <div class="card">
+    <table>
+      <colgroup><col style="width:22%"><col style="width:78%"></colgroup>
+      <thead><tr><th>方式</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr><td>移动开发调试</td><td>在移动端构建后由 Capacitor 同步到 Android 工程，通过 Android Studio 安装到真机；WebView 可远程调试。禁止在发布配置中保留开发服务器地址与调试开关。</td></tr>
+        <tr><td>APK 打包</td><td>通过 Gradle 构建 release 产物并签名；输出 arm64-v8a 包。<b>注意</b>：每次插件安装或配置变更后必须执行 Capacitor 同步操作，否则会出现「插件未实现」的运行时错误。</td></tr>
+        <tr><td>桌面端升级</td><td>同步中枢随桌面端 v1.7.0 发布（Electron-builder NSIS），沿用现有构建脚本。</td></tr>
+        <tr><td>版本对应关系</td><td>桌面端 v1.7.0 ↔ 移动端 v0.1.0 ↔ schema 版本 v1。三者任一变更需在握手阶段校验，不匹配即拒绝同步。</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note warn"><b>待确认项：</b>① 目标真机具体型号与系统版本（用于锁定兼容性矩阵）；② 家庭/办公路由器的 AP 隔离现状（决定 LAN 方案是否可行、是否需要提前做文件兜底）；③ 是否接受 Android 通知与后台常驻带来的额外电量开销；④ 若后续升级为公网同步服务，服务器的部署环境与选型。</div>
+</section>
+
+<footer>TaskHarbor Mobile 与双端数据同步系统 · 软件设计文档 v0.1（草案） · 2026-10-27 · Capacitor 8 + React 18 + Vite 5 + 原生 SQLite · 随实现同步更新</footer>
+</div>
+</body>
+</html>
