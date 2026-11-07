@@ -25,12 +25,12 @@ export interface Task extends SyncStamped {
   progress: number;
   status: TaskStatus;
   priority: Priority;
-  assignee?: string;
+  assignee?: string | null;
   startDate?: string;
-  estimatedEndDate?: string;
+  estimatedEndDate?: string | null;
   actualEndDate?: string;
   issues?: string;
-  notes?: string;
+  notes?: string | null;
   createdAt: string;
 }
 
@@ -72,14 +72,14 @@ export interface TaskTagRelation extends SyncStamped {
 
 export interface Schedule extends SyncStamped {
   title: string;
-  description?: string;
-  location?: string;
+  description?: string | null;
+  location?: string | null;
   startTime: string;
   endTime: string;
   allDay: boolean;
   color: string;
   priority: Priority;
-  reminder?: number;
+  reminder?: number | null;
   repeatType?: 'daily' | 'weekly' | 'monthly' | 'yearly';
   repeatInterval?: number;
   repeatEndDate?: string;

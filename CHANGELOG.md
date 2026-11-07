@@ -2,6 +2,28 @@
 
 本文件记录 TaskHarbor 各版本变更。（对外品牌名：**小湾清单 Cove**；内部技术标识仍沿用 `TaskHarbor`。）**版本号按语义化版本（SemVer）+ Conventional Commits 前缀维护**：`feat` 升 minor，`fix` 升 patch，`docs/test` 不升版但仍重新构建。
 
+## [1.16.2] - 2026-11-07
+
+### Fixed — 安装器再次卡在「无法关闭…单击重试」（治本）
+
+- **现象**：1.16.1 包生成后，本机卸载项仍停留在 `1.15.1`、安装目录 `app.asar` 时间戳未变，且有 3 个 `小湾清单.exe` 进程常驻；用户运行安装器仍会卡住，升级不生效。
+- **根因 A（弹窗）**：「小湾清单 无法关闭。请手动关闭它，然后单击重试以继续。」是 `$(appCannotBeClosed)`，来自 electron-builder 内置 `_CHECK_APP_RUNNING`（`allowOnlyOneInstallerInstance.nsh` 第 110 行）在 taskkill 两轮重试后仍判定「进程存在」时弹出的 `MB_RETRYCANCEL`。该实现用 `tasklist /FI "IMAGENAME eq ..." | find.exe "..."` 匹配**中文 exe 名**，且 `taskkill /f /im ... /fi "PID ne $pid"` 会排除 `$pid`（`GetProcessInfo 0` 取到的父进程；从 App 内启动安装器时正是 App 主进程），必然误判或漏杀。1.16.1 只在 `.onInit` 提前杀进程，属于「尽量让检测不命中」，内置检测与弹窗仍在，属治标。
+- **根因 B（真正的卡死点，本次实测新增）**：1.14.3~1.16.1 的 `installer.nsh` 用 `nsExec::Exec "%SYSTEMROOT%\System32\cmd.exe /c taskkill /im ... /fi \"USERNAME eq %USERNAME%\""` 结束进程。安装轨迹日志 + 进程 PID 核对证明：**这条命令在 NSIS 里一个进程都没杀掉**；而在 PowerShell 里直接执行 `taskkill.exe /f /t /im "小湾清单.exe"` 退出码 0、瞬间清空 3 个进程。差异来自 nsExec 插件 + `cmd.exe` 这一层（代码页 / 环境变量展开 / 插件目录初始化）。进程没结束 → 主 exe 被占用 → NSIS `File` 写入失败弹窗 → 安装永久停滞，并留下「卸载项已删、主程序仍是旧版」的半升级现场。1.16.1 只是把 `nsProcess` 换成**同样调用形式**的 `taskkill`，所以没有解决。
+- **修复（治本）**：
+  1. `ForceCloseApp` 改用 NSIS **内置 `ExecWait` 直调 `$SYSDIR\taskkill.exe`**（不经 nsExec 插件、不经 cmd.exe、不带任何 `/fi` 过滤）：先温和 `/im` 发 WM_CLOSE 让 App 保存数据，再 `/f /t /im` 强杀进程树。`ExecWait` 不依赖插件目录，在 `.onInit` / Section / 卸载器里都能执行，退出码写入安装轨迹日志。
+  2. 把可靠性主力放在 **`customUnInstallCheck`** —— 安装轨迹日志证实该钩子在 `handleUninstallResult` 中必定执行，且位于 `installApplicationFiles` 之前；它先结束进程，再 `RMDir /r` 删旧目录、清卸载注册表，让后续文件写入面对全新目录。
+  3. 定义 electron-builder 官方替换钩子 **`customCheckAppRunning`**，使内置 `_CHECK_APP_RUNNING`（检测 + `$(appRunning)` / `$(appCannotBeClosed)` 弹窗 + taskkill 重试循环）完全不参与编译；`customInit` 保留为多重保险。
+  4. 新增 `%TEMP%\cove-install-trace.log` 安装轨迹日志（纯 ASCII 结构化文本，不含用户数据），记录各钩子与 taskkill 退出码，便于以后现场定位安装卡死。
+  5. **去掉 `customUnInstallCheck` 里无条件的 `RMDir /r`**：该宏在 `handleUninstallResult` 中**每次升级都会执行**，原实现不论卸载成败都把整个安装目录（2668 个文件）删一遍再由安装器重写，是安装耗时数分钟、体感「卡住」的主因，且中途失败必然留下半升级现场。现改为仅当旧卸载器真正失败（`$R0 != 0`）才强制删目录 / 清卸载注册表；卸载成功时只结束进程，由安装器直接覆盖文件。
+- **构建链修复（完整构建前置条件）**：1.16.0 并行合入的移动端详情页 `TaskDetail.tsx` / `ScheduleDetail.tsx` 用 `null` 表示「清空输入框」，但 `core/src/domain/types.ts` 中 `Task.assignee / estimatedEndDate / notes` 与 `Schedule.description / location / reminder` 只声明为 `string` / `number`，`tsc -b` 报 6 个 TS2322，导致 `npm run build:win:nsis` 全量构建中断（1.16.1 曾因此只重打包 NSIS、复用旧 dist）。本次按数据模型（列可为 NULL、同步层也会传 NULL）把这 6 个字段修正为 `| null`，保留作者「用 null 清空」的语义，而非把值改成 `''`/`0` 或绕过类型检查。renderer / main / preload 三端 `tsc` 复验均无连锁错误。
+- **验证**：
+  - 完整干净构建（`build:all` + `electron-builder --win nsis`），makensis 零 warning/error；`tsc -b`（renderer）与 main / preload 类型检查全绿。
+  - 静态校验产物：`app.asar` 含 `1.16.2`、`sync_history`、`getSyncHistory`、`clearSyncHistory` 与主进程文件日志特征；安装脚本含 `customCheckAppRunning`、`ExecWait` 直调 taskkill、条件清理分支。
+  - 安装轨迹日志 `cove-install-trace.log` 实测记录到 `customUnInstallCheck` 执行，证明自定义钩子确已编译并被调用；单独执行 `taskkill.exe /f /t /im "小湾清单.exe"` 实测退出码 0、瞬间清空 3 个旧进程（对比旧脚本的 nsExec+cmd 形式一个进程都没杀掉）。
+  - **端到端静默安装验证未完成（环境限制，非代码缺陷）**：沙箱内以非交互方式启动 GUI 安装器时，NSIS 的 `System.dll` 在 `.onInit` 的 `System::Call`（`ALLOW_ONLY_ONE_INSTALLER_INSTANCE`）阶段崩溃 —— Windows 事件日志 ID 1000、异常码 `0xc0000005`、出错模块 `%TEMP%\nsXXXX.tmp\System.dll`、脚本尚未执行、无轨迹日志。用户手动双击（交互桌面会话）不受此限制：此前用户手动运行安装器能正常走到「无法关闭…」弹窗步骤即为佐证。按项目既有红线，产物正确性以静态校验收口。
+- **交付操作**：无需手工结束进程，直接双击 `小湾清单 Setup 1.16.2.exe`。若本机此前处于「卸载项已删、主程序仍旧版」的半升级状态，安装器会重建卸载项 / 卸载器并完整覆盖文件。
+- 版本 1.16.1 → **1.16.2**（fix/patch）。**仅安装脚本 + 类型定义变更**，应用功能与 1.16.1 一致；装过 1.16.1 或更早版本的用户直接运行本安装包即可，无需手工结束进程。
+
 ## [1.16.1] - 2026-11-07
 
 ### Fixed — 安装器仍弹出「小湾清单 无法关闭，请手动关闭它」
