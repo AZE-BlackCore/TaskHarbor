@@ -2,6 +2,16 @@
 
 本文件记录 TaskHarbor 各版本变更。（对外品牌名：**小湾清单 Cove**；内部技术标识仍沿用 `TaskHarbor`。）**版本号按语义化版本（SemVer）+ Conventional Commits 前缀维护**：`feat` 升 minor，`fix` 升 patch，`docs/test` 不升版但仍重新构建。
 
+## [1.16.1] - 2026-11-07
+
+### Fixed — 安装器仍弹出「小湾清单 无法关闭，请手动关闭它」
+
+- **现象**：安装 1.15.1 时，安装器在安装阶段弹出 `小湾清单 无法关闭。请手动关闭它，然后单击重试以继续。`，进度停滞。
+- **根因**：该弹窗来自 electron-builder 内置 `CHECK_APP_RUNNING`（`allowOnlyOneInstallerInstance.nsh` 的 `$(appRunning)`），它在安装 Section 开头检测残留 app 进程。1.15.1 的 `customInit` 使用 `nsProcess` 插件（`CloseProcess` / `FindProcess` / `KillProcess`）结束进程，**实测未能结束残留进程**，检测仍命中 → 弹窗。
+- **修复**：`installer.nsh` 抽出 `ForceCloseApp` 宏，改用与官方 `CHECK_APP_RUNNING` **完全相同的 `taskkill` 命令**（`cmd.exe /c taskkill /im "${APP_EXECUTABLE_FILENAME}" /fi "USERNAME eq %USERNAME%"`，已验证对中文 exe 名有效）：先温和终止（发 WM_CLOSE，让 app 走 `before-quit` 保存数据），等待 1.2s，再以 `/f /t` **无条件**强制结束进程树。**不做任何进程探测判断**，避免插件返回值语义差异导致漏杀；进程不存在时 `taskkill` 仅返回非 0，对安装无影响。`customInit`（`.onInit`，早于 `CHECK_APP_RUNNING` 与文件复制）与 `customUnInstallCheck`（旧卸载失败分支）均调用该宏。
+- 现场处置：弹窗时实测 app 进程已为 0、18766/18765 无监听、安装目录 `app.asar` 已更新为 1.15.1，直接点「重试」即可完成安装。
+- 版本 1.16.0 → **1.16.1**（fix/patch）。**仅安装脚本变更**，桌面端应用功能与 1.15.1 一致；已装好 1.15.1 的用户无需立即覆盖，本包用于防止后续升级复发。
+
 ## [1.16.0] - 2026-11-07
 
 ### Added — 移动端（Cove 手机版）任务/计划详情页 + 五状态选择器（M3-1 收口）
