@@ -306,6 +306,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getSyncCandidates: () =>
     ipcRenderer.invoke('sync:candidates'),
 
+  getSyncHistory: (limit?: number) =>
+    ipcRenderer.invoke('sync:history', limit),
+
+  clearSyncHistory: () =>
+    ipcRenderer.invoke('sync:clearHistory'),
+
   // ========== 数据库信息 ==========
   getDatabasePath: () =>
     ipcRenderer.invoke('window:getDatabasePath'),

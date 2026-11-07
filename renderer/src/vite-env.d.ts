@@ -1,5 +1,21 @@
 /// <reference types="vite/client" />
 
+/** 桌面 Hub 同步历史流水（脱敏：仅表名 / 记录 ID / 操作与条数，不含任务内容） */
+interface SyncHistoryEntry {
+  id: string;
+  sessionId: string;
+  occurredAt: string;
+  direction: 'up' | 'down' | 'pair';
+  operation: 'push' | 'pull' | 'pair';
+  source: string | null;
+  deviceName: string | null;
+  tableName: string | null;
+  itemCount: number;
+  breakdown: string | null;
+  status: 'ok' | 'partial' | 'error';
+  detail: string | null;
+}
+
 interface ElectronAPI {
   // 窗口控制
   setWindowOpacity: (opacity: number) => Promise<{ success: boolean }>;
@@ -135,6 +151,15 @@ interface ElectronAPI {
     outputPath?: string;
     filename?: string;
   }) => Promise<{ success: boolean; message: string; filePath?: string }>;
+
+  // 同步中枢（Hub）
+  startSync: (host?: string) => Promise<unknown>;
+  stopSync: () => Promise<unknown>;
+  getSyncStatus: () => Promise<unknown>;
+  rotateSyncPin: () => Promise<unknown>;
+  getSyncCandidates: () => Promise<Array<{ address: string; iface: string }>>;
+  getSyncHistory: (limit?: number) => Promise<SyncHistoryEntry[]>;
+  clearSyncHistory: () => Promise<{ ok: boolean }>;
 }
 
 interface TaskReminderInfo {

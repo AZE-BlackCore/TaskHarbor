@@ -2,6 +2,19 @@
 
 本文件记录 TaskHarbor 各版本变更。（对外品牌名：**小湾清单 Cove**；内部技术标识仍沿用 `TaskHarbor`。）**版本号按语义化版本（SemVer）+ Conventional Commits 前缀维护**：`feat` 升 minor，`fix` 升 patch，`docs/test` 不升版但仍重新构建。
 
+## [1.15.0] - 2026-11-07
+
+### Added — 「同步与设备」页新增同步历史
+
+- **每次同步的内容与方向可追溯**：桌面 Hub 记录每一次同步操作，页面按「一次同步」聚合展示。
+  - **方向**：`上行（手机 → 电脑）` = 接收手机上传的变更；`下行（电脑 → 手机）` = 向手机下发数据；`配对` = 设备配对事件。
+  - **内容**（遵守 Hub 脱敏红线，仅结构化摘要）：涉及表名、各表新增/更新与删除条数、记录 ID 样本、请求次数、来源设备/IP、结果与时间；**不记录任务标题与正文**。
+  - 一次同步由移动端 `syncOnce()` 发起（先 push、再逐表 pull，共 1~9 个请求），Hub 以「同源 + 10 秒连续请求窗口」聚合为同一会话，避免历史碎片化。
+- **页面能力**：会话列表显示时间 / 方向汇总 / 涉及表 / 来源；点击展开查看逐条流水；每 5 秒自动刷新 + 手动刷新；「清空历史」需二次确认；空状态引导。
+- **存储**：新增桌面 Hub 本地审计表 `sync_history`（`core/schema/migrations/002_sync_history.sql`），不参与同步（不在 `SYNC_TABLES`）、移动端不执行该迁移；`applySyncSchemaMigration` 改为按文件名顺序执行 `migrations/*.sql`（001 + 002）。历史写入复用已防抖的 `saveDatabase()`，不影响同步主流程。
+- **链路**：新增 IPC `sync:history` / `sync:clearHistory`，preload 桥接 `getSyncHistory` / `clearSyncHistory`，并补齐 `vite-env.d.ts` 中同步中枢相关类型声明。
+- 版本 1.14.4 → **1.15.0**（feat/minor）。移动端保持 0.1.5 不变（本功能仅桌面端，无需重构建 APK）。
+
 ## [1.14.4] - 2026-11-02
 
 ### Fixed — 局域网配对（Hub 跨域 / CORS）

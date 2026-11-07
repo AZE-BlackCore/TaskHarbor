@@ -134,20 +134,28 @@ export async function applySyncSchemaMigration(): Promise<void> {
     // 必须经由 app.getAppPath() 解析（process.resourcesPath 指向 resources/ 根目录，
     // 不含 asar 内的 core/schema），否则打包版会找不到迁移文件、同步元表不创建、
     // 启动同步报 no such table: _sync_meta。
-    const base = path.join(app.getAppPath(), 'core', 'schema');
-    const file = path.join(base, 'migrations', '001_sync_enable.sql');
-    if (!fs.existsSync(file)) {
-      log(`migration file not found: ${file}`);
+    // 按文件名顺序执行 migrations/ 下所有脚本：001 开启同步元表、002 建同步历史表。
+    const base = path.join(app.getAppPath(), 'core', 'schema', 'migrations');
+    if (!fs.existsSync(base)) {
+      log(`migration dir not found: ${base}`);
       return;
     }
-    const sql = fs.readFileSync(file, 'utf8');
+    const files = fs.readdirSync(base).filter((f) => f.endsWith('.sql')).sort();
+    if (!files.length) {
+      log('no migration files found');
+      return;
+    }
     const db = await getDatabase();
-    for (const stmt of sql.split(';').map((s) => s.trim()).filter(Boolean)) {
-      try {
-        db.run(stmt);
-      } catch {
-        /* 预期内失败：列/表已存在 */
+    for (const file of files) {
+      const sql = fs.readFileSync(path.join(base, file), 'utf8');
+      for (const stmt of sql.split(';').map((s) => s.trim()).filter(Boolean)) {
+        try {
+          db.run(stmt);
+        } catch {
+          /* 预期内失败：列/表/索引已存在 */
+        }
       }
+      log(`migration applied: ${file}`);
     }
     saveDatabase();
     log('sync schema migration applied');
@@ -277,6 +285,114 @@ function handlePull(params: URLSearchParams): { table: string; changes: unknown[
   };
 }
 
+// --------------------------------------------------------------- 同步历史
+
+/**
+ * 一次同步由移动端 syncOnce() 发起：先 push（可能无请求），再对 8 张表逐表 pull。
+ * 若按 HTTP 请求逐条展示会很碎，故以「同源 + 连续请求窗口」聚合为一次同步会话。
+ * 窗口内每次请求续期，整批请求归入同一 sessionId；间隔超过窗口则开启新会话。
+ */
+const SYNC_SESSION_TTL_MS = 10_000;
+const activeSessions = new Map<string, { id: string; expiresAt: number }>();
+
+function sessionFor(source: string): string {
+  const now = Date.now();
+  const active = activeSessions.get(source);
+  if (active && active.expiresAt > now) {
+    active.expiresAt = now + SYNC_SESSION_TTL_MS;
+    return active.id;
+  }
+  const id = `sync_${crypto.randomUUID()}`;
+  activeSessions.set(source, { id, expiresAt: now + SYNC_SESSION_TTL_MS });
+  return id;
+}
+
+export interface SyncHistoryRow {
+  id: string;
+  sessionId: string;
+  occurredAt: string;
+  direction: 'up' | 'down' | 'pair';
+  operation: 'push' | 'pull' | 'pair';
+  source: string | null;
+  deviceName: string | null;
+  tableName: string | null;
+  itemCount: number;
+  breakdown: string | null;
+  status: 'ok' | 'partial' | 'error';
+  detail: string | null;
+}
+
+interface HistoryInput {
+  sessionId: string;
+  direction: SyncHistoryRow['direction'];
+  operation: SyncHistoryRow['operation'];
+  source?: string;
+  deviceName?: string;
+  tableName?: string;
+  itemCount?: number;
+  /** 脱敏红线：仅允许表名 / 记录 ID / 操作计数 / 布尔标记，严禁任务标题与正文 */
+  breakdown?: Record<string, unknown>;
+  status?: SyncHistoryRow['status'];
+  detail?: string;
+}
+
+function recordHistory(entry: HistoryInput): void {
+  if (!dbRef) return;
+  try {
+    runSql(
+      `INSERT INTO sync_history
+         (id, sessionId, occurredAt, direction, operation, source, deviceName,
+          tableName, itemCount, breakdown, status, detail)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        `hist_${crypto.randomUUID()}`,
+        entry.sessionId,
+        new Date().toISOString(),
+        entry.direction,
+        entry.operation,
+        entry.source ?? null,
+        entry.deviceName ?? null,
+        entry.tableName ?? null,
+        entry.itemCount ?? 0,
+        entry.breakdown ? JSON.stringify(entry.breakdown) : null,
+        entry.status ?? 'ok',
+        entry.detail ?? null,
+      ]
+    );
+    saveDatabase(); // saveDatabase 自带防抖，不会因逐表 pull 反复全量落盘
+  } catch (e) {
+    // 历史写入失败绝不能影响同步主流程
+    log(`record history failed: ${String(e)}`);
+  }
+}
+
+/** 供「同步与设备」页查询：按时间倒序返回最近 limit 条流水 */
+export async function getSyncHistory(limit = 200): Promise<SyncHistoryRow[]> {
+  try {
+    if (!dbRef) dbRef = await getDatabase();
+    const safeLimit = Math.min(Math.max(Number(limit) || 200, 1), 1000);
+    const rows = queryAll(
+      'SELECT id, sessionId, occurredAt, direction, operation, source, deviceName, tableName, itemCount, breakdown, status, detail FROM sync_history ORDER BY occurredAt DESC, id DESC LIMIT ?',
+      [safeLimit]
+    );
+    return rows as unknown as SyncHistoryRow[];
+  } catch (e) {
+    // Hub 从未开启过时表尚未创建，属正常，返回空列表
+    log(`read history failed: ${String(e)}`);
+    return [];
+  }
+}
+
+export async function clearSyncHistory(): Promise<void> {
+  try {
+    if (!dbRef) dbRef = await getDatabase();
+    runSql('DELETE FROM sync_history');
+    saveDatabase();
+  } catch (e) {
+    log(`clear history failed: ${String(e)}`);
+  }
+}
+
 // ------------------------------------------------------------------ 启停
 
 export interface StartHubOptions {
@@ -355,6 +471,7 @@ export async function startHub(opts: StartHubOptions = {}): Promise<{
     try {
       const url = new URL(req.url ?? '/', `http://${host}:${port}`);
       const pathname = url.pathname;
+      const source = String(req.socket.remoteAddress ?? '');
 
       if (pathname === '/api/sync/meta') {
         return json(res, 200, {
@@ -397,6 +514,15 @@ export async function startHub(opts: StartHubOptions = {}): Promise<{
           });
         }
         saveDatabase();
+        recordHistory({
+          sessionId: `pair_${crypto.randomUUID()}`, // 配对独立成组，不并入同步会话
+          direction: 'pair',
+          operation: 'pair',
+          source,
+          deviceName: String(body?.deviceName ?? '移动端'),
+          status: 'ok',
+          detail: '设备配对成功',
+        });
         return json(res, 200, {
           token: hubState.token,
           hubId: hubState.hubId,
@@ -418,11 +544,55 @@ export async function startHub(opts: StartHubOptions = {}): Promise<{
           return { id: String(c?.id ?? ''), ok: r.ok, hubUpdatedAt: serverTs, error: r.error };
         });
         saveDatabase(); // 关键：写入后落盘（与 Agent API 一致）
+        // 历史：上行（手机 → 电脑）。仅按表统计操作与记录 ID，绝不写任务标题/正文。
+        const byTable: Record<string, { upsert: number; delete: number }> = {};
+        const sampleIds: string[] = [];
+        for (const c of changes) {
+          const t = String(c?.table ?? '');
+          if (!byTable[t]) byTable[t] = { upsert: 0, delete: 0 };
+          if (c?.op === 'delete') byTable[t].delete += 1;
+          else byTable[t].upsert += 1;
+          if (sampleIds.length < 20) sampleIds.push(String(c?.id ?? ''));
+        }
+        const failed = results.filter((r) => !r.ok).length;
+        recordHistory({
+          sessionId: sessionFor(source),
+          direction: 'up',
+          operation: 'push',
+          source,
+          itemCount: changes.length,
+          breakdown: { tables: byTable, sampleIds },
+          status: failed ? 'partial' : 'ok',
+          detail: failed
+            ? `接收 ${changes.length} 条变更，${failed} 条写入失败`
+            : `接收 ${changes.length} 条变更`,
+        });
         return json(res, 200, { results, serverTime: serverTs });
       }
 
       if (pathname === '/api/sync/pull') {
         const data = handlePull(url.searchParams);
+        // 历史：下行（电脑 → 手机）。空页不记录，避免逐表拉取产生大量空流水。
+        if (data.changes.length > 0) {
+          const ops: Record<string, number> = {};
+          const sampleIds: string[] = [];
+          for (const c of data.changes as Array<{ op?: string; id?: string }>) {
+            const op = c?.op === 'delete' ? 'delete' : 'upsert';
+            ops[op] = (ops[op] ?? 0) + 1;
+            if (sampleIds.length < 20) sampleIds.push(String(c?.id ?? ''));
+          }
+          recordHistory({
+            sessionId: sessionFor(source),
+            direction: 'down',
+            operation: 'pull',
+            source,
+            tableName: data.table,
+            itemCount: data.changes.length,
+            breakdown: { ops, sampleIds, hasMore: data.hasMore },
+            status: 'ok',
+            detail: `下发 ${data.table} ${data.changes.length} 条`,
+          });
+        }
         return json(res, 200, { ...data, serverTime: new Date().toISOString() });
       }
 

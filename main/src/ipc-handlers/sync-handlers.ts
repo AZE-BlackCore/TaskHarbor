@@ -5,7 +5,9 @@
 
 import { ipcMain } from 'electron';
 import {
+  clearSyncHistory,
   getHubStatus,
+  getSyncHistory,
   listCandidateAddresses,
   rotatePin,
   startHub,
@@ -30,4 +32,12 @@ export function setupSyncHandlers(): void {
   });
 
   ipcMain.handle('sync:candidates', () => listCandidateAddresses());
+
+  // 同步历史：供「同步与设备」页展示每次同步的内容与方向
+  ipcMain.handle('sync:history', async (_e, limit?: number) => getSyncHistory(limit));
+
+  ipcMain.handle('sync:clearHistory', async () => {
+    await clearSyncHistory();
+    return { ok: true };
+  });
 }
